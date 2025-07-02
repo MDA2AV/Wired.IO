@@ -1,0 +1,59 @@
+name: Build, Test, and Publish
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read   # Required for reading repository content
+  packages: write  # Required for publishing packages to NuGet
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Set up .NET SDK
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '9.0' # Specify your .NET SDK version
+
+      # Restore dependencies
+      - name: Restore dependencies
+        run: dotnet restore Wired.IO/Wired.IO.csproj
+
+      # Build the project
+      - name: Build project
+        run: dotnet build Wired.IO/Wired.IO.csproj --configuration Release --no-restore
+        
+      - name: Pack NuGet package
+        run: dotnet pack Wired.IO/Wired.IO.csproj --configuration Release --output ./artifacts
+
+      # Run tests only for .NET 9
+      - name: Run tests (only for .NET 9)
+        run: |
+          if [[ "$(dotnet --version)" == 9.* ]]; then
+            dotnet test Wired.IO.Tests/Wired.IO.Tests.csproj --verbosity normal
+          else
+            echo "Skipping tests: Not running on .NET 9."
+          fi
+        
+      - name: Publish to NuGet
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: dotnet nuget push ./artifacts/*.nupkg --source https://api.nuget.org/v3/index.json --api-key $NUGET_API_KEY --skip-duplicate
+        
+      # Publish to GitHub Packages
+      - name: Publish to GitHub Packages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: dotnet nuget push ./artifacts/*.nupkg --source https://nuget.pkg.github.com/MDA2AV/index.json --api-key $GITHUB_TOKEN --skip-duplicate
