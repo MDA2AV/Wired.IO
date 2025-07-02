@@ -1,9 +1,22 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
+	  <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+	  <ImplicitUsings>enable</ImplicitUsings>
+	  <Nullable>enable</Nullable>
+	  <Title>Wired.IO</Title>
+	  <Authors>Toni Caçadeira</Authors>
+	  <RepositoryUrl>https://github.com/MDA2AV/Wired.IO</RepositoryUrl>
+	  <RepositoryType>git</RepositoryType>
+	  <AssemblyVersion>9.0.0</AssemblyVersion>
+	  <FileVersion>9.0.0</FileVersion>
+	  <Version>9.0.0</Version>
+	  <PackageReadmeFile>README.md</PackageReadmeFile>
+	  <PackageTags>socket;webserver;lightweight</PackageTags>
+	  <PackageLicenseFile>LICENSE</PackageLicenseFile>
+	  <Description>Ultra lightweight highly customizable web server based on IHost and Socket classes. No third party dependencies.</Description>
+	  <PackageProjectUrl>https://github.com/MDA2AV/Wired.IO</PackageProjectUrl>
+	  <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
