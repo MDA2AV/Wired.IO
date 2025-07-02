@@ -23,12 +23,12 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
-              "Title": "Wired.IO",
+              "Title": "Wired.IO.csproj",
               "DocumentMoniker": "E:\\VS\\Wired.IO\\Wired.IO\\Wired.IO.csproj",
               "RelativeDocumentMoniker": "Wired.IO\\Wired.IO.csproj",
               "ToolTip": "E:\\VS\\Wired.IO\\Wired.IO\\Wired.IO.csproj",
               "RelativeToolTip": "Wired.IO\\Wired.IO.csproj",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAYAAAAaAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAB0AAAAJAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
               "WhenOpened": "2025-07-02T13:12:04.924Z",
               "EditorCaption": ""
