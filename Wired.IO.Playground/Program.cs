@@ -1,12 +1,34 @@
-﻿using System.Text.Json;
+﻿using System.Net.Security;
+using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Wired.IO.App;
+using Wired.IO.Http11;
+using Wired.IO.Http11.Context;
 using Wired.IO.Http11.Response.Content;
 using Wired.IO.Protocol.Response;
 
 var builder = App.CreateBuilder(); // Create a default builder, assumes HTTP/1.1
+
+var builderWithParameters = App.CreateBuilder(() => 
+    new WiredHttp11<Http11Context>(new Http11HandlerArgs(
+        UseResources: false,
+        ResourcesPath: null!,
+        ResourcesAssembly: null!))
+);
+
+var builderWithSslApplicationProtocols = App.CreateBuilder([SslApplicationProtocol.Http11]);
+
+var builder2 = App.CreateBuilder(() =>
+    new WiredHttp11<Http11Context>(new Http11HandlerArgs(
+        UseResources: false,
+        ResourcesPath: null!,
+        ResourcesAssembly: null!)),
+    [SslApplicationProtocol.Http11]
+);
+
+
 
 builder.App.HostBuilder
     .ConfigureLogging(logging =>
