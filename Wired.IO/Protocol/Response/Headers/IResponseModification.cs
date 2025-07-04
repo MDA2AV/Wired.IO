@@ -59,4 +59,5 @@ public interface IResponseModification<out TBuilder>
     /// </summary>
     /// <param name="contentType">The content type of this response</param>
     IResponseBuilder Type(FlexibleContentType contentType);
+    IResponseBuilder Type(string contentType);
 }
