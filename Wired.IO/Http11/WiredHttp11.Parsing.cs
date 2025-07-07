@@ -197,7 +197,7 @@ public sealed partial class WiredHttp11<TContext>
         return builder.ToString();
     }
 
-    public static void ParseHttpRequestLine(string line, IHttpRequest request)
+    public static void ParseHttpRequestLine(string line, IRequest request)
     {
         ReadOnlySpan<char> span = line;
 

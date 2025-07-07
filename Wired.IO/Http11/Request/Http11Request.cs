@@ -8,10 +8,10 @@ namespace Wired.IO.Http11.Request;
 /// Represents an HTTP/1.1 request, including headers, body content, method, route, and connection metadata.
 /// </summary>
 /// <remarks>
-/// This class implements <see cref="IHttpRequest"/> and serves as the concrete model
+/// This class implements <see cref="IRequest"/> and serves as the concrete model
 /// for parsing and accessing incoming request data in the HTTP/1.1 protocol.
 /// </remarks>
-public class Http11Request : IHttpRequest
+public class Http11Request : IRequest
 {
     /// <summary>
     /// Gets or sets the collection of HTTP request headers.

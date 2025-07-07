@@ -1,53 +1,42 @@
-﻿using System.IO.Pipelines;
+﻿using System.Buffers;
+using System.IO.Pipelines;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.ObjectPool;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Handlers;
 using Wired.IO.Protocol.Request;
 using Wired.IO.Protocol.Response;
-using Wired.IO.Utilities;
+using Wired.IO.WiredEvents;
 
 namespace Wired.IO.Playground;
 
 public class CustomContext : IContext
 {
-    public PipeReader Reader { get; set; } = null!;
-    public PipeWriter Writer { get; set; } = null!;
+    public void Dispose()
+    {
+        // TODO release managed resources here
+    }
 
-    public IHttpRequest Request { get; set; } = null!;
-    public IResponse? Response { get; set; }
-
+    public PipeReader Reader { get; set; }
+    public PipeWriter Writer { get; set; }
+    public IRequest Request { get; set; }
     public AsyncServiceScope Scope { get; set; }
     public CancellationToken CancellationToken { get; set; }
-
+    public IResponse? Response { get; set; }
     public void Clear()
     {
-        // Clear Resources
+        throw new NotImplementedException();
     }
-    public void Dispose()
+
+    public IReadOnlyList<IWiredEvent> WiredEvents { get; }
+    public void AddWiredEvent(IWiredEvent wiredEvent)
     {
-        // Release managed resources here
+        throw new NotImplementedException();
     }
-}
 
-public class CustomRequest : IHttpRequest
-{
-
-    public string Route { get; set; }
-    public string HttpMethod { get; set; }
-    public PooledDictionary<string, ReadOnlyMemory<char>>? QueryParameters { get; set; }
-    public PooledDictionary<string, string> Headers { get; set; }
-    public ReadOnlyMemory<byte> Content { get; set; }
-    public string ContentAsString { get; }
-    public ConnectionType ConnectionType { get; set; }
-
-    public void Clear()
+    public void ClearWiredEvents()
     {
-        // Clear Resources
-    }
-    public void Dispose()
-    {
-        // Release managed resources here
+        throw new NotImplementedException();
     }
 }
 
@@ -63,7 +52,32 @@ public class CustomHttpHandler<TContext> : IHttpHandler<TContext>
         // Get a context object from pool (or create a new instance if not pooling)
         var context = ContextPool.Get();
 
-        // Create a new IHttpRequest or use pooling
-        //context.Request = ...
+        // Create a new IRequest or use pooling
+        //context.Request = new CustomRequest();
+
+        // Set up the PipeReader and PipeWriter for the context.
+        // You can also skip this and use the Stream directly to read and write from socket.
+        // However, the preferred way is to use PipeReader and PipeWriter for better performance.
+        // Also, if you decide to use Stream, you will need to cast the IContext passed to the endpoint
+        // since IContext does not expose the Stream directly.
+        context.Reader = PipeReader.Create(stream,
+            new StreamPipeReaderOptions(MemoryPool<byte>.Shared, leaveOpen: true, bufferSize: 8192));
+
+        context.Writer = PipeWriter.Create(stream,
+            new StreamPipeWriterOptions(MemoryPool<byte>.Shared, leaveOpen: true));
+
+
+
+        // The next section is typically wrapped in a loop or equivalent if the connection is persistent (keep-alive).
+
+        // Read the received request headers and set the context's HttpMethod and Route
+
+        // Call the pipeline callback, it will trigger the middleware pipeline and the endpoint
+
+        // Handle Keep-Alive connections
+
+        // Make sure to dispose managed resources and return the context to the pool
+
+
     }
 }

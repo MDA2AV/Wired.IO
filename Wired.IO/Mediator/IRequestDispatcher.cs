@@ -1,10 +1,13 @@
-﻿namespace Wired.IO.Mediator;
+﻿using Wired.IO.Protocol;
+
+namespace Wired.IO.Mediator;
 
 /// <summary>
 /// Abstraction for a request dispatcher that executes a request 
 /// through the configured pipeline (behaviors + handler).
 /// </summary>
-public interface IRequestDispatcher
+public interface IRequestDispatcher<in TContext>
+    where TContext : IContext
 {
     /// <summary>
     /// Sends a request through the pipeline and returns the response.
@@ -16,6 +19,9 @@ public interface IRequestDispatcher
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>The response from the pipeline</returns>
     Task<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default);
+
     // Void response
     Task Send(IRequest request, CancellationToken cancellationToken = default);
+
+    Task Send(TContext context, CancellationToken cancellationToken = default);
 }

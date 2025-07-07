@@ -5,7 +5,7 @@ namespace Wired.IO.Protocol.Request;
 /// <summary>
 /// Represents a minimal abstraction of an HTTP request containing essential routing information.
 /// </summary>
-public interface IHttpRequest : IDisposable
+public interface IRequest : IDisposable
 {
     /// <summary>
     /// Gets the route or path portion of the HTTP request, typically used to determine the target endpoint.

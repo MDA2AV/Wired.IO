@@ -104,14 +104,14 @@ public partial class WiredHttp11<TContext>(IHandlerArgs args) : IHttpHandler<TCo
                 else
                     await pipeline(context);
 
+                context.Clear();
+
                 // For non keep-alive connections, break the loop
                 if (context.Request.ConnectionType is not ConnectionType.KeepAlive &&
                     !stoppingToken.IsCancellationRequested)
                 {
                     break;
                 }
-
-                context.Clear();
             }
         }
         catch (OperationCanceledException)
@@ -179,6 +179,8 @@ public partial class WiredHttp11<TContext>(IHandlerArgs args) : IHttpHandler<TCo
                     await FlushResource(context.Writer, context.Request.Route);
                 else
                     await pipeline(context);
+
+                 context.Clear();
 
                 // For non keep-alive connections, break the loop
                 if (context.Request.ConnectionType is not ConnectionType.KeepAlive &&

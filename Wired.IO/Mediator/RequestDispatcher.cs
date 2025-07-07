@@ -1,10 +1,12 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
+using Wired.IO.Http11.Context;
+using Wired.IO.Protocol;
 
 namespace Wired.IO.Mediator;
 
 /// <summary>
-/// Default implementation of <see cref="IRequestDispatcher"/> that orchestrates the execution
+/// Default implementation of <see cref="IRequestDispatcher{TContext}"/> that orchestrates the execution
 /// of requests through a pipeline of behaviors.
 /// 
 /// This implementation uses a static cache to avoid repeated reflection costs when creating
@@ -21,13 +23,14 @@ namespace Wired.IO.Mediator;
 /// the performance cost of repeated reflection.
 /// </remarks>
 [ExcludeFromCodeCoverage]
-public class RequestDispatcher(IServiceProvider serviceProvider) : IRequestDispatcher
+public class RequestDispatcher<TContext>(IServiceProvider serviceProvider) : IRequestDispatcher<TContext>
+    where TContext : IContext
 {
     /// <summary>
     /// Static cache of request handler wrappers to avoid repeated reflection costs.
     /// The key is a tuple of (RequestType, ResponseType?) where ResponseType is null for requests without responses.
     /// </summary>
-    private static readonly ConcurrentDictionary<(Type, Type?), object> WrapperCache = new();
+    private static readonly ConcurrentDictionary<(Type?, Type?), object> WrapperCache = new();
 
     /// <summary>
     /// Sends a request that returns a response through the mediator pipeline.
@@ -47,11 +50,12 @@ public class RequestDispatcher(IServiceProvider serviceProvider) : IRequestDispa
 
         var wrapperObj = WrapperCache.GetOrAdd((requestType, typeof(TResponse)), static key =>
         {
-            var wrapperType = typeof(RequestHandlerWrapper<,>).MakeGenericType(key.Item1, key.Item2!);
+            var wrapperType = typeof(RequestHandlerWrapper<,>).MakeGenericType(key.Item1!, key.Item2!);
             return Activator.CreateInstance(wrapperType)!;
         });
 
         var wrapper = (IRequestHandlerWrapper<TResponse>)wrapperObj;
+
         return wrapper.Handle(request, serviceProvider, cancellationToken);
     }
 
@@ -72,11 +76,22 @@ public class RequestDispatcher(IServiceProvider serviceProvider) : IRequestDispa
 
         var wrapperObj = WrapperCache.GetOrAdd((requestType, null), static key =>
         {
-            var wrapperType = typeof(RequestHandlerWrapper<>).MakeGenericType(key.Item1);
+            var wrapperType = typeof(RequestHandlerWrapper<>).MakeGenericType(key.Item1!);
             return Activator.CreateInstance(wrapperType)!;
         });
 
         var wrapper = (IRequestHandlerWrapper)wrapperObj;
+
         return wrapper.Handle(request, serviceProvider, cancellationToken);
+    }
+
+    public Task Send(TContext context, CancellationToken cancellationToken = default)
+    {
+        var wrapperObj = WrapperCache.GetOrAdd((null, null), static key => 
+            Activator.CreateInstance(typeof(ContextHandlerWrapper<>).MakeGenericType(typeof(TContext)))!);
+
+        var wrapper = (IContextHandlerWrapper<TContext>)wrapperObj;
+
+        return wrapper.Handle(context, serviceProvider, cancellationToken);
     }
 }

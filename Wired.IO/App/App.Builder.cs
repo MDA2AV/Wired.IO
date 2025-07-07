@@ -28,7 +28,11 @@ public sealed partial class App<TContext> where TContext : IContext
         { HttpConstants.Options, [] },
     };
 
+    public HashSet<string> Routes { get; set; } = [];
+
     public List<Func<TContext, Func<TContext, Task>, Task>> Middleware { get; set; } = null!;
+
+    public Dictionary<string, Func<TContext, Task>> Endpoints { get; set; } = null!;
 
     #endregion
 

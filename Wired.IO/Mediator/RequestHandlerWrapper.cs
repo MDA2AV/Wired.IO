@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics.CodeAnalysis;
+using Wired.IO.Protocol;
 
 namespace Wired.IO.Mediator;
 
@@ -33,6 +34,28 @@ public class RequestHandlerWrapper<TRequest, TResponse> : IRequestHandlerWrapper
     }
 }
 
+[ExcludeFromCodeCoverage]
+public class ContextHandlerWrapper<TContext> : IContextHandlerWrapper<TContext>
+    where TContext : class, IContext
+{
+    public async Task Handle(TContext context, IServiceProvider provider, CancellationToken cancellationToken)
+    {
+        var handler = provider.GetRequiredService<IContextHandler<TContext>>();
+        var behaviors = provider.GetServices<IPipelineBehavior<TContext>>().ToList();
+
+        RequestHandlerDelegate handlerDelegate = () =>
+            handler.Handle(context, cancellationToken);
+
+        foreach (var behavior in behaviors.AsEnumerable().Reverse())
+        {
+            var next = handlerDelegate;
+            handlerDelegate = () => behavior.Handle(context, next, cancellationToken);
+        }
+
+        await handlerDelegate();
+    }
+}
+
 /// <summary>
 /// Wrapper that handles a request without a response (void-style)
 /// by executing its associated pipeline behaviors and invoking the appropriate <see cref="IRequestHandler{TRequest}"/>.
@@ -46,12 +69,11 @@ public class RequestHandlerWrapper<TRequest> : IRequestHandlerWrapper
     {
         var request = (TRequest)baseRequest;
         var handler = provider.GetRequiredService<IRequestHandler<TRequest>>();
-        var behaviors = provider.GetServices<IPipelineBehavior<TRequest, Unit>>().ToList();
+        var behaviors = provider.GetServices<IPipelineBehaviorNoResponse<TRequest>>().ToList();
 
-        RequestHandlerDelegate<Unit> handlerDelegate = async () =>
+        RequestHandlerDelegate handlerDelegate = async () =>
         {
             await handler.Handle(request, cancellationToken);
-            return Unit.Value;
         };
 
         foreach (var behavior in behaviors.AsEnumerable().Reverse())

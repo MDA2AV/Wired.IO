@@ -4,6 +4,7 @@ using Wired.IO.Http11.Response;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Request;
 using Wired.IO.Protocol.Response;
+using Wired.IO.WiredEvents;
 
 namespace Wired.IO.Http11.Context;
 
@@ -29,7 +30,7 @@ public class Http11Context : IContext
     /// <summary>
     /// Gets or sets the current HTTP request associated with the connection.
     /// </summary>
-    public IHttpRequest Request { get; set; } = null!;
+    public IRequest Request { get; set; } = null!;
 
     /// <summary>
     /// Gets or sets the <see cref="AsyncServiceScope"/> for resolving scoped services during the request lifecycle.
@@ -85,5 +86,19 @@ public class Http11Context : IContext
     {
         Response?.Clear();
         Request.Clear();
+    }
+
+    private readonly List<IWiredEvent> _wiredEvents = new();
+
+    public IReadOnlyList<IWiredEvent> WiredEvents => _wiredEvents.AsReadOnly();
+
+    public void AddWiredEvent(IWiredEvent wiredEvent)
+    {
+        _wiredEvents.Add(wiredEvent);
+    }
+
+    public void ClearWiredEvents()
+    {
+        _wiredEvents.Clear();
     }
 }

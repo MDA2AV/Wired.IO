@@ -8,6 +8,7 @@ using Wired.IO.Mediator;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Handlers;
 using Wired.IO.Protocol.Response;
+using Wired.IO.WiredEvents;
 
 namespace Wired.IO.Builder;
 
@@ -35,6 +36,15 @@ public sealed class Builder<THandler, TContext>
         App.LoggerFactory = App.InternalHost.Services.GetRequiredService<ILoggerFactory>();
         App.Logger = App.LoggerFactory.CreateLogger<App<TContext>>();
         App.Middleware = App.InternalHost.Services.GetServices<Func<TContext, Func<TContext, Task>, Task>>().ToList();
+
+        App.Endpoints = [];
+        foreach (var route in App.Routes)
+        {
+            Console.WriteLine(route);
+            App.Endpoints.Add(
+                route, 
+                App.InternalHost.Services.GetRequiredKeyedService<Func<TContext, Task>>(route));
+        }
 
         return App;
     }
@@ -81,7 +91,32 @@ public sealed class Builder<THandler, TContext>
     {
         App.HostBuilder.ConfigureServices((_, services) =>
         {
-            services.AddHandlers(assembly);
+            services
+                .AddHandlers(assembly, App)
+                .AddScoped<IRequestDispatcher<TContext>, RequestDispatcher<TContext>>();
+        });
+
+        return this;
+    }
+
+    public Builder<THandler, TContext> AddWiredEvents(bool dispatchContextWiredEvents = true)
+    {
+        App.HostBuilder.ConfigureServices((_, services) =>
+        {
+            services.AddWiredEventDispatcher();
+        });
+
+        if (!dispatchContextWiredEvents)
+            return this;
+
+        UseMiddleware(scope => async (context, next) =>
+        {
+            await next(context);
+
+            var wiredEventDispatcher = scope.GetRequiredService<Func<IEnumerable<IWiredEvent>, Task>>();
+
+            await wiredEventDispatcher(context.WiredEvents);
+            context.ClearWiredEvents();
         });
 
         return this;
@@ -104,9 +139,14 @@ public sealed class Builder<THandler, TContext>
 
     public Builder<THandler, TContext> MapGet(string route, Func<IServiceProvider, Func<TContext, Task>> func)
     {
+        AddKeyedScoped(func, HttpConstants.Get , route);
+
         App.EncodedRoutes[HttpConstants.Get].Add(route);
+
+        /*
         App.HostBuilder.ConfigureServices((_, services) =>
             services.AddKeyedScoped<Func<TContext, Task>>($"{HttpConstants.Get}_{route}", (sp, key) => func(sp)));
+        */
 
         return this;
     }
@@ -279,6 +319,9 @@ public sealed class Builder<THandler, TContext>
     public Builder<THandler, TContext> MapOptions(string route, Func<IServiceProvider, Func<TContext, Task>> func)
     {
         App.EncodedRoutes[HttpConstants.Options].Add(route);
+
+        //AddKeyedScoped(func, $"{HttpConstants.Options}_{route}");
+
         App.HostBuilder.ConfigureServices((_, services) =>
             services.AddKeyedScoped<Func<TContext, Task>>($"{HttpConstants.Options}_{route}", (sp, key) => func(sp)));
 
@@ -299,9 +342,21 @@ public sealed class Builder<THandler, TContext>
             };
         }
 
+        //AddKeyedScoped(AsyncFunc, $"{HttpConstants.Options}_{route}");
+
         App.HostBuilder.ConfigureServices((_, services) =>
             services.AddKeyedScoped<Func<TContext, Task>>($"{HttpConstants.Options}_{route}", (sp, key) => AsyncFunc(sp)));
 
         return this;
+    }
+
+    private void AddKeyedScoped(Func<IServiceProvider, Func<TContext, Task>> func, string httpMethod, string route)
+    {
+        var fullRoute = $"{httpMethod}_{route}";
+        App.Routes.Add(fullRoute);
+
+        App.HostBuilder.ConfigureServices((_, services) =>
+            services.AddKeyedScoped<Func<TContext, Task>>
+                (fullRoute, (sp, key) => func(sp)));
     }
 }

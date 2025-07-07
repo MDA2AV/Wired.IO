@@ -30,10 +30,10 @@ public static class MiddlewareRegisterExtensions
     /// all earlier handlers and middleware have completed their logic.
     /// </remarks>
     /// <param name="builder">
-    /// The <see cref="Wired.IO.Builder.Builder{THandler, TContext}"/> to extend.
+    /// The <see cref="Builder{THandler, TContext}"/> to extend.
     /// </param>
     /// <returns>
-    /// The same <see cref="Wired.IO.Builder.Builder{THandler, TContext}"/> instance, allowing method chaining.
+    /// The same <see cref="Builder{THandler, TContext}"/> instance, allowing method chaining.
     /// </returns>
     public static Builder<WiredHttp11<Http11Context>, Http11Context> UseResponse(
         this Builder<WiredHttp11<Http11Context>, Http11Context> builder)
@@ -64,15 +64,15 @@ public static class MiddlewareRegisterExtensions
     /// <item><c>Transfer-Encoding: chunked</c> bodies</item>
     /// </list>
     ///
-    /// The raw request content is populated into <see cref="IHttpRequest.Content"/> on the current <see cref="Http11Context"/>.
+    /// The raw request content is populated into <see cref="IRequest.Content"/> on the current <see cref="Http11Context"/>.
     /// 
     /// This should be placed early in the middleware pipeline for any application expecting to access request bodies.
     /// </remarks>
     /// <param name="builder">
-    /// The <see cref="WebHostBuilder{THandler, TContext}"/> to extend.
+    /// The <see cref="Builder{THandler, TContext}"/> to extend.
     /// </param>
     /// <returns>
-    /// The same <see cref="WebHostBuilder{THandler, TContext}"/> instance for fluent configuration.
+    /// The same <see cref="Builder{THandler, TContext}"/> instance for fluent configuration.
     /// </returns>
     public static Builder<WiredHttp11<Http11Context>, Http11Context> ReadRequestBody(
         this Builder<WiredHttp11<Http11Context>, Http11Context> builder)

@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Net.Http;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.DependencyInjection;
 using Wired.IO.Protocol.Response;
 
@@ -47,10 +48,13 @@ public partial class App<TContext>
             return middleware[index](context, async (ctx) => await PipelineNoResponse(ctx, index + 1, middleware));
         }
 
-        var decodedRoute = MatchEndpoint(EncodedRoutes[context.Request.HttpMethod.ToUpper()], context.Request.Route);
+        var httpMethod = context.Request.HttpMethod.ToUpper();
+        var decodedRoute = MatchEndpoint(EncodedRoutes[httpMethod], context.Request.Route);
 
-        var endpoint = context.Scope.ServiceProvider
-            .GetRequiredKeyedService<Func<TContext, Task>>($"{context.Request.HttpMethod}_{decodedRoute}");
+        var endpoint = Endpoints[httpMethod + "_" + decodedRoute!];
+
+        //var endpoint = context.Scope.ServiceProvider
+        //    .GetRequiredKeyedService<Func<TContext, Task>>($"{context.Request.HttpMethod}_{decodedRoute}");
 
         return endpoint is null
             ? throw new InvalidOperationException("Unable to find the Invoke method on the resolved service.")

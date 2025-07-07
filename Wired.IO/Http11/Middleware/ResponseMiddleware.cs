@@ -92,7 +92,6 @@ public static class ResponseMiddleware
 
     #endregion
 
-
     #region Date Header Caching
 
     /// <summary>
@@ -118,7 +117,6 @@ public static class ResponseMiddleware
 #endif
 
     #endregion
-
 
     #region Public API
 

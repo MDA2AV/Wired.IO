@@ -13,7 +13,7 @@ namespace Wired.IO.Http11.Middleware;
 public static class RequestBodyMiddleware
 {
     /// <summary>
-    /// Handles reading the request body and assigning it to the context's <see cref="IHttpRequest.Content"/> property.
+    /// Handles reading the request body and assigning it to the context's <see cref="IRequest.Content"/> property.
     /// </summary>
     /// <param name="ctx">The <see cref="IContext"/> representing the current HTTP connection.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>

@@ -1,4 +1,6 @@
-﻿namespace Wired.IO.Mediator;
+﻿using Wired.IO.Protocol;
+
+namespace Wired.IO.Mediator;
 
 /// <summary>
 /// Defines a handler for a request
@@ -33,6 +35,18 @@ public interface IRequestHandler<in TRequest>
     Task Handle(TRequest request, CancellationToken cancellationToken);
 }
 
+public interface IContextHandler<in TContext>
+    where TContext : IContext
+{
+    /// <summary>
+    /// Handles a request
+    /// </summary>
+    /// <param name="context"></param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Response from the request</returns>
+    Task Handle(TContext context, CancellationToken cancellationToken);
+}
+
 /// <summary>
 /// Represents a wrapper around a generic request handler with a return value.
 /// Used to resolve and invoke the appropriate handler and pipeline from a non-generic context.
@@ -64,4 +78,17 @@ public interface IRequestHandlerWrapper
     /// <param name="cancellationToken">Token to monitor for cancellation.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     Task Handle(IBaseRequest baseRequest, IServiceProvider provider, CancellationToken cancellationToken);
+}
+
+public interface IContextHandlerWrapper<in TContext>
+    where TContext : IContext
+{
+    /// <summary>
+    /// Handles a context by resolving its handler and pipeline from the provided <see cref="IServiceProvider"/>.
+    /// </summary>
+    /// <param name="context">The context to handle.</param>
+    /// <param name="provider">The service provider for resolving dependencies.</param>
+    /// <param name="cancellationToken">Token to monitor for cancellation.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task Handle(TContext context, IServiceProvider provider, CancellationToken cancellationToken);
 }
