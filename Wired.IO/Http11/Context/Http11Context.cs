@@ -66,6 +66,26 @@ public class Http11Context : IContext
     /// </summary>
     public CancellationToken CancellationToken { get; set; }
 
+    private readonly List<IWiredEvent> _wiredEvents = new();
+
+    public IReadOnlyList<IWiredEvent> WiredEvents => _wiredEvents.AsReadOnly();
+
+    public void AddWiredEvent(IWiredEvent wiredEvent)
+    {
+        _wiredEvents.Add(wiredEvent);
+    }
+
+    public void ClearWiredEvents()
+    {
+        _wiredEvents.Clear();
+    }
+
+    public void Clear()
+    {
+        Response?.Clear();
+        Request.Clear();
+    }
+
     /// <summary>
     /// Disposes the context and its associated resources.
     /// </summary>
@@ -80,25 +100,5 @@ public class Http11Context : IContext
 
         Response?.Dispose();
         Request.Dispose();
-    }
-
-    public void Clear()
-    {
-        Response?.Clear();
-        Request.Clear();
-    }
-
-    private readonly List<IWiredEvent> _wiredEvents = new();
-
-    public IReadOnlyList<IWiredEvent> WiredEvents => _wiredEvents.AsReadOnly();
-
-    public void AddWiredEvent(IWiredEvent wiredEvent)
-    {
-        _wiredEvents.Add(wiredEvent);
-    }
-
-    public void ClearWiredEvents()
-    {
-        _wiredEvents.Clear();
     }
 }

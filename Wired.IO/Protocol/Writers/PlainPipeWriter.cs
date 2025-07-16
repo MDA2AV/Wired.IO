@@ -32,4 +32,9 @@ public sealed class PlainPipeWriter(PipeWriter writer)
 
         writer.Write(buffer);
     }
+
+    public async ValueTask FlushAsync()
+    {
+        await writer.FlushAsync();
+    }
 }

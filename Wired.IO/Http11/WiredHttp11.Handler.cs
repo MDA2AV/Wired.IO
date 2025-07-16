@@ -136,7 +136,9 @@ public partial class WiredHttp11<TContext>(IHandlerArgs args) : IHttpHandler<TCo
         }
     }
 
-#elif NET8_0
+#endif
+
+#if NET8_0
 
     public async Task HandleClientAsync(Stream stream, Func<TContext, Task> pipeline, CancellationToken stoppingToken)
     {
@@ -176,11 +178,11 @@ public partial class WiredHttp11<TContext>(IHandlerArgs args) : IHttpHandler<TCo
 
                 // Check if the request is for a static file
                 if (UseResources & IsRouteFile(context.Request.Route))
-                    await FlushResource(context.Writer, context.Request.Route);
+                    await FlushResource(context.Writer, context.Request.Route, stoppingToken);
                 else
                     await pipeline(context);
 
-                 context.Clear();
+                context.Clear();
 
                 // For non keep-alive connections, break the loop
                 if (context.Request.ConnectionType is not ConnectionType.KeepAlive &&

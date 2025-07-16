@@ -1,10 +1,126 @@
 {
   "Version": 1,
-  "WorkspaceRootPath": "E:\\VS\\Wired.IO\\",
+  "WorkspaceRootPath": "E:\\VS\\Nova pasta\\Wired.IO\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|e:\\vs\\wired.io\\wired.io\\wired.io.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "AbsoluteMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|e:\\vs\\nova pasta\\wired.io\\wired.io\\app\\app.host.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|solutionrelative:wired.io\\app\\app.host.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|e:\\vs\\nova pasta\\wired.io\\wired.io\\app\\app.engine.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|solutionrelative:wired.io\\app\\app.engine.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|e:\\vs\\nova pasta\\wired.io\\wired.io\\app\\app.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|solutionrelative:wired.io\\app\\app.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|e:\\vs\\nova pasta\\wired.io\\wired.io\\app\\app.clienthandling.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|solutionrelative:wired.io\\app\\app.clienthandling.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|e:\\vs\\nova pasta\\wired.io\\wired.io\\app\\app.builder.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|solutionrelative:wired.io\\app\\app.builder.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|e:\\vs\\nova pasta\\wired.io\\wired.io\\builder\\builder.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|solutionrelative:wired.io\\builder\\builder.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|e:\\vs\\nova pasta\\wired.io\\wired.io\\utilities\\middlewareutilities.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|solutionrelative:wired.io\\utilities\\middlewareutilities.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|e:\\vs\\nova pasta\\wired.io\\wired.io\\app\\app.pipeline.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|solutionrelative:wired.io\\app\\app.pipeline.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|e:\\vs\\nova pasta\\wired.io\\wired.io\\wiredevents\\depdendencyinjectionextensions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|solutionrelative:wired.io\\wiredevents\\depdendencyinjectionextensions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{9FF83B78-9496-4B66-AAF4-AC49BE4D81BF}|Wired.IO.Playground\\Wired.IO.Playground.csproj|e:\\vs\\nova pasta\\wired.io\\wired.io.playground\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{9FF83B78-9496-4B66-AAF4-AC49BE4D81BF}|Wired.IO.Playground\\Wired.IO.Playground.csproj|solutionrelative:wired.io.playground\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|e:\\vs\\nova pasta\\wired.io\\wired.io\\mediator\\dependencyinjectionextensions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|solutionrelative:wired.io\\mediator\\dependencyinjectionextensions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{9FF83B78-9496-4B66-AAF4-AC49BE4D81BF}|Wired.IO.Playground\\Wired.IO.Playground.csproj|e:\\vs\\nova pasta\\wired.io\\wired.io.playground\\examplewiredevent.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{9FF83B78-9496-4B66-AAF4-AC49BE4D81BF}|Wired.IO.Playground\\Wired.IO.Playground.csproj|solutionrelative:wired.io.playground\\examplewiredevent.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|e:\\vs\\nova pasta\\wired.io\\wired.io\\wired.io.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
       "RelativeMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|solutionrelative:wired.io\\wired.io.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{9FF83B78-9496-4B66-AAF4-AC49BE4D81BF}|Wired.IO.Playground\\Wired.IO.Playground.csproj|e:\\vs\\nova pasta\\wired.io\\wired.io.playground\\wired.io.playground.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{9FF83B78-9496-4B66-AAF4-AC49BE4D81BF}|Wired.IO.Playground\\Wired.IO.Playground.csproj|solutionrelative:wired.io.playground\\wired.io.playground.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|e:\\vs\\nova pasta\\wired.io\\wired.io\\http11\\wiredhttp11.resources.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|solutionrelative:wired.io\\http11\\wiredhttp11.resources.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|e:\\vs\\nova pasta\\wired.io\\wired.io\\http11\\wiredhttp11.handler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|solutionrelative:wired.io\\http11\\wiredhttp11.handler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|e:\\vs\\nova pasta\\wired.io\\wired.io\\http11\\wiredhttp11.parsing.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|solutionrelative:wired.io\\http11\\wiredhttp11.parsing.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|e:\\vs\\nova pasta\\wired.io\\wired.io\\http11\\middleware\\responsemiddleware.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|solutionrelative:wired.io\\http11\\middleware\\responsemiddleware.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|e:\\vs\\nova pasta\\wired.io\\wired.io\\http11\\middleware\\middlewareregisterextensions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|solutionrelative:wired.io\\http11\\middleware\\middlewareregisterextensions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|e:\\vs\\nova pasta\\wired.io\\wired.io\\http11\\middleware\\requestbodymiddleware.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|solutionrelative:wired.io\\http11\\middleware\\requestbodymiddleware.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|e:\\vs\\nova pasta\\wired.io\\wired.io\\protocol\\writers\\chunkedpipewriter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|solutionrelative:wired.io\\protocol\\writers\\chunkedpipewriter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|e:\\vs\\nova pasta\\wired.io\\wired.io\\http11\\context\\http11context.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|solutionrelative:wired.io\\http11\\context\\http11context.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|e:\\vs\\nova pasta\\wired.io\\wired.io\\protocol\\icontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|solutionrelative:wired.io\\protocol\\icontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|e:\\vs\\nova pasta\\wired.io\\wired.io\\http11\\response\\content\\iresponsecontent.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|solutionrelative:wired.io\\http11\\response\\content\\iresponsecontent.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|e:\\vs\\nova pasta\\wired.io\\wired.io\\http11\\response\\content\\jsoncontent.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|solutionrelative:wired.io\\http11\\response\\content\\jsoncontent.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|e:\\vs\\nova pasta\\wired.io\\wired.io\\http11\\response\\content\\stringcontent.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|solutionrelative:wired.io\\http11\\response\\content\\stringcontent.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{9FF83B78-9496-4B66-AAF4-AC49BE4D81BF}|Wired.IO.Playground\\Wired.IO.Playground.csproj|e:\\vs\\nova pasta\\wired.io\\wired.io.playground\\customresponsecontent.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{9FF83B78-9496-4B66-AAF4-AC49BE4D81BF}|Wired.IO.Playground\\Wired.IO.Playground.csproj|solutionrelative:wired.io.playground\\customresponsecontent.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|e:\\vs\\nova pasta\\wired.io\\wired.io\\http11\\response\\content\\rawcontent.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|solutionrelative:wired.io\\http11\\response\\content\\rawcontent.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|e:\\vs\\nova pasta\\wired.io\\wired.io\\protocol\\writers\\plainpipewriter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|solutionrelative:wired.io\\protocol\\writers\\plainpipewriter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|e:\\vs\\nova pasta\\wired.io\\wired.io\\protocol\\response\\iresponse.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F0BB2441-B4AE-443C-8814-DD824551A74F}|Wired.IO\\Wired.IO.csproj|solutionrelative:wired.io\\protocol\\response\\iresponse.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -14,7 +130,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 1,
+          "SelectedChildIndex": 14,
           "Children": [
             {
               "$type": "Bookmark",
@@ -22,13 +138,390 @@
             },
             {
               "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "MiddlewareUtilities.cs",
+              "DocumentMoniker": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\Utilities\\MiddlewareUtilities.cs",
+              "RelativeDocumentMoniker": "Wired.IO\\Utilities\\MiddlewareUtilities.cs",
+              "ToolTip": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\Utilities\\MiddlewareUtilities.cs",
+              "RelativeToolTip": "Wired.IO\\Utilities\\MiddlewareUtilities.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAQAAAAdAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-15T09:58:53.455Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "DepdendencyInjectionExtensions.cs",
+              "DocumentMoniker": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\WiredEvents\\DepdendencyInjectionExtensions.cs",
+              "RelativeDocumentMoniker": "Wired.IO\\WiredEvents\\DepdendencyInjectionExtensions.cs",
+              "ToolTip": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\WiredEvents\\DepdendencyInjectionExtensions.cs",
+              "RelativeToolTip": "Wired.IO\\WiredEvents\\DepdendencyInjectionExtensions.cs",
+              "ViewState": "AgIAABkAAAAAAAAAAAAAACsAAAAlAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-15T09:47:46.287Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 13,
+              "Title": "Wired.IO.Playground",
+              "DocumentMoniker": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO.Playground\\Wired.IO.Playground.csproj",
+              "RelativeDocumentMoniker": "Wired.IO.Playground\\Wired.IO.Playground.csproj",
+              "ToolTip": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO.Playground\\Wired.IO.Playground.csproj",
+              "RelativeToolTip": "Wired.IO.Playground\\Wired.IO.Playground.csproj",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2025-07-14T21:44:43.647Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "App.ClientHandling.cs",
+              "DocumentMoniker": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\App\\App.ClientHandling.cs",
+              "RelativeDocumentMoniker": "Wired.IO\\App\\App.ClientHandling.cs",
+              "ToolTip": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\App\\App.ClientHandling.cs",
+              "RelativeToolTip": "Wired.IO\\App\\App.ClientHandling.cs",
+              "ViewState": "AgIAAAsAAAAAAAAAAAAQwF4AAAAqAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-09T02:23:06.596Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 22,
+              "Title": "IContext.cs",
+              "DocumentMoniker": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\Protocol\\IContext.cs",
+              "RelativeDocumentMoniker": "Wired.IO\\Protocol\\IContext.cs",
+              "ToolTip": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\Protocol\\IContext.cs",
+              "RelativeToolTip": "Wired.IO\\Protocol\\IContext.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABMAAAASAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-09T02:12:58.889Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 14,
+              "Title": "WiredHttp11.Resources.cs",
+              "DocumentMoniker": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\Http11\\WiredHttp11.Resources.cs",
+              "RelativeDocumentMoniker": "Wired.IO\\Http11\\WiredHttp11.Resources.cs",
+              "ToolTip": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\Http11\\WiredHttp11.Resources.cs",
+              "RelativeToolTip": "Wired.IO\\Http11\\WiredHttp11.Resources.cs",
+              "ViewState": "AgIAAJ8AAAAAAAAAAAAowK8AAAAlAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-09T02:12:58.199Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 21,
+              "Title": "Http11Context.cs",
+              "DocumentMoniker": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\Http11\\Context\\Http11Context.cs",
+              "RelativeDocumentMoniker": "Wired.IO\\Http11\\Context\\Http11Context.cs",
+              "ToolTip": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\Http11\\Context\\Http11Context.cs",
+              "RelativeToolTip": "Wired.IO\\Http11\\Context\\Http11Context.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAEAAAAQAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-09T02:12:57.057Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "App.Pipeline.cs",
+              "DocumentMoniker": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\App\\App.Pipeline.cs",
+              "RelativeDocumentMoniker": "Wired.IO\\App\\App.Pipeline.cs",
+              "ToolTip": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\App\\App.Pipeline.cs",
+              "RelativeToolTip": "Wired.IO\\App\\App.Pipeline.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-09T01:23:27.632Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 19,
+              "Title": "RequestBodyMiddleware.cs",
+              "DocumentMoniker": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\Http11\\Middleware\\RequestBodyMiddleware.cs",
+              "RelativeDocumentMoniker": "Wired.IO\\Http11\\Middleware\\RequestBodyMiddleware.cs",
+              "ToolTip": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\Http11\\Middleware\\RequestBodyMiddleware.cs",
+              "RelativeToolTip": "Wired.IO\\Http11\\Middleware\\RequestBodyMiddleware.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAcAAAAlAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-08T01:56:08.766Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 18,
+              "Title": "MiddlewareRegisterExtensions.cs",
+              "DocumentMoniker": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\Http11\\Middleware\\MiddlewareRegisterExtensions.cs",
+              "RelativeDocumentMoniker": "Wired.IO\\Http11\\Middleware\\MiddlewareRegisterExtensions.cs",
+              "ToolTip": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\Http11\\Middleware\\MiddlewareRegisterExtensions.cs",
+              "RelativeToolTip": "Wired.IO\\Http11\\Middleware\\MiddlewareRegisterExtensions.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAAwAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-08T01:22:15.789Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "App.cs",
+              "DocumentMoniker": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\App\\App.cs",
+              "RelativeDocumentMoniker": "Wired.IO\\App\\App.cs",
+              "ToolTip": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\App\\App.cs",
+              "RelativeToolTip": "Wired.IO\\App\\App.cs",
+              "ViewState": "AgIAAAoAAAAAAAAAAAAswC8AAAA/AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-08T01:06:23.306Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 10,
+              "Title": "DependencyInjectionExtensions.cs",
+              "DocumentMoniker": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\Mediator\\DependencyInjectionExtensions.cs",
+              "RelativeDocumentMoniker": "Wired.IO\\Mediator\\DependencyInjectionExtensions.cs",
+              "ToolTip": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\Mediator\\DependencyInjectionExtensions.cs",
+              "RelativeToolTip": "Wired.IO\\Mediator\\DependencyInjectionExtensions.cs",
+              "ViewState": "AgIAAAMAAAAAAAAAAAAqwBEAAABIAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-08T01:01:39.324Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "App.Engine.cs",
+              "DocumentMoniker": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\App\\App.Engine.cs",
+              "RelativeDocumentMoniker": "Wired.IO\\App\\App.Engine.cs",
+              "ToolTip": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\App\\App.Engine.cs",
+              "RelativeToolTip": "Wired.IO\\App\\App.Engine.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAIAAAAjAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-07T23:34:06.085Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
               "DocumentIndex": 0,
-              "Title": "Wired.IO",
-              "DocumentMoniker": "E:\\VS\\Wired.IO\\Wired.IO\\Wired.IO.csproj",
+              "Title": "App.Host.cs",
+              "DocumentMoniker": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\App\\App.Host.cs",
+              "RelativeDocumentMoniker": "Wired.IO\\App\\App.Host.cs",
+              "ToolTip": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\App\\App.Host.cs",
+              "RelativeToolTip": "Wired.IO\\App\\App.Host.cs",
+              "ViewState": "AgIAAAMAAAAAAAAAAAAAABEAAABIAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-07T22:04:48.269Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "Builder.cs",
+              "DocumentMoniker": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\Builder\\Builder.cs",
+              "RelativeDocumentMoniker": "Wired.IO\\Builder\\Builder.cs",
+              "ToolTip": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\Builder\\Builder.cs",
+              "RelativeToolTip": "Wired.IO\\Builder\\Builder.cs",
+              "ViewState": "AgIAAHwAAAAAAAAAAAAUwAwAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-07T21:59:34.725Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "App.Builder.cs",
+              "DocumentMoniker": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\App\\App.Builder.cs",
+              "RelativeDocumentMoniker": "Wired.IO\\App\\App.Builder.cs",
+              "ToolTip": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\App\\App.Builder.cs",
+              "RelativeToolTip": "Wired.IO\\App\\App.Builder.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAEoAAAASAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-07T21:34:36.928Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 27,
+              "Title": "RawContent.cs",
+              "DocumentMoniker": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\Http11\\Response\\Content\\RawContent.cs",
+              "RelativeDocumentMoniker": "Wired.IO\\Http11\\Response\\Content\\RawContent.cs",
+              "ToolTip": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\Http11\\Response\\Content\\RawContent.cs",
+              "RelativeToolTip": "Wired.IO\\Http11\\Response\\Content\\RawContent.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABAAAAAgAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-07T19:42:22.912Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 29,
+              "Title": "IResponse.cs",
+              "DocumentMoniker": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\Protocol\\Response\\IResponse.cs",
+              "RelativeDocumentMoniker": "Wired.IO\\Protocol\\Response\\IResponse.cs",
+              "ToolTip": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\Protocol\\Response\\IResponse.cs",
+              "RelativeToolTip": "Wired.IO\\Protocol\\Response\\IResponse.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAADAAAAAWAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-07T19:37:39.541Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 24,
+              "Title": "JsonContent.cs",
+              "DocumentMoniker": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\Http11\\Response\\Content\\JsonContent.cs",
+              "RelativeDocumentMoniker": "Wired.IO\\Http11\\Response\\Content\\JsonContent.cs",
+              "ToolTip": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\Http11\\Response\\Content\\JsonContent.cs",
+              "RelativeToolTip": "Wired.IO\\Http11\\Response\\Content\\JsonContent.cs",
+              "ViewState": "AgIAAAEAAAAAAAAAAEBVwAEAAAAQAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-07T19:35:19.804Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 28,
+              "Title": "PlainPipeWriter.cs",
+              "DocumentMoniker": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\Protocol\\Writers\\PlainPipeWriter.cs",
+              "RelativeDocumentMoniker": "Wired.IO\\Protocol\\Writers\\PlainPipeWriter.cs",
+              "ToolTip": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\Protocol\\Writers\\PlainPipeWriter.cs",
+              "RelativeToolTip": "Wired.IO\\Protocol\\Writers\\PlainPipeWriter.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAAUAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-07T19:34:32.787Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 23,
+              "Title": "IResponseContent.cs",
+              "DocumentMoniker": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\Http11\\Response\\Content\\IResponseContent.cs",
+              "RelativeDocumentMoniker": "Wired.IO\\Http11\\Response\\Content\\IResponseContent.cs",
+              "ToolTip": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\Http11\\Response\\Content\\IResponseContent.cs",
+              "RelativeToolTip": "Wired.IO\\Http11\\Response\\Content\\IResponseContent.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-07T19:27:36.936Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 20,
+              "Title": "ChunkedPipeWriter.cs",
+              "DocumentMoniker": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\Protocol\\Writers\\ChunkedPipeWriter.cs",
+              "RelativeDocumentMoniker": "Wired.IO\\Protocol\\Writers\\ChunkedPipeWriter.cs",
+              "ToolTip": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\Protocol\\Writers\\ChunkedPipeWriter.cs",
+              "RelativeToolTip": "Wired.IO\\Protocol\\Writers\\ChunkedPipeWriter.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAIAAAAPAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-07T16:59:17.029Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 16,
+              "Title": "WiredHttp11.Parsing.cs",
+              "DocumentMoniker": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\Http11\\WiredHttp11.Parsing.cs",
+              "RelativeDocumentMoniker": "Wired.IO\\Http11\\WiredHttp11.Parsing.cs",
+              "ToolTip": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\Http11\\WiredHttp11.Parsing.cs",
+              "RelativeToolTip": "Wired.IO\\Http11\\WiredHttp11.Parsing.cs",
+              "ViewState": "AgIAAAIAAAAAAAAAAAAmwBAAAAAIAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-07T16:53:35.751Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 15,
+              "Title": "WiredHttp11.Handler.cs",
+              "DocumentMoniker": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\Http11\\WiredHttp11.Handler.cs",
+              "RelativeDocumentMoniker": "Wired.IO\\Http11\\WiredHttp11.Handler.cs",
+              "ToolTip": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\Http11\\WiredHttp11.Handler.cs",
+              "RelativeToolTip": "Wired.IO\\Http11\\WiredHttp11.Handler.cs",
+              "ViewState": "AgIAADEAAAAAAAAAAAASwM0AAAAJAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-07T16:52:56.447Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 11,
+              "Title": "ExampleWiredEvent.cs",
+              "DocumentMoniker": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO.Playground\\ExampleWiredEvent.cs",
+              "RelativeDocumentMoniker": "Wired.IO.Playground\\ExampleWiredEvent.cs",
+              "ToolTip": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO.Playground\\ExampleWiredEvent.cs",
+              "RelativeToolTip": "Wired.IO.Playground\\ExampleWiredEvent.cs",
+              "ViewState": "AgIAAAIAAAAAAAAAAAD4vxAAAAAWAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-07T16:45:48.882Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 17,
+              "Title": "ResponseMiddleware.cs",
+              "DocumentMoniker": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\Http11\\Middleware\\ResponseMiddleware.cs",
+              "RelativeDocumentMoniker": "Wired.IO\\Http11\\Middleware\\ResponseMiddleware.cs",
+              "ToolTip": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\Http11\\Middleware\\ResponseMiddleware.cs",
+              "RelativeToolTip": "Wired.IO\\Http11\\Middleware\\ResponseMiddleware.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA0AAAACAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-07T16:41:06.459Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 25,
+              "Title": "StringContent.cs",
+              "DocumentMoniker": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\Http11\\Response\\Content\\StringContent.cs",
+              "RelativeDocumentMoniker": "Wired.IO\\Http11\\Response\\Content\\StringContent.cs",
+              "ToolTip": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\Http11\\Response\\Content\\StringContent.cs",
+              "RelativeToolTip": "Wired.IO\\Http11\\Response\\Content\\StringContent.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAEAAAAQAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-07T16:39:59.383Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 26,
+              "Title": "CustomResponseContent.cs",
+              "DocumentMoniker": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO.Playground\\CustomResponseContent.cs",
+              "RelativeDocumentMoniker": "Wired.IO.Playground\\CustomResponseContent.cs",
+              "ToolTip": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO.Playground\\CustomResponseContent.cs",
+              "RelativeToolTip": "Wired.IO.Playground\\CustomResponseContent.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABkAAAAFAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-07T16:33:12.131Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "Program.cs",
+              "DocumentMoniker": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO.Playground\\Program.cs",
+              "RelativeDocumentMoniker": "Wired.IO.Playground\\Program.cs",
+              "ToolTip": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO.Playground\\Program.cs",
+              "RelativeToolTip": "Wired.IO.Playground\\Program.cs",
+              "ViewState": "AgIAADkAAAAAAAAAAAAAALsAAAAHAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-07T14:45:03.249Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 12,
+              "Title": "Wired.IO.csproj",
+              "DocumentMoniker": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\Wired.IO.csproj",
               "RelativeDocumentMoniker": "Wired.IO\\Wired.IO.csproj",
-              "ToolTip": "E:\\VS\\Wired.IO\\Wired.IO\\Wired.IO.csproj",
+              "ToolTip": "E:\\VS\\Nova pasta\\Wired.IO\\Wired.IO\\Wired.IO.csproj",
               "RelativeToolTip": "Wired.IO\\Wired.IO.csproj",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAAnAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAMAAAAcAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
               "WhenOpened": "2025-07-07T10:47:32.322Z",
               "EditorCaption": ""

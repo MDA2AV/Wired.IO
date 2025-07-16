@@ -1,14 +1,11 @@
-﻿using System;
-using System.Buffers;
-using System.Net.Security;
+﻿using System.Buffers;
 using System.Reflection;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Console;
 using Wired.IO.App;
 using Wired.IO.Common.Attributes;
-using Wired.IO.Http11;
 using Wired.IO.Http11.Context;
 using Wired.IO.Http11.Response.Content;
 using Wired.IO.Http11.Websockets;
@@ -18,43 +15,41 @@ using Wired.IO.Protocol;
 using Wired.IO.Protocol.Response;
 using Wired.IO.WiredEvents;
 
-var builder = App.CreateBuilder(); // Create a default builder, assumes HTTP/1.1
+var serviceCollection = new ServiceCollection();
 
-builder.App.HostBuilder
-    .ConfigureLogging(logging =>
+serviceCollection
+    .AddScoped<DependencyService>()
+    .AddWiredEventHandler<ExampleWiredEvent, ExampleWiredEventHandler>()
+    .AddScoped(typeof(IPipelineBehavior<>), typeof(ExampleBehavior<>))
+    .AddScoped(typeof(IPipelineBehaviorNoResponse<RequestQuery3>), typeof(ExampleBehavior8<RequestQuery3>))
+    .AddScoped(typeof(IPipelineBehavior<,>), typeof(ExampleBehavior<,>));
+
+var builder = WiredApp.CreateBuilder(); // Create a default builder, assumes HTTP/1.1
+
+builder.Services
+    .AddLogging(loggingBuilder =>
     {
-        logging.ClearProviders();
-        logging.AddConsole();
-        logging.SetMinimumLevel(LogLevel.Trace); // Set the minimum log level
+        loggingBuilder
+            .ClearProviders()
+            .SetMinimumLevel(LogLevel.Trace)
+            .AddConsole();
     })
-    .ConfigureServices((_, services) =>
-    {
-        services
-            .AddScoped<DependencyService>()
+    .AddScoped<DependencyService>()
+    .AddWiredEventHandler<ExampleWiredEvent, ExampleWiredEventHandler>()
+    .AddScoped(typeof(IPipelineBehavior<>), typeof(ExampleBehavior<>))
+    .AddScoped(typeof(IPipelineBehaviorNoResponse<RequestQuery3>), typeof(ExampleBehavior8<RequestQuery3>))
+    .AddScoped(typeof(IPipelineBehavior<,>), typeof(ExampleBehavior<,>));
 
-            .AddWiredEventHandler<ExampleWiredEvent, ExampleWiredEventHandler>()
-
-            .AddScoped(typeof(IPipelineBehavior<>), typeof(ExampleBehavior<>))
-            .AddScoped(typeof(IPipelineBehaviorNoResponse<RequestQuery3>), typeof(ExampleBehavior8<RequestQuery3>))
-            .AddScoped(typeof(IPipelineBehavior<,>), typeof(ExampleBehavior<,>));
-    });
-
-var app = builder
-    /*
-    .UseTls(new SslServerAuthenticationOptions
-    {
-        // Define your SSL options here
-        // Such as load server certificate,
-        // Load CA certificate,
-        // RemoteCertificateValidationCallback for mutual TLS, etc.
-    })
-    */
+builder
     .AddWiredEvents(dispatchContextWiredEvents: false)
     .AddHandlers(Assembly.GetExecutingAssembly())
     .Port(5000) // Configured to http://localhost:5000
     .MapGet("/quick-start", scope => async httpContext =>
     {
         //httpContext.AddWiredEvent(new ExampleWiredEvent("Creating a wired event"));
+
+        var service = scope.GetRequiredService<DependencyService>();
+        service.Handle();
 
         var entity = new Entity();
         entity.DoSomething();
@@ -64,7 +59,7 @@ var app = builder
             .Status(ResponseStatus.Ok)
             .Type("application/json")
             .Content(new JsonContent(
-                new { Name = "Alice", Age = 30 }, 
+                new { Name = "Alice", Age = 30 },
                 JsonSerializerOptions.Default));
 
         var wiredEventDispatcher = scope.GetRequiredService<Func<IEnumerable<IWiredEvent>, Task>>();
@@ -74,7 +69,9 @@ var app = builder
     .MapGet("/quick-start2", scope => async httpContext =>
     {
         await httpContext
-            .Writer.WriteAsync("HTTP/1.1 200 OK\r\nContent-Length:0\r\nContent-Type: application/json\r\nConnection: keep-alive\r\n\r\n"u8.ToArray());
+            .Writer.WriteAsync(
+                "HTTP/1.1 200 OK\r\nContent-Length:0\r\nContent-Type: application/json\r\nConnection: keep-alive\r\n\r\n"u8
+                    .ToArray());
     })
     .MapGet("/quick-start3", scope => async httpContext =>
     {
@@ -161,11 +158,19 @@ var app = builder
             .Type("application/json")
             .Content(new JsonContent(result, JsonSerializerOptions.Default));
     })
-.UseMiddleware(scope => async (context, next) =>
+    .MapGet("/custom-content", scope => async context =>
     {
-        Console.WriteLine("Error Handling Middleware");
-
+        context
+            .Respond()
+            .Status(ResponseStatus.Ok)
+            .Type("text/plain")
+            .Content(new CustomResponseContent("response data"u8.ToArray()));
+    })
+    .UseMiddleware(scope => async (context, next) =>
+    {
         var logger = scope.GetRequiredService<ILogger<Program>>();
+
+        logger.LogInformation("Middleware");
 
         try
         {
@@ -180,18 +185,25 @@ var app = builder
                 .Type("application/json")
                 .Content(new JsonContent(new { Error = e.Message }, JsonSerializerOptions.Default));
         }
-    })
+    });
 
-    .Build();
+var serviceProvider = serviceCollection.BuildServiceProvider();
+
+var app = builder.Build();
 
 await app.RunAsync();
 
 public class DependencyService(ILogger<DependencyService> logger) : IDisposable
 {
-    public void Handle() =>
+    public void Handle()
+    {
         logger.LogInformation($"{nameof(DependencyService)} was handled.");
-    public void Dispose() =>
+    }
+
+    public void Dispose()
+    {
         logger.LogInformation($"{nameof(DependencyService)} was disposed.");
+    }
 }
 
 public class RequestHandlerExample(Func<IEnumerable<IWiredEvent>, Task> wiredEventDispatcher) 

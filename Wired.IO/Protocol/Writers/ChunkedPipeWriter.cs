@@ -35,6 +35,11 @@ public sealed class ChunkedPipeWriter(PipeWriter writer)
         WriteChunkOptimized(buffer);
     }
 
+    public async ValueTask FlushAsync()
+    {
+        await writer.FlushAsync();
+    }
+
 #if NET9_0_OR_GREATER
     /// <summary>
     /// Writes a single chunk asynchronously using the provided buffer.
@@ -89,7 +94,7 @@ public sealed class ChunkedPipeWriter(PipeWriter writer)
     /// This must be called once all chunked content has been written,
     /// otherwise the client may hang waiting for more data.
     /// </remarks>
-    public void FinishAsync()
+    public void Finish()
     {
         writer.Write(FinalChunk.Span);
     }

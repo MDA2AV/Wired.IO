@@ -1,43 +1,22 @@
-﻿using System.Net.Http;
+﻿using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.DependencyInjection;
-using Wired.IO.Protocol.Response;
 
 namespace Wired.IO.App;
 
-public partial class App<TContext>
+public partial class WiredApp<TContext>
 {
-    public Task<IResponse> Pipeline(
-        TContext context,
-        int index,
-        IList<Func<TContext, Func<TContext, Task<IResponse>>, Task<IResponse>>> middleware)
-    {
-        if (index < middleware.Count)
-        {
-            return middleware[index](context, async (ctx) => await Pipeline(ctx, index + 1, middleware));
-        }
-
-        var decodedRoute = MatchEndpoint(EncodedRoutes[context.Request.HttpMethod.ToUpper()], context.Request.Route);
-
-        var endpoint = context.Scope.ServiceProvider
-            .GetRequiredKeyedService<Func<TContext, Task<IResponse>>>(
-                $"{context.Request.HttpMethod}_{decodedRoute}");
-
-        return endpoint.Invoke(context);
-    }
-
-    public async Task<IResponse> Pipeline(TContext context)
-    {
-        var middleware = InternalHost.Services
-            .GetServices<Func<TContext, Func<TContext, Task<IResponse>>, Task<IResponse>>>()
-            .ToList();
-
-        await using var scope = InternalHost.Services.CreateAsyncScope();
-        context.Scope = scope;
-
-        return await Pipeline(context, 0, middleware);
-    }
-
+    /// <summary>
+    /// Executes the middleware pipeline recursively for a given request context.
+    /// Once all middleware are processed, invokes the matched endpoint.
+    /// </summary>
+    /// <param name="context">The current request context.</param>
+    /// <param name="index">The index of the current middleware being executed.</param>
+    /// <param name="middleware">The list of middleware functions to invoke.</param>
+    /// <returns>A task that completes when the pipeline has finished executing.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when no endpoint is found for the resolved route.
+    /// </exception>
     public Task PipelineNoResponse(
         TContext context,
         int index,
@@ -50,34 +29,68 @@ public partial class App<TContext>
 
         var httpMethod = context.Request.HttpMethod.ToUpper();
         var decodedRoute = MatchEndpoint(EncodedRoutes[httpMethod], context.Request.Route);
-
         var endpoint = Endpoints[httpMethod + "_" + decodedRoute!];
-
-        //var endpoint = context.Scope.ServiceProvider
-        //    .GetRequiredKeyedService<Func<TContext, Task>>($"{context.Request.HttpMethod}_{decodedRoute}");
 
         return endpoint is null
             ? throw new InvalidOperationException("Unable to find the Invoke method on the resolved service.")
             : endpoint.Invoke(context);
     }
 
+    /// <summary>
+    /// Entry point for processing an incoming request through the middleware pipeline.
+    /// Creates a scoped service provider for the request and invokes <see cref="PipelineNoResponse(TContext, int, IList{Func{TContext, Func{TContext, Task}, Task}})"/>.
+    /// </summary>
+    /// <param name="context">The request context to process.</param>
+    /// <returns>A task that completes when request processing is finished.</returns>
     public async Task PipelineNoResponse(TContext context)
     {
-        await using var scope = InternalHost.Services.CreateAsyncScope();
+        await using var scope = Services.CreateAsyncScope();
         context.Scope = scope;
 
         await PipelineNoResponse(context, 0, Middleware);
     }
 
-    public static string? MatchEndpoint(HashSet<string> hashSet, string input)
+    private static readonly ConcurrentDictionary<string, string?> RouteMatchCache = new();
+    private static readonly ConcurrentDictionary<string, Regex> RouteRegexCache = new();
+
+    /// <summary>
+    /// Matches a request route against a set of encoded patterns using cached regular expressions.
+    /// If a match is found, the matching pattern is returned and cached.
+    /// </summary>
+    /// <param name="patterns">A set of registered route patterns for the current HTTP method.</param>
+    /// <param name="input">The actual route string from the request.</param>
+    /// <returns>
+    /// The matching pattern if found; otherwise, <c>null</c>.
+    /// </returns>
+    public static string? MatchEndpoint(HashSet<string> patterns, string input)
     {
-        return (from entry in hashSet
-                let pattern = ConvertToRegex(entry) // Convert route pattern to regex
-                where Regex.IsMatch(input, pattern) // Check if input matches the regex
-                select entry) // Select the matching pattern
-            .FirstOrDefault(); // Return the first match or null if no match is found
+        // Check if we've seen this exact input before
+        if (RouteMatchCache.TryGetValue(input, out var cachedPattern))
+            return cachedPattern;
+
+        foreach (var pattern in patterns)
+        {
+            var regex = RouteRegexCache.GetOrAdd(pattern, static p =>
+                new Regex(ConvertToRegex(p), RegexOptions.Compiled | RegexOptions.CultureInvariant));
+
+            if (!regex.IsMatch(input)) 
+                continue;
+
+            // Cache for next time
+            RouteMatchCache[input] = pattern;
+            return pattern;
+        }
+
+        // No match found — cache null
+        RouteMatchCache[input] = null;
+        return null;
     }
 
+    /// <summary>
+    /// Converts a route pattern with placeholders (e.g., <c>/users/:id</c>) into a regular expression pattern.
+    /// </summary>
+    /// <param name="pattern">The route pattern containing optional placeholders (e.g., <c>:id</c>).</param>
+    /// <returns>A regex string that matches the route with placeholders replaced by wildcards.</returns>
     public static string ConvertToRegex(string pattern)
     {
         // Replace placeholders like ":id" with a regex pattern that matches any non-slash characters

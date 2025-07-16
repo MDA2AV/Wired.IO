@@ -41,17 +41,28 @@ public static class MiddlewareRegisterExtensions
         Func<IServiceProvider, Func<Http11Context, Func<Http11Context, Task>, Task>> func =
             scope => async (ctx, next) =>
             {
-                //Console.WriteLine("UseResponse");
-
                 await next(ctx);
                 await ResponseMiddleware.HandleAsync(ctx);
             };
 
-        builder.App.HostBuilder.ConfigureServices((_, services) =>
-            services.AddScoped<Func<Http11Context, Func<Http11Context, Task>, Task>>(func));
+        builder.Services.AddScoped<Func<Http11Context, Func<Http11Context, Task>, Task>>(func);
 
         return builder;
     }
+    public static IServiceCollection UseResponse(this IServiceCollection services)
+    {
+        Func<Http11Context, Func<Http11Context, Task>, Task> Func(IServiceProvider scope) =>
+            async (ctx, next) =>
+            {
+                await next(ctx);
+                await ResponseMiddleware.HandleAsync(ctx);
+            };
+
+        services.AddScoped<Func<Http11Context, Func<Http11Context, Task>, Task>>(Func);
+
+        return services;
+    }
+
 
     /// <summary>
     /// Adds request body parsing middleware to the pipeline.
@@ -80,15 +91,26 @@ public static class MiddlewareRegisterExtensions
         Func<IServiceProvider, Func<Http11Context, Func<Http11Context, Task>, Task>> func =
             scope => async (ctx, next) =>
             {
-                //Console.WriteLine("ReadRequestBody");
-
                 await RequestBodyMiddleware.HandleAsync(ctx);
                 await next(ctx);
             };
 
-        builder.App.HostBuilder.ConfigureServices((_, services) =>
-            services.AddScoped<Func<Http11Context, Func<Http11Context, Task>, Task>>(func));
+        builder.Services.AddScoped<Func<Http11Context, Func<Http11Context, Task>, Task>>(func);
 
         return builder;
+    }
+    public static IServiceCollection ReadRequestBody(
+        this IServiceCollection services)
+    {
+        Func<Http11Context, Func<Http11Context, Task>, Task> Func(IServiceProvider scope) =>
+            async (ctx, next) =>
+            {
+                await RequestBodyMiddleware.HandleAsync(ctx);
+                await next(ctx);
+            };
+
+        services.AddScoped<Func<Http11Context, Func<Http11Context, Task>, Task>>(Func);
+
+        return services;
     }
 }

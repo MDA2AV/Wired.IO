@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.IO.Pipelines;
 using Wired.IO.Protocol.Writers;
 
 namespace Wired.IO.Http11.Response.Content;
@@ -13,12 +9,12 @@ public sealed class RawContent(ReadOnlyMemory<byte> data) : IResponseContent
 
     public ValueTask<ulong?> CalculateChecksumAsync() => new((ulong)data.GetHashCode());
 
-    public void Write(ChunkedPipeWriter writer, uint bufferSize)
+    public ValueTask WriteAsync(ChunkedPipeWriter writer, uint bufferSize)
     {
         throw new NotImplementedException();
     }
 
-    public void Write(PlainPipeWriter writer, uint bufferSize)
+    public ValueTask WriteAsync(PipeWriter writer, uint bufferSize)
     {
         throw new NotImplementedException();
     }

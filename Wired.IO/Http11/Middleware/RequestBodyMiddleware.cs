@@ -46,8 +46,6 @@ public static class RequestBodyMiddleware
                     if (chunk.Length == 0) // Last chunk indicator "0\r\n\r\n"
                         break;
                     chunks.Add(chunk);
-
-                    Console.WriteLine(Encoding.UTF8.GetString(chunk));
                 }
 
                 // Combine all chunks into a single byte array

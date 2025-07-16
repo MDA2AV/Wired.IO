@@ -162,10 +162,14 @@ public static class ResponseMiddleware
         // Write body with error handling
         if (ctx.Response.Content is not null)
         {
-            WriteResponseBody(ctx, ctx.Writer, bufferSize);
-        }
+            await WriteResponseBody(ctx, ctx.Writer, bufferSize);
 
-        await ctx.Writer.FlushAsync();
+            // IResponseContent should flush already
+        }
+        else
+        {
+            await ctx.Writer.FlushAsync();
+        }
     }
 
     #endregion
@@ -197,19 +201,15 @@ public static class ResponseMiddleware
     /// - Smaller buffers reduce memory pressure for concurrent requests
     /// </remarks>
     /// <exception cref="IOException">Thrown when client disconnects during body writing.</exception>
-    private static void WriteResponseBody(IContext ctx, PipeWriter writer, uint bufferSize)
+    private static async ValueTask WriteResponseBody(IContext ctx, PipeWriter writer, uint bufferSize)
     {
         if (ctx.Response!.ContentLength is null)
         {
-            var chunkedWriter = new ChunkedPipeWriter(writer);
-
-            ctx.Response.Content?.Write(chunkedWriter, bufferSize);
-
-            chunkedWriter.FinishAsync();
+            await ctx.Response.Content!.WriteAsync(new ChunkedPipeWriter(writer), bufferSize);
         }
         else
         {
-            ctx.Response.Content?.Write(new PlainPipeWriter(writer), bufferSize);
+            await ctx.Response.Content!.WriteAsync(writer, bufferSize);
         }
     }
 
@@ -400,7 +400,7 @@ public static class ResponseMiddleware
         var written = 0;
 
         // Mandatory headers
-        WriteHeader(ServerHeader, "WebHost", buffer);
+        WriteHeader(ServerHeader, "Wired.IO", buffer);
         WriteHeader(DateHeader, GetCachedDateHeader(), buffer);
 
         // Optional headers

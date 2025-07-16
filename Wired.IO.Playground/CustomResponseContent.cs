@@ -1,28 +1,30 @@
 ﻿using System.Buffers;
 using System.IO.Pipelines;
-using System.Text;
+using Wired.IO.Http11.Response.Content;
 using Wired.IO.Protocol.Writers;
 
-namespace Wired.IO.Http11.Response.Content;
+namespace Wired.IO.Playground;
 
-public class StringContent(string data) : IResponseContent
+public class CustomResponseContent(ReadOnlyMemory<byte> data) : IResponseContent
 {
-    public ulong? Length { get; } = null!;
+    public ulong? Length => (ulong)data.Length;
 
     public ValueTask<ulong?> CalculateChecksumAsync() => new((ulong)data.GetHashCode());
 
     public async ValueTask WriteAsync(ChunkedPipeWriter writer, uint bufferSize)
     {
-        writer.Write(Encoding.UTF8.GetBytes(data));
+        writer.Write(data.Span);
+        await writer.FlushAsync();
+
+        writer.Write("Additional information"u8);
 
         writer.Finish();
-
         await writer.FlushAsync();
     }
 
     public async ValueTask WriteAsync(PipeWriter writer, uint bufferSize)
     {
-        writer.Write(Encoding.UTF8.GetBytes(data));
+        writer.Write(data.Span);
 
         await writer.FlushAsync();
     }

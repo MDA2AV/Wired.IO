@@ -1,24 +1,15 @@
-﻿using Microsoft.Extensions.Hosting;
-using System.Net.Sockets;
+﻿using System.Net.Sockets;
 using System.Net;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Wired.IO.App;
 
-public sealed partial class App<TContext>
+public sealed partial class WiredApp<TContext>
 {
-    internal App()
-    {
-        HostBuilder = Host.CreateDefaultBuilder()
-            .ConfigureServices((hostContext, services) =>
-            {
-                services.AddHostedService(_ => TlsEnabled
-                    ? CreateTlsEnabledEngine()
-                    : CreatePlainEngine());
-            });
-    }
-
+    /// <summary>
+    /// Creates an <see cref="Engine"/> instance configured to accept and process plain (non-TLS) HTTP connections.
+    /// </summary>
+    /// <returns>An <see cref="Engine"/> that listens for unencrypted HTTP requests.</returns>
     private Engine CreatePlainEngine() =>
         new Engine(async stoppingToken =>
         {
@@ -26,6 +17,10 @@ public sealed partial class App<TContext>
             await RunAcceptLoopAsync(HandlePlainClientAsync, stoppingToken);
         });
 
+    /// <summary>
+    /// Creates an <see cref="Engine"/> instance configured to accept and process TLS-secured HTTP connections.
+    /// </summary>
+    /// <returns>An <see cref="Engine"/> that listens for HTTPS requests using TLS.</returns>
     private Engine CreateTlsEnabledEngine() =>
         new Engine(async stoppingToken =>
         {
@@ -35,6 +30,10 @@ public sealed partial class App<TContext>
 
     private Socket? _socket;
 
+    /// <summary>
+    /// Initializes the TCP listening socket and binds it to the configured IP address and port.
+    /// Uses dual-stack IPv6 socket with IPv4 support enabled.
+    /// </summary>
     private void CreateListeningSocket()
     {
         //IPv4
@@ -50,6 +49,12 @@ public sealed partial class App<TContext>
         _socket.Listen(Backlog);
     }
 
+    /// <summary>
+    /// Launches parallel accept loops, one per processor core, to maximize concurrent connection handling throughput.
+    /// </summary>
+    /// <param name="clientHandler">A delegate that handles a connected <see cref="Socket"/>.</param>
+    /// <param name="stoppingToken">A token used to cancel the accept loops.</param>
+    /// <returns>A task that completes when all accept loops have terminated.</returns>
     private async Task RunAcceptLoopAsync(Func<Socket, CancellationToken, Task> clientHandler, CancellationToken stoppingToken)
     {
         // Multiple concurrent accept loops for maximum throughput
@@ -62,6 +67,13 @@ public sealed partial class App<TContext>
         await Task.WhenAll(acceptTasks);
     }
 
+    /// <summary>
+    /// Continuously accepts incoming connections and dispatches them to the provided client handler delegate.
+    /// Each accepted client is processed in the background to avoid blocking the accept loop.
+    /// </summary>
+    /// <param name="clientHandler">A delegate that handles the accepted <see cref="Socket"/>.</param>
+    /// <param name="cancellationToken">A token that cancels the accept loop when requested.</param>
+    /// <returns>A task that completes when the loop is canceled or terminated due to error.</returns>
     private async Task AcceptLoopAsync(Func<Socket, CancellationToken, Task> clientHandler, CancellationToken cancellationToken)
     {
         while (!cancellationToken.IsCancellationRequested)
@@ -87,6 +99,13 @@ public sealed partial class App<TContext>
         }
     }
 
+    /// <summary>
+    /// Invokes the specified handler for a connected client socket, ensuring proper error logging and disposal.
+    /// </summary>
+    /// <param name="client">The connected <see cref="Socket"/> to handle.</param>
+    /// <param name="clientHandler">The delegate responsible for processing the client connection.</param>
+    /// <param name="stoppingToken">The token used to cancel the operation.</param>
+    /// <returns>A task that completes when client handling is finished.</returns>
     private async Task HandleClientAsync(Socket client, Func<Socket, CancellationToken, Task> clientHandler, CancellationToken stoppingToken)
     {
         try
@@ -101,10 +120,5 @@ public sealed partial class App<TContext>
         {
             client.Dispose();
         }
-    }
-
-    private sealed class Engine(Func<CancellationToken, Task> action) : BackgroundService
-    {
-        protected override Task ExecuteAsync(CancellationToken stoppingToken) => action(stoppingToken);
     }
 }
