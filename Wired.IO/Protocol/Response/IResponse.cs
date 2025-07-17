@@ -46,6 +46,12 @@ public interface IResponse : IDisposable
 
     #region Content
 
+    /// <summary>
+    /// Gets or sets the response content body.
+    /// </summary>
+    /// <remarks>
+    /// This content will be streamed to the client using either content-length or chunked transfer encoding.
+    /// </remarks>
     IResponseContent? Content { get; set; }
 
     /// <summary>
@@ -65,6 +71,12 @@ public interface IResponse : IDisposable
 
     #endregion
 
+    /// <summary>
+    /// Clears the response state of the current context without disposing it.
+    /// </summary>
+    /// <remarks>
+    /// This method is typically used to reset the context for reuse within a connection handling loop.
+    /// </remarks>
     void Clear();
 
 }

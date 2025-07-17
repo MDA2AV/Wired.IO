@@ -19,6 +19,10 @@ public interface IHasWiredEvents
     /// </remarks>
     IReadOnlyList<IWiredEvent> WiredEvents { get; }
 
+    /// <summary>
+    /// Adds a wired event to the current context's event queue.
+    /// </summary>
+    /// <param name="wiredEvent">The event instance to enqueue.</param>
     void AddWiredEvent(IWiredEvent wiredEvent);
 
     /// <summary>

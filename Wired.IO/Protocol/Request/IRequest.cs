@@ -53,5 +53,11 @@ public interface IRequest : IDisposable
     /// </remarks>
     ConnectionType ConnectionType { get; set; }
 
+    /// <summary>
+    /// Clears the request state of the current context without disposing it.
+    /// </summary>
+    /// <remarks>
+    /// This method is typically used to reset the context for reuse within a connection handling loop.
+    /// </remarks>
     void Clear();
 }

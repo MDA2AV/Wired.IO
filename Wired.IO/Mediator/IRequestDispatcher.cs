@@ -20,8 +20,19 @@ public interface IRequestDispatcher<in TContext>
     /// <returns>The response from the pipeline</returns>
     Task<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default);
 
-    // Void response
+    /// <summary>
+    /// Sends a request through the pipeline that does not produce a response.
+    /// </summary>
+    /// <param name="request">The request to process.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     Task Send(IRequest request, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Executes the pipeline directly against the provided context, bypassing request/response types.
+    /// </summary>
+    /// <param name="context">The context to pass through the pipeline.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     Task Send(TContext context, CancellationToken cancellationToken = default);
 }

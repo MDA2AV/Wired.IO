@@ -1,6 +1,5 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
-using Wired.IO.Http11.Context;
 using Wired.IO.Protocol;
 
 namespace Wired.IO.Mediator;
@@ -85,6 +84,17 @@ public class RequestDispatcher<TContext>(IServiceProvider serviceProvider) : IRe
         return wrapper.Handle(request, serviceProvider, cancellationToken);
     }
 
+    /// <summary>
+    /// Sends a context through the pipeline, typically used in context-based pipelines (e.g., HTTP handlers).
+    /// </summary>
+    /// <param name="context">The context instance representing the current execution environment.</param>
+    /// <param name="cancellationToken">Optional cancellation token.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <remarks>
+    /// This method is intended for pipelines that operate directly on a context object rather than a request/response model.
+    /// It creates or retrieves a cached wrapper for the <typeparamref name="TContext"/> type, and uses that wrapper to
+    /// resolve and execute the appropriate context handler and associated pipeline behaviors from the service provider.
+    /// </remarks>
     public Task Send(TContext context, CancellationToken cancellationToken = default)
     {
         var wrapperObj = WrapperCache.GetOrAdd((null, null), static key => 

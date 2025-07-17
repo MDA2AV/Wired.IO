@@ -35,6 +35,13 @@ public sealed class ChunkedPipeWriter(PipeWriter writer)
         WriteChunkOptimized(buffer);
     }
 
+    /// <summary>
+    /// Flushes any buffered chunked data to the underlying <see cref="PipeWriter"/>.
+    /// </summary>
+    /// <returns>A task that completes once the flush operation is done.</returns>
+    /// <remarks>
+    /// This should be called after writing one or more chunks to ensure they are sent to the client.
+    /// </remarks>
     public async ValueTask FlushAsync()
     {
         await writer.FlushAsync();

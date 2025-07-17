@@ -5,6 +5,10 @@ using Wired.IO.Protocol.Writers;
 
 namespace Wired.IO.Http11.Response.Content;
 
+/// <summary>
+/// Represents plain UTF-8 string response content.
+/// </summary>
+/// <param name="data">The string to write to the response body.</param>
 public class StringContent(string data) : IResponseContent
 {
     public ulong? Length { get; } = null!;

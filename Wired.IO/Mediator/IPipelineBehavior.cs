@@ -1,6 +1,4 @@
-﻿using Wired.IO.Protocol;
-
-namespace Wired.IO.Mediator;
+﻿namespace Wired.IO.Mediator;
 
 /// <summary>
 /// Represents an async continuation for the next task to execute in the pipeline
@@ -29,12 +27,34 @@ public interface IPipelineBehavior<in TRequest, TResponse> where TRequest : notn
     Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken);
 }
 
+/// <summary>
+/// Defines a pipeline behavior for a request that does not return a response.
+/// </summary>
+/// <typeparam name="TRequest">The type of the incoming request.</typeparam>
 public interface IPipelineBehaviorNoResponse<in TRequest> where TRequest : notnull
 {
+    /// <summary>
+    /// Handles the request by optionally adding behavior before or after invoking the <paramref name="next"/> delegate.
+    /// </summary>
+    /// <param name="request">The incoming request instance.</param>
+    /// <param name="next">The delegate representing the next action in the pipeline.</param>
+    /// <param name="cancellationToken">A cancellation token to observe during execution.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     Task Handle(TRequest request, RequestHandlerDelegate next, CancellationToken cancellationToken);
 }
 
+/// <summary>
+/// Defines a pipeline behavior based on a context object, typically used in frameworks where context holds request, response, and services.
+/// </summary>
+/// <typeparam name="TContext">The context type for the current request.</typeparam>
 public interface IPipelineBehavior<in TContext> where TContext : notnull
 {
+    /// <summary>
+    /// Handles the context by optionally adding behavior before or after invoking the <paramref name="next"/> delegate.
+    /// </summary>
+    /// <param name="context">The context associated with the current request pipeline.</param>
+    /// <param name="next">The delegate representing the next step in the pipeline.</param>
+    /// <param name="cancellationToken">A cancellation token to observe during execution.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     Task Handle(TContext context, RequestHandlerDelegate next, CancellationToken cancellationToken);
 }

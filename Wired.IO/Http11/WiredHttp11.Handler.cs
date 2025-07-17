@@ -48,18 +48,6 @@ public partial class WiredHttp11<TContext>(IHandlerArgs args) : IHttpHandler<TCo
     /// The method supports HTTP/1.1 features including persistent connections, allowing
     /// multiple requests to be processed over the same TCP connection for improved performance.
     /// </remarks>
-    /// <exception cref="ArgumentNullException"/>
-    /// <exception cref="ArgumentException"/>
-    /// <exception cref="ArgumentOutOfRangeException"/>
-    /// <exception cref="FileLoadException"/>
-    /// <exception cref="FileNotFoundException"/>
-    /// <exception cref="BadImageFormatException"/>
-    /// <exception cref="InvalidOperationException"/>
-    /// <exception cref="OperationCanceledException"/>
-    /// <exception cref="EncoderFallbackException"/>
-    /// <exception cref="DecoderFallbackException"/>
-    /// <exception cref="ArrayTypeMismatchException"/>
-    /// <exception cref="ObjectDisposedException"/>
 #if NET9_0_OR_GREATER
 
     public async Task HandleClientAsync(Stream stream, Func<TContext, Task> pipeline, CancellationToken stoppingToken)

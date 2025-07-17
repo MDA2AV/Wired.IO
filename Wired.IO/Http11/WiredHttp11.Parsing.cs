@@ -27,11 +27,11 @@ public sealed partial class WiredHttp11<TContext>
 
                 // Decode directly into stack memory
                 var byteLength = (int)headerBytes.Length;
-                Span<byte> byteSpan = byteLength <= 1024 ? stackalloc byte[byteLength] : new byte[byteLength];
+                var byteSpan = byteLength <= 1024 ? stackalloc byte[byteLength] : new byte[byteLength];
                 headerBytes.CopyTo(byteSpan);
 
-                int charCount = Encoding.UTF8.GetCharCount(byteSpan);
-                Span<char> charSpan = charCount <= 1024 ? stackalloc char[charCount] : new char[charCount];
+                var charCount = Encoding.UTF8.GetCharCount(byteSpan);
+                var charSpan = charCount <= 1024 ? stackalloc char[charCount] : new char[charCount];
                 Encoding.UTF8.GetChars(byteSpan, charSpan);
 
                 // Advance past the headers
@@ -39,12 +39,12 @@ public sealed partial class WiredHttp11<TContext>
 
                 // Parse headers
 
-                int lineStart = 0;
-                bool isFirstLine = true;
+                var lineStart = 0;
+                var isFirstLine = true;
 
                 while (true)
                 {
-                    int lineEnd = charSpan.Slice(lineStart).IndexOf("\r\n");
+                    var lineEnd = charSpan[lineStart..].IndexOf("\r\n");
 
                     if (lineEnd == -1)
                         break;
@@ -59,7 +59,7 @@ public sealed partial class WiredHttp11<TContext>
                         continue;
                     }
 
-                    int colonIndex = line.IndexOf(':');
+                    var colonIndex = line.IndexOf(':');
                     if (colonIndex == -1) continue;
 
                     var key = line[..colonIndex].Trim();

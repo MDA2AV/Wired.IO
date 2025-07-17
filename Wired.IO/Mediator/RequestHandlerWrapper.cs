@@ -34,10 +34,22 @@ public class RequestHandlerWrapper<TRequest, TResponse> : IRequestHandlerWrapper
     }
 }
 
+/// <summary>
+/// Wrapper that handles context-based pipelines by executing registered <see cref="IPipelineBehavior{TContext}"/>
+/// and invoking the appropriate <see cref="IContextHandler{TContext}"/>.
+/// </summary>
+/// <typeparam name="TContext">The type of the context used in the pipeline.</typeparam>
 [ExcludeFromCodeCoverage]
 public class ContextHandlerWrapper<TContext> : IContextHandlerWrapper<TContext>
     where TContext : class, IContext
 {
+    /// <summary>
+    /// Executes the pipeline for the given context by resolving the handler and applying all registered behaviors.
+    /// </summary>
+    /// <param name="context">The context to be processed.</param>
+    /// <param name="provider">The service provider used to resolve the handler and behaviors.</param>
+    /// <param name="cancellationToken">A cancellation token to observe during execution.</param>
+    /// <returns>A task that completes when the context handler and all behaviors have executed.</returns>
     public async Task Handle(TContext context, IServiceProvider provider, CancellationToken cancellationToken)
     {
         var handler = provider.GetRequiredService<IContextHandler<TContext>>();

@@ -60,5 +60,11 @@ public interface IContext : IHasWiredEvents, IDisposable
     /// </summary>
     IResponse? Response { get; set; }
 
+    /// <summary>
+    /// Clears the request and response state of the current context without disposing it.
+    /// </summary>
+    /// <remarks>
+    /// This method is typically used to reset the context for reuse within a connection handling loop.
+    /// </remarks>
     void Clear();
 }

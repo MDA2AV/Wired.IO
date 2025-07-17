@@ -33,6 +33,13 @@ public sealed class PlainPipeWriter(PipeWriter writer)
         writer.Write(buffer);
     }
 
+    /// <summary>
+    /// Flushes any buffered data to the underlying <see cref="PipeWriter"/>.
+    /// </summary>
+    /// <returns>A task representing the asynchronous flush operation.</returns>
+    /// <remarks>
+    /// This should be called after writing content to ensure it is pushed to the transport.
+    /// </remarks>
     public async ValueTask FlushAsync()
     {
         await writer.FlushAsync();

@@ -55,9 +55,14 @@ public interface IResponseModification<out TBuilder>
     TBuilder Encoding(string encoding);
 
     /// <summary>
-    /// Specifies the content type of this response.
+    /// Specifies the content type of this response (FlexibleContentType).
     /// </summary>
     /// <param name="contentType">The content type of this response</param>
     IResponseBuilder Type(FlexibleContentType contentType);
+
+    /// <summary>
+    /// Specifies the content type of this response (string).
+    /// </summary>
+    /// <param name="contentType">The content type of this response</param>
     IResponseBuilder Type(string contentType);
 }

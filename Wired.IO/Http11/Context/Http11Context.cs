@@ -17,37 +17,14 @@ namespace Wired.IO.Http11.Context;
 /// </remarks>
 public class Http11Context : IContext
 {
-    /// <summary>
-    /// Gets or sets the <see cref="PipeReader"/> used to read data from the client connection.
-    /// </summary>
     public PipeReader Reader { get; set; } = null!;
 
-    /// <summary>
-    /// Gets or sets the <see cref="PipeWriter"/> used to write data to the client connection.
-    /// </summary>
     public PipeWriter Writer { get; set; } = null!;
 
-    /// <summary>
-    /// Gets or sets the current HTTP request associated with the connection.
-    /// </summary>
     public IRequest Request { get; set; } = null!;
 
-    /// <summary>
-    /// Gets or sets the <see cref="AsyncServiceScope"/> for resolving scoped services during the request lifecycle.
-    /// </summary>
     public AsyncServiceScope Scope { get; set; }
 
-    /// <summary>
-    /// Resolves a scoped service of the specified type from the current <see cref="Scope"/>.
-    /// </summary>
-    /// <typeparam name="T">The service type to resolve.</typeparam>
-    /// <returns>An instance of the requested service type.</returns>
-    /// <exception cref="InvalidOperationException">Thrown if the service cannot be resolved.</exception>
-    public T Resolve<T>() where T : notnull => Scope.ServiceProvider.GetRequiredService<T>();
-
-    /// <summary>
-    /// Gets or sets the response that will be sent back to the client.
-    /// </summary>
     public IResponse? Response { get; set; }
 
     /// <summary>
@@ -60,12 +37,15 @@ public class Http11Context : IContext
         return new ResponseBuilder(Response).Status(ResponseStatus.Ok);
     }
 
-    /// <summary>
-    /// Gets or sets the <see cref="CancellationToken"/> associated with the current context,
-    /// used to monitor for cancellation of request processing.
-    /// </summary>
     public CancellationToken CancellationToken { get; set; }
 
+    /// <summary>
+    /// A list of wired events that have been raised during the processing of this context.
+    /// </summary>
+    /// <remarks>
+    /// These events are typically dispatched after the request completes,
+    /// enabling integration with event-driven architectures such as the outbox pattern.
+    /// </remarks>
     private readonly List<IWiredEvent> _wiredEvents = new();
 
     public IReadOnlyList<IWiredEvent> WiredEvents => _wiredEvents.AsReadOnly();
