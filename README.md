@@ -47,3 +47,112 @@ Wired.IO was created to **run inside your app**, not alongside it. This means yo
 - Use it for internal tooling, configuration UIs, simulators, or control panels.
 - Serve static files, WebSockets, or JSON APIs directly from your executable.
 - Create **hybrid apps** with native backends and web-based frontends, served over `localhost`.
+
+## Quick Start
+
+
+## Include the Wired.IO package in your project.
+
+```bash
+dotnet add package Wired.IO --version 9.1.0
+```
+
+## Wire up a basic endpoint
+
+No middlewares, directly respond to the socket's NetworkStream using PipeWriter.
+
+```csharp
+using Wired.IO.App;
+using Wired.IO.Http11.Context;
+
+var builder = WiredApp.CreateBuilder(); // Create a default builder, assumes HTTP/1.1
+
+var app = builder
+    .Port(5000) // Configured to http://localhost:5000
+    .MapGet("/quick-start", scope => async httpContext =>
+    {
+        await httpContext
+            .SendAsync("HTTP/1.1 200 OK\r\nContent-Length:0\r\nContent-Type: application/json\r\nConnection: keep-alive\r\n\r\n"u8.ToArray());
+    })
+    .Build();
+
+await app.RunAsync();
+```
+
+Using response building middleware to correctly send proper response headers and content
+
+```csharp
+using System.Text.Json;
+using Wired.IO.App;
+using Wired.IO.Http11.Response.Content;
+using Wired.IO.Protocol.Response;
+
+var builder = WiredApp.CreateBuilder(); // Create a default builder, assumes HTTP/1.1
+
+var app = builder
+    .Port(5000) // Configured to http://localhost:5000
+    .MapGet("/quick-start", scope => httpContext =>
+    {
+        httpContext
+            .Respond()
+            .Status(ResponseStatus.Ok)
+            .Type("application/json")
+            .Content(new JsonContent(
+                new { Name = "Toni", Age = 18 }, 
+                JsonSerializerOptions.Default));
+    })
+    .Build();
+
+await app.RunAsync();
+```
+
+## Add logging and inject a dependency
+
+Just like ASP.NET, scoped dependencies are disposed by the end of the request processing.
+
+```csharp
+using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Wired.IO.App;
+using Wired.IO.Http11.Response.Content;
+using Wired.IO.Protocol.Response;
+
+var builder = WiredApp.CreateBuilder(); // Create a default builder, assumes HTTP/1.1
+
+builder.Services
+    .AddLogging(loggingBuilder => {
+        loggingBuilder.ClearProviders();
+        loggingBuilder.AddConsole();
+        loggingBuilder.SetMinimumLevel(LogLevel.Information); // Set the minimum log level
+    })
+    .AddScoped<DependencyService>();
+
+var app = builder
+    .Port(5000) // Configured to http://localhost:5000
+    .MapGet("/quick-start", scope => async httpContext =>
+    {
+        var dependency = scope.GetRequiredService<DependencyService>();
+        dependency.Handle(); // Use the service
+
+        httpContext
+            .Respond()
+            .Status(ResponseStatus.Ok)
+            .Type("application/json")
+            .Content(new JsonContent(
+                new { Name = "Alice", Age = 30 }, 
+                JsonSerializerOptions.Default));
+    })
+    .Build();
+
+await app.RunAsync();
+
+class DependencyService(ILogger<DependencyService> logger) : IDisposable
+{
+    public void Handle() =>
+        logger.LogInformation($"{nameof(DependencyService)} was handled.");
+    public void Dispose() =>
+        logger.LogInformation($"{nameof(DependencyService)} was disposed.");
+}
+```
