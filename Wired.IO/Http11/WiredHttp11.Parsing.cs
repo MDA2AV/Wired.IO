@@ -12,14 +12,18 @@ public sealed partial class WiredHttp11<TContext>
 
 #if NET9_0_OR_GREATER
 
-    public static async Task<bool> ExtractHeadersAsync(IContext context, CancellationToken stoppingToken)
+    public static async Task<bool> ExtractHeadersAsync(IContext context)
     {
         var reader = context.Reader;
 
         while (true)
         {
-            var result = await reader.ReadAsync(stoppingToken);
+            var result = await reader.ReadAsync(context.CancellationToken);
             var buffer = result.Buffer;
+            if (buffer.Length == 0)
+            {
+                throw new IOException("Client disconnected");
+            }
 
             if (PipeReaderUtilities.TryAdvanceTo(new SequenceReader<byte>(buffer), "\r\n\r\n"u8, out var position))
             {
@@ -80,13 +84,13 @@ public sealed partial class WiredHttp11<TContext>
 
 #elif NET8_0
 
-    public static async Task<bool> ExtractHeadersAsync(IContext context, CancellationToken stoppingToken)
+    public static async Task<bool> ExtractHeadersAsync(IContext context)
     {
         var reader = context.Reader;
 
         while (true)
         {
-            var result = await reader.ReadAsync(stoppingToken);
+            var result = await reader.ReadAsync(context.CancellationToken);
             var buffer = result.Buffer;
 
             if (TryFindHeaderEnd(buffer, out var position))
@@ -120,22 +124,22 @@ public sealed partial class WiredHttp11<TContext>
     {
         // Copy bytes to byteSpan
         var byteLength = (int)buffer.Length;
-        Span<byte> byteSpan = byteLength <= 1024 ? stackalloc byte[byteLength] : new byte[byteLength];
+        var byteSpan = byteLength <= 1024 ? stackalloc byte[byteLength] : new byte[byteLength];
         buffer.CopyTo(byteSpan);
 
         // Decode to charSpan
-        int charCount = Encoding.UTF8.GetCharCount(byteSpan);
-        Span<char> charSpan = charCount <= 1024 ? stackalloc char[charCount] : new char[charCount];
+        var charCount = Encoding.UTF8.GetCharCount(byteSpan);
+        var charSpan = charCount <= 1024 ? stackalloc char[charCount] : new char[charCount];
         Encoding.UTF8.GetChars(byteSpan, charSpan);
 
         // Parse headers
 
-        int lineStart = 0;
-        bool isFirstLine = true;
+        var lineStart = 0;
+        var isFirstLine = true;
 
         while (lineStart < charSpan.Length)
         {
-            int lineEnd = charSpan.Slice(lineStart).IndexOf("\r\n");
+            var lineEnd = charSpan[lineStart..].IndexOf("\r\n");
             if (lineEnd == -1)
                 break;
 
@@ -149,7 +153,7 @@ public sealed partial class WiredHttp11<TContext>
                 continue;
             }
 
-            int colonIndex = line.IndexOf(':');
+            var colonIndex = line.IndexOf(':');
             if (colonIndex == -1) continue;
 
             var key = line[..colonIndex].Trim();

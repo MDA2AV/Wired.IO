@@ -1,9 +1,11 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System.IO.Pipelines;
+using Wired.IO.Http11.Request;
 using Wired.IO.Http11.Response;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Request;
 using Wired.IO.Protocol.Response;
+using Wired.IO.Utilities;
 using Wired.IO.WiredEvents;
 
 namespace Wired.IO.Http11.Context;
@@ -21,7 +23,13 @@ public class Http11Context : IContext
 
     public PipeWriter Writer { get; set; } = null!;
 
-    public IRequest Request { get; set; } = null!;
+    public IRequest Request { get; set; } = new Http11Request
+    {
+        Headers = new PooledDictionary<string, string>(
+            capacity: 16,
+            comparer: StringComparer.OrdinalIgnoreCase),
+        QueryParameters = new PooledDictionary<string, ReadOnlyMemory<char>>(),
+    };
 
     public AsyncServiceScope Scope { get; set; }
 
@@ -75,9 +83,6 @@ public class Http11Context : IContext
     /// </remarks>
     public void Dispose()
     {
-        Reader.Complete();
-        Writer.Complete();
-
         Response?.Dispose();
         Request.Dispose();
     }

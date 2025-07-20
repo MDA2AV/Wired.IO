@@ -43,7 +43,7 @@ public sealed partial class WiredApp<TContext>
         _socket = new Socket(AddressFamily.InterNetworkV6, SocketType.Stream, ProtocolType.Tcp);
 
         _socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.IPv6Only, false);
-        _socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+        _socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, false);
 
         _socket.Bind(new IPEndPoint(IpAddress, Port));
         _socket.Listen(Backlog);

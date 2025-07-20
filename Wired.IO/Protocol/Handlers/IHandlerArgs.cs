@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using Wired.IO.Http11;
 
 namespace Wired.IO.Protocol.Handlers;
 
@@ -33,4 +34,6 @@ public interface IHandlerArgs
     /// when <see cref="UseResources"/> is enabled.
     /// </remarks>
     Assembly ResourcesAssembly { get; }
+
+    Http11HandlerType HandlerType { get; }
 }

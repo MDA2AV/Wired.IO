@@ -1,209 +1,94 @@
 ﻿using Microsoft.Extensions.ObjectPool;
-using System.Buffers;
-using System.Collections;
-using System.IO.Pipelines;
-using System.Text;
-using Wired.IO.Http11.Request;
 using Wired.IO.Protocol.Handlers;
-using Wired.IO.Protocol.Request;
 using Wired.IO.Protocol;
-using Wired.IO.Utilities;
 using System.Reflection;
 
 namespace Wired.IO.Http11;
 
+/// <summary>
+/// HTTP/1.1 handler implementation for processing incoming requests using either
+/// blocking or non-blocking strategies over a single stream.
+/// </summary>
+/// <typeparam name="TContext">
+/// The context type used per request. Must implement <see cref="IContext"/> and have a public parameterless constructor.
+/// </typeparam>
+/// <param name="args">Configuration arguments for the handler.</param>
 public partial class WiredHttp11<TContext>(IHandlerArgs args) : IHttpHandler<TContext>
     where TContext : class, IContext, new()
 {
-
+    /// <summary>
+    /// Object pool used to recycle request contexts for reduced allocations and improved performance.
+    /// </summary>
     private static readonly ObjectPool<TContext> ContextPool =
-        new DefaultObjectPool<TContext>(new DefaultPooledObjectPolicy<TContext>(), 8192);
+        new DefaultObjectPool<TContext>(new PipelinedContextPoolPolicy(), 8192);
 
     /// <summary>
-    /// Handles a client connection by processing incoming HTTP/1.1 requests and executing the middleware pipeline.
+    /// Pool policy that defines how to create and reset pooled <typeparamref name="TContext"/> instances.
     /// </summary>
-    /// <param name="stream">The network stream for communication with the client.</param>
-    /// <param name="pipeline"></param>
-    /// <param name="stoppingToken">A <see cref="CancellationToken"/> to signal when the operation should stop.</param>
-    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    /// <remarks>
-    /// This method implements the core HTTP/1.1 request processing logic:
-    /// 
-    /// 1. Connection Lifecycle:
-    ///    - Reads the initial headers from the client request
-    ///    - Processes requests in a loop for persistent connections (keep-alive)
-    ///    - Closes the connection based on connection header or after processing a non-keep-alive request
-    ///    
-    /// 2. Request Processing:
-    ///    - Parses HTTP headers to extract the route, HTTP method, and other metadata
-    ///    - Handles static file requests if the route points to a file and static file serving is enabled
-    ///    - For non-file requests, extracts the request body and creates an Http11Request object
-    ///    - Creates a scoped service provider for dependency injection
-    ///    - Executes the middleware pipeline against the request context
-    ///    
-    /// 3. Special Cases:
-    ///    - Handles WebSocket connection upgrades
-    ///    - Validates request format and throws exceptions for invalid requests
-    ///    
-    /// The method supports HTTP/1.1 features including persistent connections, allowing
-    /// multiple requests to be processed over the same TCP connection for improved performance.
-    /// </remarks>
-#if NET9_0_OR_GREATER
-
-    public async Task HandleClientAsync(Stream stream, Func<TContext, Task> pipeline, CancellationToken stoppingToken)
+    private class PipelinedContextPoolPolicy : PooledObjectPolicy<TContext>
     {
-        var context = ContextPool.Get();
-        context.Request = new Http11Request();
+        /// <summary>
+        /// Creates a new instance of <typeparamref name="TContext"/>.
+        /// </summary>
+        public override TContext Create() => new();
 
-        context.Reader = PipeReader.Create(stream,
-            new StreamPipeReaderOptions(MemoryPool<byte>.Shared, leaveOpen: true, bufferSize: 8192));
-
-        context.Writer = PipeWriter.Create(stream,
-            new StreamPipeWriterOptions(MemoryPool<byte>.Shared, leaveOpen: true));
-
-        context.Request.Headers = new PooledDictionary<string, string>(capacity: 16, comparer: StringComparer.OrdinalIgnoreCase);
-        context.Request.QueryParameters = new PooledDictionary<string, ReadOnlyMemory<char>>();
-
-        try
+        /// <summary>
+        /// Resets the context before returning it to the pool.
+        /// </summary>
+        /// <param name="context">The context instance to return.</param>
+        /// <returns><c>true</c> if the context can be reused; otherwise, <c>false</c>.</returns>
+        public override bool Return(TContext context)
         {
-            while (await ExtractHeadersAsync(context, stoppingToken))
-            {
-                // Determine the connection type based on headers
-                context.Request.ConnectionType =
-                    context.Request.Headers.TryGetValue("Connection", out var connectionValue)
-                        ? GetConnectionType(connectionValue)
-                        : ConnectionType.KeepAlive;
-
-                // Handle WebSocket upgrade requests
-                if (context.Request.ConnectionType is ConnectionType.Websocket)
-                    await SendHandshakeResponse(context, ToRawHeaderString(context.Request.Headers));
-
-                // Extract the URI and HTTP method from the request line
-                IEnumerator enumerator = context.Request.Headers.GetEnumerator();
-                enumerator.MoveNext();
-
-                ParseHttpRequestLine(
-                    ((KeyValuePair<string, string>)enumerator.Current).Value,
-                    context.Request);
-
-                // Check if the request is for a static file
-                if (UseResources & IsRouteFile(context.Request.Route))
-                    await FlushResource(context.Writer, context.Request.Route, stoppingToken);
-                else
-                    await pipeline(context);
-
-                context.Clear();
-
-                // For non keep-alive connections, break the loop
-                if (context.Request.ConnectionType is not ConnectionType.KeepAlive &&
-                    !stoppingToken.IsCancellationRequested)
-                {
-                    break;
-                }
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            // Expected when cancellation is requested
-            //Console.WriteLine("Operation was cancelled");
-        }
-        catch (IOException)
-        {
-            // Client disconnected - this is normal for HTTP connections
-            //Console.WriteLine("Client connection closed");
-        }
-        catch (Exception ex)
-        {
-            //Console.WriteLine($"Unexpected error in HandleClientAsync: {ex.Message}");
-        }
-        finally
-        {
-            context.Dispose();
-
-            ContextPool.Return(context);
+            context.Clear(); // User-defined reset method to clean internal state.
+            return true;
         }
     }
 
-#endif
-
-#if NET8_0
-
+    /// <summary>
+    /// Handles an HTTP/1.1 client connection using the selected handler mode (blocking or non-blocking).
+    /// </summary>
+    /// <param name="stream">The stream representing the client connection.</param>
+    /// <param name="pipeline">The middleware/request handling pipeline.</param>
+    /// <param name="stoppingToken">A cancellation token used to terminate the operation.</param>
     public async Task HandleClientAsync(Stream stream, Func<TContext, Task> pipeline, CancellationToken stoppingToken)
     {
-        var context = ContextPool.Get();
-        context.Request = new Http11Request();
-
-        context.Reader = PipeReader.Create(stream,
-            new StreamPipeReaderOptions(MemoryPool<byte>.Shared, leaveOpen: true, bufferSize: 8192));
-
-        context.Writer = PipeWriter.Create(stream, 
-            new StreamPipeWriterOptions(MemoryPool<byte>.Shared, leaveOpen: true));
-
-        context.Request.Headers = new PooledDictionary<string, string>(capacity: 16, comparer: StringComparer.OrdinalIgnoreCase);
-        context.Request.QueryParameters = new PooledDictionary<string, ReadOnlyMemory<char>>();
-
-        try
+        if (HandlerType == Http11HandlerType.Blocking)
         {
-            while (await ExtractHeadersAsync(context, stoppingToken))
-            {
-                // Determine the connection type based on headers
-                context.Request.ConnectionType =
-                    context.Request.Headers.TryGetValue("Connection", out var connectionValue)
-                        ? GetConnectionType(connectionValue)
-                        : ConnectionType.KeepAlive;
-
-                // Handle WebSocket upgrade requests
-                if (context.Request.ConnectionType == ConnectionType.Websocket)
-                    await SendHandshakeResponse(context, ToRawHeaderString(context.Request.Headers));
-
-                // Extract the URI and HTTP method from the request line
-                IEnumerator enumerator = context.Request.Headers.GetEnumerator();
-                enumerator.MoveNext();
-
-                ParseHttpRequestLine(
-                    ((KeyValuePair<string, string>)enumerator.Current).Value,
-                    context.Request);
-
-                // Check if the request is for a static file
-                if (UseResources & IsRouteFile(context.Request.Route))
-                    await FlushResource(context.Writer, context.Request.Route, stoppingToken);
-                else
-                    await pipeline(context);
-
-                context.Clear();
-
-                // For non keep-alive connections, break the loop
-                if (context.Request.ConnectionType is not ConnectionType.KeepAlive &&
-                    !stoppingToken.IsCancellationRequested)
-                    break;
-            }
+            await HandleBlocking(stream, pipeline);
         }
-        catch (OperationCanceledException)
+        else
         {
-            // Expected when cancellation is requested
-            //Console.WriteLine("Operation was cancelled");
-        }
-        catch (IOException)
-        {
-            // Client disconnected - this is normal for HTTP connections
-            //Console.WriteLine("Client connection closed");
-        }
-        catch (Exception ex)
-        {
-            //Console.WriteLine($"Unexpected error in HandleClientAsync: {ex.Message}");
-        }
-        finally
-        {
-            context.Dispose();
-
-            ContextPool.Return(context);
+            await HandleNonBlocking(stream, pipeline);
         }
     }
-
-#endif
-
 }
+
+/// <summary>
+/// Configuration record used to initialize the HTTP/1.1 handler.
+/// </summary>
+/// <param name="UseResources">Whether to serve embedded resources (e.g. static files).</param>
+/// <param name="ResourcesPath">The virtual path used to locate resources (e.g. "/static").</param>
+/// <param name="ResourcesAssembly">The assembly containing embedded resources.</param>
+/// <param name="HandlerType">The handler mode to use (blocking or non-blocking).</param>
 public record Http11HandlerArgs(
     bool UseResources,
     string ResourcesPath,
-    Assembly ResourcesAssembly) : IHandlerArgs;
+    Assembly ResourcesAssembly,
+    Http11HandlerType HandlerType = Http11HandlerType.Blocking
+) : IHandlerArgs;
+
+/// <summary>
+/// Defines the mode in which the HTTP/1.1 handler operates.
+/// </summary>
+public enum Http11HandlerType
+{
+    /// <summary>
+    /// Handles each request sequentially, waiting for each response to complete before accepting a new one.
+    /// </summary>
+    Blocking,
+
+    /// <summary>
+    /// Handles multiple pipelined requests concurrently over the same connection.
+    /// </summary>
+    NonBlocking
+}
