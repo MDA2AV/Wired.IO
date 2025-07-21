@@ -11,7 +11,8 @@ namespace Wired.IO.Http11.Request;
 /// This class implements <see cref="IRequest"/> and serves as the concrete model
 /// for parsing and accessing incoming request data in the HTTP/1.1 protocol.
 /// </remarks>
-public class Http11Request : IRequest
+public sealed class Http11Request 
+    : IRequest, IHasHeaders<string, string>
 {
     public PooledDictionary<string, string> Headers { get; set; } = null!;
 

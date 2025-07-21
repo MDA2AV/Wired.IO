@@ -1,11 +1,13 @@
 ﻿using System.Buffers;
 using System.Collections;
 using System.IO.Pipelines;
+using System.Runtime.CompilerServices;
+using Wired.IO.Http11.Request;
 using Wired.IO.Protocol.Request;
 
 namespace Wired.IO.Http11;
 
-public sealed partial class WiredHttp11<TContext>
+public partial class WiredHttp11<TContext, TRequest>
 {
     /// <summary>
     /// Handles an HTTP/1.1 connection using a blocking model — each request is processed sequentially
@@ -34,18 +36,20 @@ public sealed partial class WiredHttp11<TContext>
             // Loop to handle multiple requests on the same connection (keep-alive)
             while (await ExtractHeadersAsync(context))
             {
+                var request = Unsafe.As<Http11Request>(context.Request);
+
                 // Determine connection type: keep-alive, close, or websocket
-                context.Request.ConnectionType =
-                    context.Request.Headers.TryGetValue("Connection", out var connectionValue)
+                request.ConnectionType =
+                    request.Headers.TryGetValue("Connection", out var connectionValue)
                         ? GetConnectionType(connectionValue)
                         : ConnectionType.KeepAlive;
 
                 // If WebSocket upgrade requested, perform handshake and skip HTTP handling
                 if (context.Request.ConnectionType is ConnectionType.Websocket)
-                    await SendHandshakeResponse(context, ToRawHeaderString(context.Request.Headers));
+                    await SendHandshakeResponse(context, ToRawHeaderString(request.Headers));
 
                 // Parse the HTTP request line (e.g. "GET /index.html HTTP/1.1") from the first header line
-                IEnumerator enumerator = context.Request.Headers.GetEnumerator();
+                IEnumerator enumerator = request.Headers.GetEnumerator();
                 enumerator.MoveNext();
 
                 ParseHttpRequestLine(

@@ -2,8 +2,16 @@
 using Wired.IO.Protocol.Handlers;
 using Wired.IO.Protocol;
 using System.Reflection;
+using Wired.IO.Http11.Context;
+using Wired.IO.Http11.Request;
+using Wired.IO.Protocol.Request;
 
 namespace Wired.IO.Http11;
+
+// Public non-generic facade
+public sealed class WiredHttp11(IHandlerArgs args) : WiredHttp11<Http11Context>(args)
+{
+}
 
 /// <summary>
 /// HTTP/1.1 handler implementation for processing incoming requests using either

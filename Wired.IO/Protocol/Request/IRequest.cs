@@ -2,6 +2,15 @@
 
 namespace Wired.IO.Protocol.Request;
 
+public interface IHasHeaders<TKey, TValue>
+    where TKey : IEquatable<TKey>
+{
+    /// <summary>
+    /// Gets the collection of HTTP request headers as raw strings, typically in the format "HeaderName: HeaderValue".
+    /// </summary>
+    PooledDictionary<TKey, TValue> Headers { get; set; }
+}
+
 /// <summary>
 /// Represents a minimal abstraction of an HTTP request containing essential routing information.
 /// </summary>
@@ -27,7 +36,7 @@ public interface IRequest : IDisposable
     /// <summary>
     /// Gets the collection of HTTP request headers as raw strings, typically in the format "HeaderName: HeaderValue".
     /// </summary>
-    PooledDictionary<string, string> Headers { get; set; }
+    //PooledDictionary<string, string> Headers { get; set; }
 
     /// <summary>
     /// Gets or sets the raw binary content (body) of the HTTP request, if present.

@@ -51,13 +51,13 @@ Wired.IO was created to **run inside your app**, not alongside it. This means yo
 ## Quick Start
 
 
-## Include the Wired.IO package in your project.
+### Include the Wired.IO package in your project.
 
 ```bash
 dotnet add package Wired.IO --version 9.1.0
 ```
 
-## Wire up a basic endpoint
+### Wire up a basic endpoint
 
 No middlewares, directly respond to the socket's NetworkStream using PipeWriter.
 
@@ -106,7 +106,7 @@ var app = builder
 await app.RunAsync();
 ```
 
-## Add logging and inject a dependency
+### Add logging and inject a dependency
 
 Just like ASP.NET, scoped dependencies are disposed by the end of the request processing.
 

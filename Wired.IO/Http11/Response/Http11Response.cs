@@ -5,7 +5,7 @@ using Wired.IO.Protocol.Response.Headers;
 
 namespace Wired.IO.Http11.Response;
 
-public class Http11Response : IResponse
+public sealed class Http11Response : IResponse
 {
     private readonly ResponseHeaderCollection _headers = new();
 

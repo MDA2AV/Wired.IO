@@ -2,6 +2,7 @@
 using Wired.IO.Builder;
 using Wired.IO.Http11;
 using Wired.IO.Http11.Context;
+using Wired.IO.Http11.Request;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Handlers;
 using Wired.IO.Utilities;
@@ -18,7 +19,7 @@ public sealed class WiredApp
     /// Creates a default HTTP/1.1 builder with built-in middleware and a default <see cref="WiredHttp11{TContext}"/> handler.
     /// </summary>
     /// <returns>A configured <see cref="Builder{THandler, TContext}"/> for HTTP/1.1 with default settings.</returns>
-    public static Builder<WiredHttp11<Http11Context>, Http11Context> CreateBuilder()
+    public static Builder<WiredHttp11, Http11Context> CreateBuilder()
     {
         return CreateBuilder([SslApplicationProtocol.Http11]);
     }
@@ -31,11 +32,11 @@ public sealed class WiredApp
     /// A list of supported <see cref="SslApplicationProtocol"/> values (e.g., <see cref="SslApplicationProtocol.Http11"/>).
     /// </param>
     /// <returns>A configured <see cref="Builder{THandler, TContext}"/> instance.</returns>
-    public static Builder<WiredHttp11<Http11Context>, Http11Context> CreateBuilder(
+    public static Builder<WiredHttp11, Http11Context> CreateBuilder(
         List<SslApplicationProtocol> sslApplicationProtocols)
     {
-        var builder = new Builder<WiredHttp11<Http11Context>, Http11Context>(() =>
-            new WiredHttp11<Http11Context>(
+        var builder = new Builder<WiredHttp11, Http11Context>(() =>
+            new WiredHttp11(
                 new Http11HandlerArgs(
                     false,
                     null!,
@@ -51,8 +52,8 @@ public sealed class WiredApp
     /// </summary>
     /// <param name="handlerFactory">A factory delegate that produces a <see cref="WiredHttp11{TContext}"/> instance.</param>
     /// <returns>A configured <see cref="Builder{THandler, TContext}"/> instance using the specified handler.</returns>
-    public static Builder<WiredHttp11<Http11Context>, Http11Context> CreateBuilder(
-        Func<WiredHttp11<Http11Context>> handlerFactory)
+    public static Builder<WiredHttp11, Http11Context> CreateBuilder(
+        Func<WiredHttp11> handlerFactory)
     {
         return CreateBuilder(handlerFactory, [SslApplicationProtocol.Http11]);
     }
@@ -65,11 +66,11 @@ public sealed class WiredApp
     /// A list of supported <see cref="SslApplicationProtocol"/> values for ALPN negotiation.
     /// </param>
     /// <returns>A configured <see cref="Builder{THandler, TContext}"/> instance.</returns>
-    public static Builder<WiredHttp11<Http11Context>, Http11Context> CreateBuilder(
-        Func<WiredHttp11<Http11Context>> handlerFactory,
+    public static Builder<WiredHttp11, Http11Context> CreateBuilder(
+        Func<WiredHttp11> handlerFactory,
         List<SslApplicationProtocol> sslApplicationProtocols)
     {
-        var builder = new Builder<WiredHttp11<Http11Context>, Http11Context>(
+        var builder = new Builder<WiredHttp11, Http11Context>(
             handlerFactory,
             sslApplicationProtocols);
 

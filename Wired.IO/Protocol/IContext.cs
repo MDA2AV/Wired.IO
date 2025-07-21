@@ -9,7 +9,7 @@ namespace Wired.IO.Protocol;
 /// <summary>
 /// Represents the context for a client connection, encapsulating the connection details, request, response, and dependency resolution.
 /// </summary>
-public interface IContext : IHasWiredEvents, IDisposable
+public interface IContext: IHasWiredEvents, IDisposable
 {
     /// <summary>
     /// Gets or sets the <see cref="PipeReader"/> used to read incoming data from the client connection.

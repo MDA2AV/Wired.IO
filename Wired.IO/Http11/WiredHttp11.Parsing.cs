@@ -1,18 +1,20 @@
 ﻿using System.Buffers;
+using System.Runtime.CompilerServices;
 using System.Text;
+using Wired.IO.Http11.Request;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Request;
 using Wired.IO.Utilities;
 
 namespace Wired.IO.Http11;
 
-public sealed partial class WiredHttp11<TContext>
+public partial class WiredHttp11<TContext, TRequest>
 {
     //TODO: Set a timeout?, if received request is malformed, this loop is stuck, maybe use the cancellation token source
 
 #if NET9_0_OR_GREATER
 
-    public static async Task<bool> ExtractHeadersAsync(IContext context)
+    public static async Task<bool> ExtractHeadersAsync(TContext context)
     {
         var reader = context.Reader;
 
@@ -56,9 +58,11 @@ public sealed partial class WiredHttp11<TContext>
                     var line = charSpan.Slice(lineStart, lineEnd);
                     lineStart += lineEnd + 2; // skip \r\n
 
+                    var request = Unsafe.As<Http11Request>(context.Request);
+
                     if (isFirstLine)
                     {
-                        context.Request.Headers.TryAdd(":Request-Line", new string(line));
+                        request.Headers.TryAdd(":Request-Line", new string(line));
                         isFirstLine = false;
                         continue;
                     }
@@ -69,7 +73,7 @@ public sealed partial class WiredHttp11<TContext>
                     var key = line[..colonIndex].Trim();
                     var value = line[(colonIndex + 1)..].Trim();
 
-                    context.Request.Headers.TryAdd(new string(key), new string(value));
+                    request.Headers.TryAdd(new string(key), new string(value));
                 }
 
                 return true;
@@ -84,7 +88,7 @@ public sealed partial class WiredHttp11<TContext>
 
 #elif NET8_0
 
-    public static async Task<bool> ExtractHeadersAsync(IContext context)
+    public static async Task<bool> ExtractHeadersAsync(TContext context)
     {
         var reader = context.Reader;
 
@@ -120,7 +124,7 @@ public sealed partial class WiredHttp11<TContext>
         return false;
     }
 
-    private static void DecodeHeaders(IContext context, ReadOnlySequence<byte> buffer)
+    private static void DecodeHeaders(TContext context, ReadOnlySequence<byte> buffer)
     {
         // Copy bytes to byteSpan
         var byteLength = (int)buffer.Length;
@@ -146,9 +150,11 @@ public sealed partial class WiredHttp11<TContext>
             var line = charSpan.Slice(lineStart, lineEnd);
             lineStart += lineEnd + 2;
 
+            var request = Unsafe.As<Http11Request>(context.Request);
+
             if (isFirstLine)
             {
-                context.Request.Headers.TryAdd(":Request-Line", new string(line));
+                request.Headers.TryAdd(":Request-Line", new string(line));
                 isFirstLine = false;
                 continue;
             }
@@ -159,7 +165,7 @@ public sealed partial class WiredHttp11<TContext>
             var key = line[..colonIndex].Trim();
             var value = line[(colonIndex + 1)..].Trim();
 
-            context.Request.Headers.TryAdd(new string(key), new string(value));
+            request.Headers.TryAdd(new string(key), new string(value));
         }
     }
 

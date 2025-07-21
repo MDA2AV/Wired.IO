@@ -2,6 +2,7 @@
 using System.Net;
 using System.Security.Authentication;
 using Microsoft.Extensions.Logging;
+using Wired.IO.Http11.Context;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Handlers;
 

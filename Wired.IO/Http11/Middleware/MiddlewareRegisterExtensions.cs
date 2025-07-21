@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Wired.IO.Builder;
 using Wired.IO.Http11.Context;
+using Wired.IO.Http11.Request;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Request;
 
@@ -35,8 +36,8 @@ public static class MiddlewareRegisterExtensions
     /// <returns>
     /// The same <see cref="Builder{THandler, TContext}"/> instance, allowing method chaining.
     /// </returns>
-    public static Builder<WiredHttp11<Http11Context>, Http11Context> UseResponse(
-        this Builder<WiredHttp11<Http11Context>, Http11Context> builder)
+    public static Builder<WiredHttp11, Http11Context> UseResponse(
+        this Builder<WiredHttp11, Http11Context> builder)
     {
         Func<IServiceProvider, Func<Http11Context, Func<Http11Context, Task>, Task>> func =
             scope => async (ctx, next) =>
@@ -85,8 +86,8 @@ public static class MiddlewareRegisterExtensions
     /// <returns>
     /// The same <see cref="Builder{THandler, TContext}"/> instance for fluent configuration.
     /// </returns>
-    public static Builder<WiredHttp11<Http11Context>, Http11Context> ReadRequestBody(
-        this Builder<WiredHttp11<Http11Context>, Http11Context> builder)
+    public static Builder<WiredHttp11, Http11Context> ReadRequestBody(
+        this Builder<WiredHttp11, Http11Context> builder)
     {
         Func<IServiceProvider, Func<Http11Context, Func<Http11Context, Task>, Task>> func =
             scope => async (ctx, next) =>

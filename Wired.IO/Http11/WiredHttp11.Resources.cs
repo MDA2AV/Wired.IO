@@ -6,7 +6,7 @@ using Wired.IO.Common.Extensions;
 
 namespace Wired.IO.Http11;
 
-public sealed partial class WiredHttp11<TContext>
+public partial class WiredHttp11<TContext, TRequest>
 {
     public bool UseResources { get; } = args.UseResources;
     public string ResourcesPath { get; } = args.ResourcesPath;

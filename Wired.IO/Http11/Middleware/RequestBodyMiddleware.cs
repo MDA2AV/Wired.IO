@@ -1,6 +1,9 @@
 ﻿using System.Buffers;
 using System.IO.Pipelines;
+using System.Runtime.CompilerServices;
 using System.Text;
+using Wired.IO.Http11.Context;
+using Wired.IO.Http11.Request;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Request;
 using Wired.IO.Utilities;
@@ -21,14 +24,16 @@ public static class RequestBodyMiddleware
     /// This method checks if the request includes a <c>Content-Length</c> header or uses <c>Transfer-Encoding: chunked</c>,
     /// and reads the body accordingly.
     /// </remarks>
-    public static async Task HandleAsync(IContext ctx)
+    public static async Task HandleAsync<TContext>(TContext ctx)
+        where TContext : IContext
     {
-        var contentLengthAvailable = TryGetContentLength(ctx.Request.Headers, out var contentLength);
+        var request = Unsafe.As<Http11Request>(ctx.Request);
+        var contentLengthAvailable = TryGetContentLength(request.Headers, out var contentLength);
 
         if (contentLengthAvailable)
         {
             // If Content-Length is present, read the body based on that length
-            var body = await ExtractBody(ctx.Reader, ctx.Request.Headers, ctx.CancellationToken);
+            var body = await ExtractBody(ctx.Reader, request.Headers, ctx.CancellationToken);
 
             ctx.Request.Content = body;
 
@@ -36,7 +41,7 @@ public static class RequestBodyMiddleware
         else
         {
             // If Content-Length is not present, check for chunked transfer encoding
-            if (ctx.Request.Headers.TryGetValue("Transfer-Encoding", out var transferEncoding) &&
+            if (request.Headers.TryGetValue("Transfer-Encoding", out var transferEncoding) &&
                 transferEncoding.Equals("chunked", StringComparison.OrdinalIgnoreCase))
             {
                 var chunks = new List<byte[]>();
