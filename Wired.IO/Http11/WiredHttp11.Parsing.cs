@@ -8,7 +8,7 @@ using Wired.IO.Utilities;
 
 namespace Wired.IO.Http11;
 
-public partial class WiredHttp11<TContext, TRequest>
+public partial class WiredHttp11<TContext>
 {
     //TODO: Set a timeout?, if received request is malformed, this loop is stuck, maybe use the cancellation token source
 
@@ -58,11 +58,9 @@ public partial class WiredHttp11<TContext, TRequest>
                     var line = charSpan.Slice(lineStart, lineEnd);
                     lineStart += lineEnd + 2; // skip \r\n
 
-                    var request = Unsafe.As<Http11Request>(context.Request);
-
                     if (isFirstLine)
                     {
-                        request.Headers.TryAdd(":Request-Line", new string(line));
+                        context.Request.Headers.TryAdd(":Request-Line", new string(line));
                         isFirstLine = false;
                         continue;
                     }
@@ -73,7 +71,7 @@ public partial class WiredHttp11<TContext, TRequest>
                     var key = line[..colonIndex].Trim();
                     var value = line[(colonIndex + 1)..].Trim();
 
-                    request.Headers.TryAdd(new string(key), new string(value));
+                    context.Request.Headers.TryAdd(new string(key), new string(value));
                 }
 
                 return true;
@@ -150,11 +148,9 @@ public partial class WiredHttp11<TContext, TRequest>
             var line = charSpan.Slice(lineStart, lineEnd);
             lineStart += lineEnd + 2;
 
-            var request = Unsafe.As<Http11Request>(context.Request);
-
             if (isFirstLine)
             {
-                request.Headers.TryAdd(":Request-Line", new string(line));
+                context.Request.Headers.TryAdd(":Request-Line", new string(line));
                 isFirstLine = false;
                 continue;
             }
@@ -165,7 +161,7 @@ public partial class WiredHttp11<TContext, TRequest>
             var key = line[..colonIndex].Trim();
             var value = line[(colonIndex + 1)..].Trim();
 
-            request.Headers.TryAdd(new string(key), new string(value));
+            context.Request.Headers.TryAdd(new string(key), new string(value));
         }
     }
 

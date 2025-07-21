@@ -23,6 +23,9 @@ public class Http11Context : IContext
 
     public PipeWriter Writer { get; set; } = null!;
 
+    // Might be necessary to use explicit interface implementation in the future
+    //IRequest IContext.Request => Request;
+
     public IRequest Request { get; set; } = new Http11Request
     {
         Headers = new PooledDictionary<string, string>(

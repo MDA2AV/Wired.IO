@@ -9,7 +9,7 @@ namespace Wired.IO.Protocol;
 /// <summary>
 /// Represents the context for a client connection, encapsulating the connection details, request, response, and dependency resolution.
 /// </summary>
-public interface IContext: IHasWiredEvents, IDisposable
+public interface IContext : IHasWiredEvents, IDisposable
 {
     /// <summary>
     /// Gets or sets the <see cref="PipeReader"/> used to read incoming data from the client connection.
@@ -34,7 +34,7 @@ public interface IContext: IHasWiredEvents, IDisposable
     /// This property contains all the details of the incoming HTTP request,
     /// such as the request method, headers, URI, and body.
     /// </summary>
-    IRequest Request { get; set; }
+    IRequest Request { get; }
 
     /// <summary>
     /// Gets or sets the service scope for resolving scoped services during the lifecycle of the request.

@@ -7,7 +7,7 @@ using Wired.IO.Protocol.Request;
 
 namespace Wired.IO.Http11;
 
-public partial class WiredHttp11<TContext, TRequest>
+public partial class WiredHttp11<TContext>
 {
     /// <summary>
     /// Handles an HTTP/1.1 connection using a non-blocking strategy, allowing pipelined
@@ -41,12 +41,10 @@ public partial class WiredHttp11<TContext, TRequest>
                 // Parse incoming headers and determine whether a request was received
                 keepAlive = await ExtractHeadersAsync(context);
 
-                var request = Unsafe.As<Http11Request>(context.Request);
-
                 // Parse the "Connection" header to decide connection behavior
                 var connType =
                     context.Request.ConnectionType =
-                        request.Headers.TryGetValue("Connection", out var connectionValue)
+                        context.Request.Headers.TryGetValue("Connection", out var connectionValue)
                             ? GetConnectionType(connectionValue)
                             : ConnectionType.KeepAlive;
 
@@ -79,16 +77,14 @@ public partial class WiredHttp11<TContext, TRequest>
     /// <param name="pipeline">The request-handling delegate to invoke for non-static routes.</param>
     public async Task ProcessPipelineRequest(TContext context, Func<TContext, Task> pipeline)
     {
-        var request = Unsafe.As<Http11Request>(context.Request);
-
         // Handle WebSocket upgrade if requested
         if (context.Request.ConnectionType is ConnectionType.Websocket)
         {
-            await SendHandshakeResponse(context, ToRawHeaderString(request.Headers));
+            await SendHandshakeResponse(context, ToRawHeaderString(context.Request.Headers));
         }
 
         // Parse the first header line to extract the HTTP request line (e.g. GET /index HTTP/1.1)
-        IEnumerator enumerator = request.Headers.GetEnumerator();
+        IEnumerator enumerator = context.Request.Headers.GetEnumerator();
         enumerator.MoveNext();
 
         ParseHttpRequestLine(

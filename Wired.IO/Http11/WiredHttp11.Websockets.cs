@@ -5,7 +5,7 @@ using Wired.IO.Protocol;
 
 namespace Wired.IO.Http11;
 
-public partial class WiredHttp11<TContext, TRequest>
+public partial class WiredHttp11<TContext>
 {
     private static readonly ReadOnlyMemory<byte> WebsocketHandshakePrefix
         = "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: "u8.ToArray();

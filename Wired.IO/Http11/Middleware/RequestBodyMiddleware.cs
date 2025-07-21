@@ -24,8 +24,7 @@ public static class RequestBodyMiddleware
     /// This method checks if the request includes a <c>Content-Length</c> header or uses <c>Transfer-Encoding: chunked</c>,
     /// and reads the body accordingly.
     /// </remarks>
-    public static async Task HandleAsync<TContext>(TContext ctx)
-        where TContext : IContext
+    public static async Task HandleAsync(Http11Context ctx)
     {
         var request = Unsafe.As<Http11Request>(ctx.Request);
         var contentLengthAvailable = TryGetContentLength(request.Headers, out var contentLength);

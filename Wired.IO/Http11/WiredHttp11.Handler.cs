@@ -3,8 +3,6 @@ using Wired.IO.Protocol.Handlers;
 using Wired.IO.Protocol;
 using System.Reflection;
 using Wired.IO.Http11.Context;
-using Wired.IO.Http11.Request;
-using Wired.IO.Protocol.Request;
 
 namespace Wired.IO.Http11;
 
@@ -22,7 +20,7 @@ public sealed class WiredHttp11(IHandlerArgs args) : WiredHttp11<Http11Context>(
 /// </typeparam>
 /// <param name="args">Configuration arguments for the handler.</param>
 public partial class WiredHttp11<TContext>(IHandlerArgs args) : IHttpHandler<TContext>
-    where TContext : class, IContext, new()
+    where TContext : Http11Context, new()
 {
     /// <summary>
     /// Object pool used to recycle request contexts for reduced allocations and improved performance.
