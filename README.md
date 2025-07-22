@@ -1,5 +1,11 @@
 [![NuGet](https://img.shields.io/nuget/v/Wired.IO.svg)](https://www.nuget.org/packages/Wired.IO/)
 
+## License
+
+This project includes code originally from [GenHttp](https://github.com/Kaliumhexacyanoferrat/GenHTTP), which is licensed under the MIT License.
+
+Portions of this code are © [Andreas Nägeli] and used under the terms of the MIT License.
+
 [Full project documentation](https://mda2av.github.io/Wired.IO.Docs/)
 
 **Wired.IO** is a lightweight, high-performance HTTP server framework for .NET. Designed from the ground up for **embedding**, **extensibility**, and **raw speed**, it gives you full control over your request pipeline without the weight of traditional web frameworks.
