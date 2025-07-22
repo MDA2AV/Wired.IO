@@ -5,9 +5,9 @@
 This project includes code originally from [GenHttp](https://github.com/Kaliumhexacyanoferrat/GenHTTP), which is licensed under the MIT License.
 
 Portions of this code are © [Andreas Nägeli] and used under the terms of the MIT License:
-PooledDictionary.cs
-PoolBufferedStream.cs
-ContentType.cs
+ - PooledDictionary.cs
+ - PoolBufferedStream.cs
+ - ContentType.cs
 
 [Full project documentation](https://mda2av.github.io/Wired.IO.Docs/)
 
