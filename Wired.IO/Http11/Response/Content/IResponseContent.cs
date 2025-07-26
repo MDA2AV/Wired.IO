@@ -32,12 +32,12 @@ public interface IResponseContent
     /// </summary>
     /// <param name="writer">The chunked writer used to send the response body.</param>
     /// <param name="bufferSize">The buffer size to use during writing operations.</param>
-    ValueTask WriteAsync(ChunkedPipeWriter writer, uint bufferSize);
+    Task WriteAsync(ChunkedPipeWriter writer, uint bufferSize);
 
     /// <summary>
     /// Writes the content to the response using a standard <see cref="PipeWriter"/>, typically with a known content length.
     /// </summary>
     /// <param name="writer">The writer used to send the response body.</param>
     /// <param name="bufferSize">The buffer size to use during writing operations.</param>
-    ValueTask WriteAsync(PipeWriter writer, uint bufferSize);
+    Task WriteAsync(PipeWriter writer, uint bufferSize);
 }

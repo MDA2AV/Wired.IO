@@ -17,7 +17,7 @@ public sealed class JsonContent(object data, JsonSerializerOptions options) : IR
 
     public ValueTask<ulong?> CalculateChecksumAsync() => new((ulong)data.GetHashCode());
 
-    public async ValueTask WriteAsync(ChunkedPipeWriter writer, uint bufferSize)
+    public async Task WriteAsync(ChunkedPipeWriter writer, uint bufferSize)
     {
         var json = JsonSerializer.Serialize(data, options);
 
@@ -28,7 +28,7 @@ public sealed class JsonContent(object data, JsonSerializerOptions options) : IR
         await writer.FlushAsync();
     }
 
-    public async ValueTask WriteAsync(PipeWriter writer, uint bufferSize)
+    public async Task WriteAsync(PipeWriter writer, uint bufferSize)
     {
         var json = JsonSerializer.Serialize(data, options);
 
@@ -67,7 +67,7 @@ public sealed class JsonContent<T> : IResponseContent
 
     public ValueTask<ulong?> CalculateChecksumAsync() => new((ulong)_data.GetHashCode());
 
-    public async ValueTask WriteAsync(ChunkedPipeWriter writer, uint bufferSize)
+    public async Task WriteAsync(ChunkedPipeWriter writer, uint bufferSize)
     {
         writer.Write(Encoding.UTF8.GetBytes(_serializedData));
 
@@ -76,7 +76,7 @@ public sealed class JsonContent<T> : IResponseContent
         await writer.FlushAsync();
     }
 
-    public async ValueTask WriteAsync(PipeWriter writer, uint bufferSize)
+    public async Task WriteAsync(PipeWriter writer, uint bufferSize)
     {
         writer.Write(Encoding.UTF8.GetBytes(_serializedData));
 

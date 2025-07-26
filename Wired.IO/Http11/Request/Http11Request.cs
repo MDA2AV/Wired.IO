@@ -36,7 +36,7 @@ public sealed class Http11Request : IRequest
     private bool _disposed;
 
     /// <summary>
-    /// Disposes the request, clearing pooled dictionaries and releasing resources.
+    /// Disposes the request, releasing resources.
     /// </summary>
     /// <remarks>
     /// Clears <see cref="Headers"/> and <see cref="QueryParameters"/> to allow reuse from the pool.

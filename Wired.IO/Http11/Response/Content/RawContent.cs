@@ -14,7 +14,7 @@ public sealed class RawContent(ReadOnlyMemory<byte> data) : IResponseContent
 
     public ValueTask<ulong?> CalculateChecksumAsync() => new((ulong)data.GetHashCode());
 
-    public async ValueTask WriteAsync(ChunkedPipeWriter writer, uint bufferSize)
+    public async Task WriteAsync(ChunkedPipeWriter writer, uint bufferSize)
     {
         writer.Write(data.Span);
 
@@ -23,7 +23,7 @@ public sealed class RawContent(ReadOnlyMemory<byte> data) : IResponseContent
         await writer.FlushAsync();
     }
 
-    public async ValueTask WriteAsync(PipeWriter writer, uint bufferSize)
+    public async Task WriteAsync(PipeWriter writer, uint bufferSize)
     {
         writer.Write(data.Span);
 

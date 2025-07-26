@@ -15,7 +15,7 @@ public class StringContent(string data) : IResponseContent
 
     public ValueTask<ulong?> CalculateChecksumAsync() => new((ulong)data.GetHashCode());
 
-    public async ValueTask WriteAsync(ChunkedPipeWriter writer, uint bufferSize)
+    public async Task WriteAsync(ChunkedPipeWriter writer, uint bufferSize)
     {
         writer.Write(Encoding.UTF8.GetBytes(data));
 
@@ -24,7 +24,7 @@ public class StringContent(string data) : IResponseContent
         await writer.FlushAsync();
     }
 
-    public async ValueTask WriteAsync(PipeWriter writer, uint bufferSize)
+    public async Task WriteAsync(PipeWriter writer, uint bufferSize)
     {
         writer.Write(Encoding.UTF8.GetBytes(data));
 

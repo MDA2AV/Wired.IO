@@ -54,7 +54,7 @@ builder
         var entity = new Entity();
         entity.DoSomething();
 
-        await Task.Delay(5000, httpContext.CancellationToken);
+        //await Task.Delay(5000, httpContext.CancellationToken);
 
         httpContext
             .Respond()

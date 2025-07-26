@@ -90,15 +90,11 @@ public sealed class Builder<THandler, TContext>
 
         App.Endpoints = [];
 
-        foreach (var kvp in App.EncodedRoutes)
+        foreach (var fullRoute in App.EncodedRoutes.SelectMany(kvp => kvp.Value.Select(route => kvp.Key + '_' + route)))
         {
-            foreach (var route in kvp.Value)
-            {
-                var fullRoute = kvp.Key + '_' + route;
-                App.Endpoints.Add(
-                    fullRoute,
-                    App.Services.GetRequiredKeyedService<Func<TContext, Task>>(fullRoute));
-            }
+            App.Endpoints.Add(
+                fullRoute,
+                App.Services.GetRequiredKeyedService<Func<TContext, Task>>(fullRoute));
         }
 
         return App;

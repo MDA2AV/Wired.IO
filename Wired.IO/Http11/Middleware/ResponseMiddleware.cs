@@ -129,11 +129,10 @@ public static class ResponseMiddleware
     /// <returns>A task that completes when the response has been fully written to the stream.</returns>
     /// <remarks>
     /// This method performs the following operations in order:
-    /// 1. Creates a PipeWriter for efficient stream writing
-    /// 2. Writes the HTTP status line
-    /// 3. Prepares and writes all HTTP headers
-    /// 4. Writes the response body (if present)
-    /// 5. Handles client disconnections gracefully
+    /// 1. Writes the HTTP status line
+    /// 2. Prepares and writes all HTTP headers
+    /// 3. Writes the response body (if present)
+    /// 4. Handles client disconnections gracefully
     /// 
     /// The method is designed to be exception-safe and will properly clean up resources
     /// even if the client disconnects during response writing.
