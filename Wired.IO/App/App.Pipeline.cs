@@ -3,20 +3,86 @@ using System.Text.RegularExpressions;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Wired.IO.App;
-
 public partial class WiredApp<TContext>
 {
+    private Func<TContext, Task>? _cachedPipeline;
+
     /// <summary>
-    /// Executes the middleware pipeline recursively for a given request context.
-    /// Once all middleware are processed, invokes the matched endpoint.
+    /// Builds and caches the middleware pipeline by chaining each middleware around the final endpoint delegate.
+    /// This method should be called only once during application startup or first request handling.
     /// </summary>
-    /// <param name="context">The current request context.</param>
-    /// <param name="index">The index of the current middleware being executed.</param>
-    /// <param name="middlewares">The list of middleware functions to invoke.</param>
-    /// <returns>A task that completes when the pipeline has finished executing.</returns>
-    /// <exception cref="InvalidOperationException">
-    /// Thrown when no endpoint is found for the resolved route.
-    /// </exception>
+    /// <param name="middlewares">The ordered list of middleware functions.</param>
+    /// <param name="endpoint">The terminal delegate that invokes the matched endpoint.</param>
+    /// <exception cref="InvalidOperationException">Thrown if the pipeline build results in a null delegate.</exception>
+    public void BuildPipeline(
+        IList<Func<TContext, Func<TContext, Task>, Task>> middlewares,
+        Func<TContext, Task> endpoint)
+    {
+        Func<TContext, Task> next = endpoint;
+
+        for (var i = middlewares.Count - 1; i >= 0; i--)
+        {
+            var middleware = middlewares[i];
+            var currentNext = next;
+            next = ctx => middleware(ctx, currentNext);
+        }
+
+        _cachedPipeline = next ?? throw new InvalidOperationException("Pipeline build failed");
+    }
+
+    /// <summary>
+    /// Executes the previously built and cached middleware pipeline.
+    /// </summary>
+    /// <param name="context">The request context to pass through the middleware chain.</param>
+    /// <returns>A task that completes when all middleware and the final endpoint have finished executing.</returns>
+    /// <exception cref="InvalidOperationException">Thrown if the pipeline has not yet been built.</exception>
+    public Task RunCachedPipeline(TContext context)
+    {
+        if (_cachedPipeline is null)
+            throw new InvalidOperationException("Pipeline not built");
+
+        return _cachedPipeline(context);
+    }
+
+    /// <summary>
+    /// Resolves and invokes the endpoint matching the request method and route.
+    /// </summary>
+    /// <param name="context">The current request context containing the route and method information.</param>
+    /// <returns>A task representing the asynchronous execution of the endpoint.</returns>
+    /// <exception cref="InvalidOperationException">Thrown if no matching endpoint is found.</exception>
+    public Task EndpointInvoker(TContext context)
+    {
+        var httpMethod = context.Request.HttpMethod.ToUpperInvariant();
+        var decodedRoute = MatchEndpoint(EncodedRoutes[httpMethod], context.Request.Route);
+        var endpoint = Endpoints[httpMethod + "_" + decodedRoute!];
+
+        return endpoint is null
+            ? throw new InvalidOperationException("Unable to find the Invoke method on the resolved service.")
+            : endpoint.Invoke(context);
+    }
+
+    /// <summary>
+    /// Entry point for processing an incoming request through the middleware pipeline.
+    /// This method ensures a per-request scoped DI container and runs the full pipeline.
+    /// </summary>
+    /// <param name="context">The request context to process.</param>
+    /// <returns>A task that completes when request processing is finished.</returns>
+    public async Task Pipeline(TContext context)
+    {
+        await using var scope = Services.CreateAsyncScope();
+        context.Scope = scope;
+
+        // No caching
+        // await PipelineRecursive(context, 0, Middleware);
+        // await PipelineIterative(context, Middleware);
+
+        await RunCachedPipeline(context);
+    }
+
+    /// <summary>
+    /// A per-request recursive middleware pipeline executor.
+    /// This approach is not cached and invokes the middleware chain using recursive function calls.
+    /// </summary>
     public Task PipelineRecursive(
         TContext context,
         int index,
@@ -36,11 +102,14 @@ public partial class WiredApp<TContext>
             : endpoint.Invoke(context);
     }
 
+    /// <summary>
+    /// A per-request iterative middleware executor.
+    /// This builds the middleware chain on every request (no caching) using closures but avoids recursion.
+    /// </summary>
     public Task PipelineIterative(
         TContext context,
         IList<Func<TContext, Func<TContext, Task>, Task>> middlewares)
     {
-        // Final delegate (the actual endpoint handler)
         Func<TContext, Task> next = ctx =>
         {
             var httpMethod = ctx.Request.HttpMethod.ToUpper();
@@ -52,53 +121,6 @@ public partial class WiredApp<TContext>
                 : endpoint.Invoke(ctx);
         };
 
-        // Build the pipeline in reverse order
-        for (int i = middlewares.Count - 1; i >= 0; i--)
-        {
-            var middleware = middlewares[i];
-            var currentNext = next; // Capture current state of the pipeline
-
-            next = ctx => middleware(ctx, currentNext);
-        }
-
-        // Execute the complete pipeline
-        return next(context);
-    }
-
-    /// <summary>
-    /// Entry point for processing an incoming request through the middleware pipeline.
-    /// Creates a scoped service provider for the request and invokes <see cref="PipelineNoResponse(TContext)"/>.
-    /// </summary>
-    /// <param name="context">The request context to process.</param>
-    /// <returns>A task that completes when request processing is finished.</returns>
-    public async Task PipelineNoResponse(TContext context)
-    {
-        await using var scope = Services.CreateAsyncScope();
-        context.Scope = scope;
-
-        //await PipelineRecursive(context, 0, Middleware);
-
-        //await PipelineIterative(context, Middleware);
-
-        if (!_pipelineBuilt)
-        {
-            _pipelineBuilt = true;
-            BuildPipeline(Middleware, EndpointInvoker);
-        }
-
-        await RunCachedPipeline(context);
-    }
-
-    private Func<TContext, Task>? _cachedPipeline;
-
-    private bool _pipelineBuilt;
-
-    public void BuildPipeline(
-        IList<Func<TContext, Func<TContext, Task>, Task>> middlewares,
-        Func<TContext, Task> endpoint)
-    {
-        Func<TContext, Task> next = endpoint;
-
         for (var i = middlewares.Count - 1; i >= 0; i--)
         {
             var middleware = middlewares[i];
@@ -106,29 +128,17 @@ public partial class WiredApp<TContext>
             next = ctx => middleware(ctx, currentNext);
         }
 
-        _cachedPipeline = next ?? throw new InvalidOperationException("Pipeline build failed");
+        return next(context);
     }
 
-    public Task RunCachedPipeline(TContext context)
-    {
-        if (_cachedPipeline is null)
-            throw new InvalidOperationException("Pipeline not built");
-
-        return _cachedPipeline(context);
-    }
-
-    public Task EndpointInvoker(TContext context)
-    {
-        var httpMethod = context.Request.HttpMethod.ToUpperInvariant();
-        var decodedRoute = MatchEndpoint(EncodedRoutes[httpMethod], context.Request.Route);
-        var endpoint = Endpoints[httpMethod + "_" + decodedRoute!];
-
-        return endpoint is null
-            ? throw new InvalidOperationException("Unable to find the Invoke method on the resolved service.")
-            : endpoint.Invoke(context);
-    }
-
+    /// <summary>
+    /// Caches matched routes for previously seen paths to speed up route resolution.
+    /// </summary>
     private static readonly ConcurrentDictionary<string, string?> RouteMatchCache = new();
+
+    /// <summary>
+    /// Caches compiled regular expressions for each route pattern to avoid recompilation.
+    /// </summary>
     private static readonly ConcurrentDictionary<string, Regex> RouteRegexCache = new();
 
     /// <summary>
@@ -142,7 +152,6 @@ public partial class WiredApp<TContext>
     /// </returns>
     public static string? MatchEndpoint(HashSet<string> patterns, string input)
     {
-        // Check if we've seen this exact input before
         if (RouteMatchCache.TryGetValue(input, out var cachedPattern))
             return cachedPattern;
 
@@ -151,15 +160,12 @@ public partial class WiredApp<TContext>
             var regex = RouteRegexCache.GetOrAdd(pattern, static p =>
                 new Regex(ConvertToRegex(p), RegexOptions.Compiled | RegexOptions.CultureInvariant));
 
-            if (!regex.IsMatch(input)) 
-                continue;
+            if (!regex.IsMatch(input)) continue;
 
-            // Cache for next time
             RouteMatchCache[input] = pattern;
             return pattern;
         }
 
-        // No match found — cache null
         RouteMatchCache[input] = null;
         return null;
     }
@@ -171,12 +177,7 @@ public partial class WiredApp<TContext>
     /// <returns>A regex string that matches the route with placeholders replaced by wildcards.</returns>
     public static string ConvertToRegex(string pattern)
     {
-        // Replace placeholders like ":id" with a regex pattern that matches any non-slash characters
         var regexPattern = Regex.Replace(pattern, @":\w+", "[^/]+");
-
-        // Add anchors to ensure the regex matches the entire input string
-        regexPattern = $"^{regexPattern}$";
-
-        return regexPattern;
+        return $"^{regexPattern}$";
     }
 }

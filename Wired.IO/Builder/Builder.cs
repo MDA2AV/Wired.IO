@@ -87,6 +87,7 @@ public sealed class Builder<THandler, TContext>
         App.Logger = App.LoggerFactory.CreateLogger<WiredApp<TContext>>();
 
         App.Middleware = App.Services.GetServices<Func<TContext, Func<TContext, Task>, Task>>().ToList();
+        App.BuildPipeline(App.Middleware, App.EndpointInvoker);
 
         App.Endpoints = [];
 

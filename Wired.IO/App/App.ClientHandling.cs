@@ -18,7 +18,7 @@ public sealed partial class WiredApp<TContext>
     private async Task HandlePlainClientAsync(Socket client, CancellationToken stoppingToken)
     {
         await using var stream = new PoolBufferedStream(new NetworkStream(client, ownsSocket: true), 65 * 1024);
-        await HttpHandler.HandleClientAsync(stream, PipelineNoResponse, stoppingToken);
+        await HttpHandler.HandleClientAsync(stream, Pipeline, stoppingToken);
     }
 
     /// <summary>
@@ -62,7 +62,7 @@ public sealed partial class WiredApp<TContext>
         //
         await HttpHandler.HandleClientAsync(
             sslStream,
-            PipelineNoResponse,
+            Pipeline,
             stoppingToken);
     }
 
