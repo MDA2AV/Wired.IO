@@ -116,6 +116,10 @@ public class WiredHttpExpress<TContext> : IHttpHandler<TContext>
             {
 
             }
+            else
+            {
+
+            }
 
             if (PipeReaderUtilities.TryAdvanceTo(new SequenceReader<byte>(buffer), "\r\n\r\n"u8, out var position))
             {
@@ -150,6 +154,49 @@ public class WiredHttpExpress<TContext> : IHttpHandler<TContext>
 
             if (result.IsCompleted)
                 return false;
+        }
+    }
+
+    static async ValueTask<ReadOnlySequence<byte>> ReadHeadersAsync(PipeReader reader)
+    {
+        ReadOnlySequence<byte> headersWithDelimiter = default;
+
+        while (true)
+        {
+            var result = await reader.ReadAsync();
+            var buffer = result.Buffer;
+
+            // Try to find CRLFCRLF across segments
+            var sr = new SequenceReader<byte>(buffer);
+            if (sr.TryReadTo(out ReadOnlySequence<byte> before, "\r\n\r\n"u8, advancePastDelimiter: true))
+            {
+                // sr.Position is now AFTER the delimiter
+                var after = sr.Position;
+
+                // You want headers INCLUDING the delimiter:
+                headersWithDelimiter = buffer.Slice(0, after);
+
+                // Consume through the delimiter
+                reader.AdvanceTo(after, after);
+                return headersWithDelimiter;
+            }
+
+            // Not found yet: preserve a tail of (delimiter.Length - 1) bytes
+            // so a split delimiter can complete on the next read.
+            const int keep = 4 - 1; // for "\r\n\r\n"
+            if (buffer.Length > keep)
+            {
+                var consumeTo = buffer.GetPosition(buffer.Length - keep);
+                reader.AdvanceTo(consumeTo, buffer.End);
+            }
+            else
+            {
+                // Too little data to safely consume anything
+                reader.AdvanceTo(buffer.Start, buffer.End);
+            }
+
+            if (result.IsCompleted)
+                throw new InvalidOperationException("Connection closed before headers completed.");
         }
     }
 }
