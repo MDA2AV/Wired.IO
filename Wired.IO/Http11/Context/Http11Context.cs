@@ -57,7 +57,7 @@ public class Http11Context : IContext
     /// These events are typically dispatched after the request completes,
     /// enabling integration with event-driven architectures such as the outbox pattern.
     /// </remarks>
-    private readonly List<IWiredEvent> _wiredEvents = new();
+    private readonly List<IWiredEvent> _wiredEvents = [];
 
     public IReadOnlyList<IWiredEvent> WiredEvents => _wiredEvents.AsReadOnly();
 

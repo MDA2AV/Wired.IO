@@ -26,10 +26,10 @@ public partial class WiredHttp11<TContext>
 
         // Wrap the stream in a PipeReader and PipeWriter for efficient buffered reads/writes
         context.Reader = PipeReader.Create(stream,
-            new StreamPipeReaderOptions(MemoryPool<byte>.Shared, leaveOpen: true, bufferSize: 8192));
+            new StreamPipeReaderOptions(MemoryPool<byte>.Shared, leaveOpen: false, bufferSize: 8192));
 
         context.Writer = PipeWriter.Create(stream,
-            new StreamPipeWriterOptions(MemoryPool<byte>.Shared, leaveOpen: true));
+            new StreamPipeWriterOptions(MemoryPool<byte>.Shared, leaveOpen: false));
 
         try
         {

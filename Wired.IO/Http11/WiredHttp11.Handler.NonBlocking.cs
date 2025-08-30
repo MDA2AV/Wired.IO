@@ -19,10 +19,10 @@ public partial class WiredHttp11<TContext>
     {
         // Create a reusable PipeReader and PipeWriter wrapping the stream
         var reader = PipeReader.Create(stream,
-            new StreamPipeReaderOptions(MemoryPool<byte>.Shared, leaveOpen: true, bufferSize: 8192));
+            new StreamPipeReaderOptions(MemoryPool<byte>.Shared, leaveOpen: false, bufferSize: 8192));
 
         var writer = PipeWriter.Create(stream,
-            new StreamPipeWriterOptions(MemoryPool<byte>.Shared, leaveOpen: true));
+            new StreamPipeWriterOptions(MemoryPool<byte>.Shared, leaveOpen: false));
 
         var cts = new CancellationTokenSource();
         var keepAlive = true;

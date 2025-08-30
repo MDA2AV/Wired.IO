@@ -1,0 +1,1 @@
+﻿HttpExpress is an optimized version of Http/1.1 for specific use cases, use with caution.

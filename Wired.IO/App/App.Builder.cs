@@ -2,7 +2,6 @@
 using System.Net;
 using System.Security.Authentication;
 using Microsoft.Extensions.Logging;
-using Wired.IO.Http11.Context;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Handlers;
 
@@ -63,7 +62,7 @@ public sealed partial class WiredApp<TContext> where TContext : IContext
     /// Gets or sets the local IP address the server will bind to.
     /// Defaults to 127.0.0.1.
     /// </summary>
-    internal IPAddress IpAddress { get; set; } = IPAddress.Parse("127.0.0.1");
+    internal IPAddress IpAddress { get; set; } = IPAddress.Any;
 
     /// <summary>
     /// Gets or sets the port the server will listen on.

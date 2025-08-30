@@ -1,8 +1,8 @@
-﻿using System.Net.Security;
+﻿using Microsoft.Extensions.Logging;
+using System.Net.Security;
 using System.Net.Sockets;
-using System.Security.Authentication;
 using System.Security;
-using Microsoft.Extensions.Logging;
+using System.Security.Authentication;
 using Wired.IO.MemoryBuffers;
 
 namespace Wired.IO.App;
