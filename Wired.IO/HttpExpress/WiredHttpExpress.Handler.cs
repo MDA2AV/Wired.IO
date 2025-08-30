@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.ObjectPool;
 using System.Buffers;
 using System.Collections;
+using System.Diagnostics.Metrics;
 using System.IO.Pipelines;
 using System.Text;
 using Wired.IO.Http11.Context;
@@ -105,9 +106,15 @@ public class WiredHttpExpress<TContext> : IHttpHandler<TContext>
         {
             var result = await reader.ReadAsync(context.CancellationToken);
             var buffer = result.Buffer;
+
             if (buffer.Length == 0)
             {
                 throw new IOException("Client disconnected");
+            }
+
+            if (buffer.IsSingleSegment)
+            {
+
             }
 
             if (PipeReaderUtilities.TryAdvanceTo(new SequenceReader<byte>(buffer), "\r\n\r\n"u8, out var position))
@@ -144,5 +151,78 @@ public class WiredHttpExpress<TContext> : IHttpHandler<TContext>
             if (result.IsCompleted)
                 return false;
         }
+    }
+}
+
+public static class SequenceSearch
+{
+    public static bool TryAdvanceSingleSegment(
+        in ReadOnlySequence<byte> buffer,
+        ReadOnlySpan<byte> delimiter,
+        out SequencePosition after)
+    {
+        after = default;
+
+        var span = buffer.FirstSpan;
+        var idx = span.IndexOf(delimiter);
+        if (idx < 0)
+            return false;
+
+        after = buffer.GetPosition(idx + delimiter.Length, buffer.Start);
+        return true;
+    }
+
+    public static bool TryAdvanceMultiSegment(
+        in ReadOnlySequence<byte> buffer,
+        ReadOnlySpan<byte> delimiter,
+        out SequencePosition after)
+    {
+        after = default;
+
+        if (delimiter.Length == 0)
+            throw new ArgumentException("Delimiter cannot be empty.", nameof(delimiter));
+
+        byte first = delimiter[0];
+        var searchFrom = buffer.Start;
+
+        while (true)
+        {
+            var pos = buffer.Slice(searchFrom).PositionOf(first);
+            if (pos == null)
+                return false;
+
+            var candidate = pos.Value;
+            if (StartsWithAt(buffer, candidate, delimiter))
+            {
+                after = buffer.GetPosition(delimiter.Length, candidate);
+                return true;
+            }
+
+            searchFrom = buffer.GetPosition(1, candidate);
+        }
+    }
+
+    // Helper: check if delimiter matches starting at position
+    private static bool StartsWithAt(
+        in ReadOnlySequence<byte> buffer,
+        SequencePosition start,
+        ReadOnlySpan<byte> delimiter)
+    {
+        var seq = buffer.Slice(start);
+        var remaining = delimiter;
+        var pos = seq.Start;
+
+        while (!remaining.IsEmpty && seq.TryGet(ref pos, out var mem, advance: true))
+        {
+            var span = mem.Span;
+            int take = Math.Min(span.Length, remaining.Length);
+
+            if (!span.Slice(0, take).SequenceEqual(remaining.Slice(0, take)))
+                return false;
+
+            remaining = remaining.Slice(take);
+        }
+
+        return remaining.IsEmpty;
     }
 }
