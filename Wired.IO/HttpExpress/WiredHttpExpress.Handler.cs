@@ -10,7 +10,7 @@ using Wired.IO.Protocol.Request;
 using Wired.IO.Utilities;
 
 namespace Wired.IO.HttpExpress;
-
+/*
 public class WiredHttpExpress<TContext> : IHttpHandler<TContext>
     where TContext : Http11Context, new()
 {
@@ -272,4 +272,4 @@ public static class SequenceSearch
 
         return remaining.IsEmpty;
     }
-}
+}*/
