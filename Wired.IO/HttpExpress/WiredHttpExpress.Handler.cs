@@ -1,8 +1,10 @@
 ﻿using Microsoft.Extensions.ObjectPool;
+using System;
 using System.Buffers;
 using System.Collections;
 using System.Diagnostics.Metrics;
 using System.IO.Pipelines;
+using System.Reflection.PortableExecutable;
 using System.Text;
 using Wired.IO.Http11.Context;
 using Wired.IO.Protocol.Handlers;
@@ -10,7 +12,7 @@ using Wired.IO.Protocol.Request;
 using Wired.IO.Utilities;
 
 namespace Wired.IO.HttpExpress;
-/*
+
 public class WiredHttpExpress<TContext> : IHttpHandler<TContext>
     where TContext : Http11Context, new()
 {
@@ -109,7 +111,7 @@ public class WiredHttpExpress<TContext> : IHttpHandler<TContext>
 
             if (buffer.Length == 0)
             {
-                throw new IOException("Client disconnected");
+                    throw new IOException("Client disconnected");
             }
 
             if (buffer.IsSingleSegment)
@@ -157,30 +159,98 @@ public class WiredHttpExpress<TContext> : IHttpHandler<TContext>
         }
     }
 
-    static async ValueTask<ReadOnlySequence<byte>> ReadHeadersAsync(PipeReader reader)
-    {
-        ReadOnlySequence<byte> headersWithDelimiter = default;
+    private const int DelimiterLen = 4;
+    private const int Keep = DelimiterLen - 1;
 
+    private static async ValueTask<ReadOnlySequence<byte>> ReadHeadersAsync(PipeReader reader)
+    {
         while (true)
         {
             var result = await reader.ReadAsync();
             var buffer = result.Buffer;
 
-            // Try to find CRLFCRLF across segments
-            var sr = new SequenceReader<byte>(buffer);
-            if (sr.TryReadTo(out ReadOnlySequence<byte> before, "\r\n\r\n"u8, advancePastDelimiter: true))
+            if (result.IsCompleted && buffer.Length == 0)
+                throw new IOException("Client disconnected");
+
+            if (buffer.IsSingleSegment)
             {
-                // sr.Position is now AFTER the delimiter
-                var after = sr.Position;
-
-                // You want headers INCLUDING the delimiter:
-                headersWithDelimiter = buffer.Slice(0, after);
-
-                // Consume through the delimiter
-                reader.AdvanceTo(after, after);
-                return headersWithDelimiter;
+                var span = buffer.FirstSpan;
+                var pos = span.IndexOf("\r\n\r\n"u8);
+                if (pos >= 0)
+                {
+                    var after = buffer.GetPosition(pos + DelimiterLen, buffer.Start);
+                    var headersWithDelimiter = buffer.Slice(0, after);
+                    reader.AdvanceTo(after, after);
+                    return headersWithDelimiter;
+                }
+            }
+            else
+            {
+                var sr = new SequenceReader<byte>(buffer);
+                if (sr.TryReadTo(out ReadOnlySequence<byte> _, "\r\n\r\n"u8, advancePastDelimiter: true))
+                {
+                    var after = sr.Position;
+                    var headersWithDelimiter = buffer.Slice(0, after);
+                    reader.AdvanceTo(after, after);
+                    return headersWithDelimiter;
+                }
             }
 
+            // Not found yet → preserve trailing 3 bytes so split delimiter can complete.
+            if (buffer.Length > Keep)
+            {
+                var consumeTo = buffer.GetPosition(buffer.Length - Keep);
+                reader.AdvanceTo(consumeTo, buffer.End);
+            }
+            else
+            {
+                reader.AdvanceTo(buffer.Start, buffer.End);
+            }
+
+            if (result.IsCompleted)
+                throw new InvalidOperationException("Connection closed before headers completed.");
+        }
+    }
+
+    private static async ValueTask<ReadOnlySequence<byte>> ReadHeadersAsync2(PipeReader reader)
+    {
+        while (true)
+        {
+            var result = await reader.ReadAsync();
+            var buffer = result.Buffer;
+
+            if (buffer.Length == 0)
+            {
+                throw new IOException("Client disconnected");
+            }
+
+            if (buffer.IsSingleSegment)
+            {
+                var firstSpan = buffer.FirstSpan;
+                var pos = firstSpan.IndexOf("\r\n\r\n"u8);
+
+                if (pos != -1)
+                {
+                    // position AFTER the delimiter
+                    var after = buffer.GetPosition(pos + 4, buffer.Start);
+
+                    var headersWithDelimiter = buffer.Slice(0, after);      
+                    reader.AdvanceTo(after, after);                         
+                    return headersWithDelimiter;
+                }
+            }
+            else
+            {
+                var sr = new SequenceReader<byte>(buffer);
+                if (sr.TryReadTo(out ReadOnlySequence<byte> _, "\r\n\r\n"u8, advancePastDelimiter: true))
+                {
+                    var after = sr.Position;
+                    var headersWithDelimiter = buffer.Slice(0, after); 
+                    reader.AdvanceTo(after, after);
+                    return headersWithDelimiter;
+                }
+            }
+            
             // Not found yet: preserve a tail of (delimiter.Length - 1) bytes
             // so a split delimiter can complete on the next read.
             const int keep = 4 - 1; // for "\r\n\r\n"
@@ -198,6 +268,41 @@ public class WiredHttpExpress<TContext> : IHttpHandler<TContext>
             if (result.IsCompleted)
                 throw new InvalidOperationException("Connection closed before headers completed.");
         }
+    }
+
+    private static bool TryReadHeadersSingleSegment(ReadOnlySequence<byte> buffer, out ReadOnlySequence<byte> headers)
+    {
+        var firstSpan = buffer.FirstSpan;
+        var pos = firstSpan.IndexOf("\r\n\r\n"u8);
+
+        if (pos == -1)
+        {
+            headers = default;
+            return false;
+        }
+
+        headers = buffer.Slice(0, pos);
+        return true;
+    }
+
+    private static bool TryReadHeadersMultiSegment(ReadOnlySequence<byte> buffer, out ReadOnlySequence<byte> headers)
+    {
+        var sr = new SequenceReader<byte>(buffer);
+        if (sr.TryReadTo(out ReadOnlySequence<byte> before, "\r\n\r\n"u8, advancePastDelimiter: true))
+        {
+            // sr.Position is now AFTER the delimiter
+            var after = sr.Position;
+
+            // You want headers INCLUDING the delimiter:
+            headers = buffer.Slice(0, after);
+
+            // Consume through the delimiter
+            //reader.AdvanceTo(after, after);
+            return true;
+        }
+
+        headers = default;
+        return false;
     }
 }
 
@@ -272,4 +377,4 @@ public static class SequenceSearch
 
         return remaining.IsEmpty;
     }
-}*/
+}
