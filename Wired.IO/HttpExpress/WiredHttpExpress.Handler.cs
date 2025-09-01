@@ -212,61 +212,19 @@ public class WiredHttpExpress<TContext> : IHttpHandler<TContext>
         }
     }
 
-    private static async ValueTask<ReadOnlySequence<byte>> ReadHeadersAsync2(PipeReader reader)
+    private const byte Space = 0x20;
+    private static ReadOnlySequence<byte> SlicePath(in ReadOnlySequence<byte> headers, bool isSingleSegment)
     {
-        while (true)
+        if (isSingleSegment)
         {
-            var result = await reader.ReadAsync();
-            var buffer = result.Buffer;
+            var span = headers.FirstSpan;
+            int firstSpace = span.IndexOf(Space);
+            int secondSpace = span.Slice(firstSpace + 1).IndexOf(Space) + firstSpace + 1;
 
-            if (buffer.Length == 0)
-            {
-                throw new IOException("Client disconnected");
-            }
+            //var pathSlice = headers.Slice(firstSpace + 1, secondSpace - (firstSpace + 1));
+            //string path = Encoding.ASCII.GetString(pathSlice.ToArray());
 
-            if (buffer.IsSingleSegment)
-            {
-                var firstSpan = buffer.FirstSpan;
-                var pos = firstSpan.IndexOf("\r\n\r\n"u8);
-
-                if (pos != -1)
-                {
-                    // position AFTER the delimiter
-                    var after = buffer.GetPosition(pos + 4, buffer.Start);
-
-                    var headersWithDelimiter = buffer.Slice(0, after);      
-                    reader.AdvanceTo(after, after);                         
-                    return headersWithDelimiter;
-                }
-            }
-            else
-            {
-                var sr = new SequenceReader<byte>(buffer);
-                if (sr.TryReadTo(out ReadOnlySequence<byte> _, "\r\n\r\n"u8, advancePastDelimiter: true))
-                {
-                    var after = sr.Position;
-                    var headersWithDelimiter = buffer.Slice(0, after); 
-                    reader.AdvanceTo(after, after);
-                    return headersWithDelimiter;
-                }
-            }
-            
-            // Not found yet: preserve a tail of (delimiter.Length - 1) bytes
-            // so a split delimiter can complete on the next read.
-            const int keep = 4 - 1; // for "\r\n\r\n"
-            if (buffer.Length > keep)
-            {
-                var consumeTo = buffer.GetPosition(buffer.Length - keep);
-                reader.AdvanceTo(consumeTo, buffer.End);
-            }
-            else
-            {
-                // Too little data to safely consume anything
-                reader.AdvanceTo(buffer.Start, buffer.End);
-            }
-
-            if (result.IsCompleted)
-                throw new InvalidOperationException("Connection closed before headers completed.");
+            return headers.Slice(firstSpace + 1, secondSpace - (firstSpace + 1));
         }
     }
 
