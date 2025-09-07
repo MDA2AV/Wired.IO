@@ -2,10 +2,11 @@
 using Wired.IO.Builder;
 using Wired.IO.Http11;
 using Wired.IO.Http11.Context;
-using Wired.IO.Http11.Request;
 using Wired.IO.HttpExpress;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Handlers;
+using Wired.IO.Protocol.Request;
+using Wired.IO.Protocol.Response;
 using Wired.IO.Utilities;
 
 namespace Wired.IO.App;
@@ -21,7 +22,7 @@ public sealed class WiredApp
         var builder = new Builder<WiredHttpExpress<HttpExpressContext>, HttpExpressContext>(() =>
             new WiredHttpExpress<HttpExpressContext>(), [SslApplicationProtocol.Http11]);
 
-        //builder.Services.AddDefaultMiddleware<HttpExpressContext>();
+        builder.Services.AddDefaultMiddleware<HttpExpressContext>();
 
         return builder;
     }
@@ -94,12 +95,12 @@ public sealed class WiredApp
     /// Creates a generic <see cref="Builder{THandler, TContext}"/> for a custom handler and context type.
     /// </summary>
     /// <typeparam name="THandler">The custom HTTP handler type implementing <see cref="IHttpHandler{TContext}"/>.</typeparam>
-    /// <typeparam name="TContext">The request context type implementing <see cref="IContext"/>.</typeparam>
+    /// <typeparam name="TContext">The request context type implementing <see cref="IBaseContext{TRequest,TResponse}"/>.</typeparam>
     /// <param name="handlerFactory">A factory delegate that produces an instance of <typeparamref name="THandler"/>.</param>
     /// <returns>A configured <see cref="Builder{THandler, TContext}"/> instance.</returns>
     public static Builder<THandler, TContext> CreateBuilder<THandler, TContext>(Func<THandler> handlerFactory)
         where THandler : IHttpHandler<TContext>
-        where TContext : IContext
+        where TContext : IBaseContext<IBaseRequest, IBaseResponse>
     {
         return CreateBuilder<THandler, TContext>(handlerFactory, [SslApplicationProtocol.Http11]);
     }
@@ -109,7 +110,7 @@ public sealed class WiredApp
     /// using a custom list of supported ALPN protocols.
     /// </summary>
     /// <typeparam name="THandler">The custom HTTP handler type implementing <see cref="IHttpHandler{TContext}"/>.</typeparam>
-    /// <typeparam name="TContext">The request context type implementing <see cref="IContext"/>.</typeparam>
+    /// <typeparam name="TContext">The request context type implementing <see cref="IBaseContext{TRequest,TResponse}"/>.</typeparam>
     /// <param name="handlerFactory">A factory delegate that produces an instance of <typeparamref name="THandler"/>.</param>
     /// <param name="sslApplicationProtocols">
     /// A list of supported <see cref="SslApplicationProtocol"/> values for ALPN negotiation.
@@ -119,7 +120,7 @@ public sealed class WiredApp
         Func<THandler> handlerFactory,
         List<SslApplicationProtocol> sslApplicationProtocols)
         where THandler : IHttpHandler<TContext>
-        where TContext : IContext
+        where TContext : IBaseContext<IBaseRequest, IBaseResponse>
     {
         return new Builder<THandler, TContext>(handlerFactory, sslApplicationProtocols);
     }

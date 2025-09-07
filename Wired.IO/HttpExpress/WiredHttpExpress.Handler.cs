@@ -1,11 +1,8 @@
 ﻿using Microsoft.Extensions.ObjectPool;
 using System.Buffers;
-using System.Collections;
 using System.IO.Pipelines;
 using System.Text;
-using Wired.IO.Http11.Context;
 using Wired.IO.Protocol.Handlers;
-using Wired.IO.Protocol.Request;
 
 namespace Wired.IO.HttpExpress;
 
@@ -202,7 +199,7 @@ public class WiredHttpExpress<TContext> : IHttpHandler<TContext>
                                 break;
                             }
                             
-                            context.Request.QueryParametersString?
+                            context.Request.QueryParameters?
                                 .TryAdd(CachedQueryKeys.GetOrAdd(pair[..equalsIndex]), 
                                         Encoding.UTF8.GetString(pair[(equalsIndex + 1)..]));
                         }

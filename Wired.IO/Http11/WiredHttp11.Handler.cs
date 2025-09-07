@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.ObjectPool;
 using Wired.IO.Protocol.Handlers;
-using Wired.IO.Protocol;
 using System.Reflection;
 using Wired.IO.Http11.Context;
 
@@ -16,7 +15,7 @@ public sealed class WiredHttp11(IHandlerArgs args) : WiredHttp11<Http11Context>(
 /// blocking or non-blocking strategies over a single stream.
 /// </summary>
 /// <typeparam name="TContext">
-/// The context type used per request. Must implement <see cref="IContext"/> and have a public parameterless constructor.
+/// The context type used per request. Must implement <see cref="TContext"/> and have a public parameterless constructor.
 /// </typeparam>
 /// <param name="args">Configuration arguments for the handler.</param>
 public partial class WiredHttp11<TContext>(IHandlerArgs args) : IHttpHandler<TContext>

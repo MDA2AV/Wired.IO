@@ -1,7 +1,6 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
 using Wired.IO.Http11.Context;
-using Wired.IO.Protocol;
 
 namespace Wired.IO.Http11;
 
@@ -43,7 +42,7 @@ public partial class WiredHttp11<TContext>
     /// <exception cref="ObjectDisposedException"/>
     /// <exception cref="ArgumentNullException"/>
     /// <exception cref="EncoderFallbackException"/>
-    private static async Task SendHandshakeResponse(IContext context, string request)
+    private static async Task SendHandshakeResponse(Http11Context context, string request)
     {
         await context.SendAsync(WebsocketHandshakePrefix);
         await context.SendAsync(CreateAcceptKey(request));

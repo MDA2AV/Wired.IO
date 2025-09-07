@@ -1,10 +1,13 @@
-﻿namespace Wired.IO.Protocol.Handlers;
+﻿using Wired.IO.Protocol.Request;
+using Wired.IO.Protocol.Response;
+
+namespace Wired.IO.Protocol.Handlers;
 
 /// <summary>
 /// Defines a contract for handling client connections using a custom or HTTP-based protocol.
 /// </summary>
 public interface IHttpHandler<out TContext>
-    where TContext : IContext
+    where TContext : IBaseContext<IBaseRequest, IBaseResponse>
 {
     /// <summary>
     /// Processes a client connection and dispatches one or more protocol-compliant requests.

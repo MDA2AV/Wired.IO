@@ -11,13 +11,13 @@ using Wired.IO.WiredEvents;
 namespace Wired.IO.Http11.Context;
 
 /// <summary>
-/// Represents the HTTP/1.1-specific implementation of the <see cref="IContext"/> interface.
+/// Represents the HTTP/1.1-specific implementation of the <see cref="IBaseContext{IRequest, IResponse}"/> interface.
 /// </summary>
 /// <remarks>
 /// This class manages the lifetime and processing state of a single HTTP/1.1 connection, including its request, response,
 /// cancellation state, and DI service resolution scope.
 /// </remarks>
-public class Http11Context : IContext
+public class Http11Context : IBaseContext<IRequest, IResponse>
 {
     public PipeReader Reader { get; set; } = null!;
 

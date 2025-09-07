@@ -1,7 +1,7 @@
 ﻿using System.Buffers;
 using System.IO.Pipelines;
 using System.Text;
-using Wired.IO.Protocol;
+using Wired.IO.Http11.Context;
 using Wired.IO.Protocol.Response;
 using Wired.IO.Protocol.Writers;
 
@@ -144,7 +144,7 @@ public static class ResponseMiddleware
     /// </remarks>
     /// <exception cref="InvalidOperationException">Thrown when status code formatting fails.</exception>
     /// <exception cref="IOException">Thrown when stream writing fails (client disconnection).</exception>
-    public static async Task HandleAsync(IContext ctx, uint bufferSize = 65 * 1024)
+    public static async Task HandleAsync(Http11Context ctx, uint bufferSize = 65 * 1024)
     {
         if (ctx.Response is null)
         {
@@ -200,7 +200,7 @@ public static class ResponseMiddleware
     /// - Smaller buffers reduce memory pressure for concurrent requests
     /// </remarks>
     /// <exception cref="IOException">Thrown when client disconnects during body writing.</exception>
-    private static async ValueTask WriteResponseBody(IContext ctx, PipeWriter writer, uint bufferSize)
+    private static async ValueTask WriteResponseBody(Http11Context ctx, PipeWriter writer, uint bufferSize)
     {
         if (ctx.Response!.ContentLength is null)
         {
@@ -384,7 +384,7 @@ public static class ResponseMiddleware
     /// Writes HTTP response headers to the <see cref="PipeWriter"/> using pooled memory and efficient span logic.
     /// </summary>
     /// <param name="writer">The <see cref="PipeWriter"/> to write headers to.</param>
-    /// <param name="ctx">The <see cref="IContext"/> containing the response and headers.</param>
+    /// <param name="ctx">The <see cref="Http11Context"/> containing the response and headers.</param>
     /// <remarks>
     /// Headers written include:
     /// - Mandatory: <c>Server</c>, <c>Date</c>
@@ -393,7 +393,7 @@ public static class ResponseMiddleware
     /// 
     /// Header values are validated before writing. The method avoids dynamic allocations by batching writes into a preallocated span.
     /// </remarks>
-    private static void WriteStandardHeaders(PipeWriter writer, IContext ctx)
+    private static void WriteStandardHeaders(PipeWriter writer, Http11Context ctx)
     {
         var buffer = writer.GetSpan(512); // max 1KB header size
         var written = 0;

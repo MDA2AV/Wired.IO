@@ -1,8 +1,6 @@
 ﻿using System.Buffers;
 using System.Collections;
 using System.IO.Pipelines;
-using System.Runtime.CompilerServices;
-using Wired.IO.Http11.Request;
 using Wired.IO.Protocol.Request;
 
 namespace Wired.IO.Http11;

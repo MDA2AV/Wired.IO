@@ -1,6 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using Wired.IO.Protocol;
+using Wired.IO.Protocol.Response;
 
 namespace Wired.IO.Mediator;
 
@@ -23,7 +24,7 @@ namespace Wired.IO.Mediator;
 /// </remarks>
 [ExcludeFromCodeCoverage]
 public class RequestDispatcher<TContext>(IServiceProvider serviceProvider) : IRequestDispatcher<TContext>
-    where TContext : IContext
+    where TContext : IBaseContext<Protocol.Request.IBaseRequest, IBaseResponse>
 {
     /// <summary>
     /// Static cache of request handler wrappers to avoid repeated reflection costs.

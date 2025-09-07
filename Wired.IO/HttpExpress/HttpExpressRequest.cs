@@ -4,14 +4,13 @@ using Wired.IO.Utilities;
 
 namespace Wired.IO.HttpExpress;
 
-public class HttpExpressRequest : IRequest
+public class HttpExpressRequest : IExpressRequest
 {
     public string Route { get; set; } = null!;
 
     public string HttpMethod { get; set; } = null!;
 
-    public PooledDictionary<string, ReadOnlyMemory<char>>? QueryParameters { get; set; } = null!;
-    public PooledDictionary<string, string>? QueryParametersString { get; set; } = null!;
+    public PooledDictionary<string, string>? QueryParameters { get; set; } = null!;
 
     public PooledDictionary<string, string> Headers { get; set; } = null!;
 
@@ -24,7 +23,7 @@ public class HttpExpressRequest : IRequest
     public void Clear()
     {
         Headers?.Clear();
-        QueryParametersString?.Clear();
+        QueryParameters?.Clear();
     }
 
     private bool _disposed;

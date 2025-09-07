@@ -6,7 +6,7 @@ namespace Wired.IO.Protocol.Response;
 /// <summary>
 /// The response to be sent to the connected client for a given request.
 /// </summary>
-public interface IResponse : IDisposable
+public interface IResponse : IBaseResponse
 {
 
     #region Protocol
@@ -70,13 +70,4 @@ public interface IResponse : IDisposable
     ulong? ContentLength { get; set; }
 
     #endregion
-
-    /// <summary>
-    /// Clears the response state of the current context without disposing it.
-    /// </summary>
-    /// <remarks>
-    /// This method is typically used to reset the context for reuse within a connection handling loop.
-    /// </remarks>
-    void Clear();
-
 }

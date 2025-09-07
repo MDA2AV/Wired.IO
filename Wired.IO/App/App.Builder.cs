@@ -4,14 +4,17 @@ using System.Security.Authentication;
 using Microsoft.Extensions.Logging;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Handlers;
+using Wired.IO.Protocol.Request;
+using Wired.IO.Protocol.Response;
 
 namespace Wired.IO.App;
 
 /// <summary>
 /// Represents the core configuration and runtime state of a Wired.IO application instance.
 /// </summary>
-/// <typeparam name="TContext">The request context type implementing <see cref="IContext"/>.</typeparam>
-public sealed partial class WiredApp<TContext> where TContext : IContext
+/// <typeparam name="TContext">The request context type implementing <see cref="IBaseContext{TRequest,TResponse}"/>.</typeparam>
+public sealed partial class WiredApp<TContext> 
+    where TContext : IBaseContext<IBaseRequest, IBaseResponse>
 {
     #region Public Properties
 

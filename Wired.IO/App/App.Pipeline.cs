@@ -1,9 +1,14 @@
-﻿using System.Collections.Concurrent;
+﻿using Microsoft.Extensions.DependencyInjection;
+using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
-using Microsoft.Extensions.DependencyInjection;
+using Wired.IO.Protocol;
+using Wired.IO.Protocol.Request;
+using Wired.IO.Protocol.Response;
 
 namespace Wired.IO.App;
-public partial class WiredApp<TContext>
+
+public sealed partial class WiredApp<TContext>
+    where TContext : IBaseContext<IBaseRequest, IBaseResponse>
 {
     private Func<TContext, Task>? _cachedPipeline;
 

@@ -1,10 +1,14 @@
-﻿using System.Net.Sockets;
+﻿using Microsoft.Extensions.Logging;
 using System.Net;
-using Microsoft.Extensions.Logging;
+using System.Net.Sockets;
+using Wired.IO.Protocol;
+using Wired.IO.Protocol.Request;
+using Wired.IO.Protocol.Response;
 
 namespace Wired.IO.App;
 
 public sealed partial class WiredApp<TContext>
+    where TContext : IBaseContext<IBaseRequest, IBaseResponse>
 {
     /// <summary>
     /// Creates an <see cref="Engine"/> instance configured to accept and process plain (non-TLS) HTTP connections.

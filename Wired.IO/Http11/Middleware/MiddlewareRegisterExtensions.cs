@@ -1,8 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Wired.IO.Builder;
 using Wired.IO.Http11.Context;
-using Wired.IO.Http11.Request;
-using Wired.IO.Protocol;
 using Wired.IO.Protocol.Request;
 
 namespace Wired.IO.Http11.Middleware;
@@ -25,7 +23,7 @@ public static class MiddlewareRegisterExtensions
     /// <item>Streaming the response body content if present.</item>
     /// </list>
     ///
-    /// It delegates to <see cref="ResponseMiddleware.HandleAsync(IContext, uint)"/> to write the complete HTTP/1.1 response.
+    /// It delegates to <see cref="ResponseMiddleware.HandleAsync(Http11Context, uint)"/> to write the complete HTTP/1.1 response.
     /// 
     /// This middleware is typically registered last to ensure the response is finalized after
     /// all earlier handlers and middleware have completed their logic.

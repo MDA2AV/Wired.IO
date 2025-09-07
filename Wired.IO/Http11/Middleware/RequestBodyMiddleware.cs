@@ -18,7 +18,7 @@ public static class RequestBodyMiddleware
     /// <summary>
     /// Handles reading the request body and assigning it to the context's <see cref="IRequest.Content"/> property.
     /// </summary>
-    /// <param name="ctx">The <see cref="IContext"/> representing the current HTTP connection.</param>
+    /// <param name="ctx">The <see cref="Http11Context"/> representing the current HTTP connection.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     /// <remarks>
     /// This method checks if the request includes a <c>Content-Length</c> header or uses <c>Transfer-Encoding: chunked</c>,
@@ -27,7 +27,7 @@ public static class RequestBodyMiddleware
     public static async Task HandleAsync(Http11Context ctx)
     {
         var request = Unsafe.As<Http11Request>(ctx.Request);
-        var contentLengthAvailable = TryGetContentLength(request.Headers, out var contentLength);
+        var contentLengthAvailable = TryGetContentLength(request.Headers, out _);
 
         if (contentLengthAvailable)
         {
@@ -136,7 +136,7 @@ public static class RequestBodyMiddleware
             var sequenceReader = new SequenceReader<byte>(buffer);
 
             // Try to read chunk size line (hex number ending with \r\n)
-            if (!TryReadChunkSizeLine(ref sequenceReader, out int chunkSize, out var chunkHeaderEnd))
+            if (!TryReadChunkSizeLine(ref sequenceReader, out int chunkSize))
             {
                 if (result.IsCompleted)
                     return null;
@@ -190,24 +190,21 @@ public static class RequestBodyMiddleware
     /// </summary>
     /// <param name="reader">The <see cref="SequenceReader{Byte}"/> positioned at the start of the chunk size line.</param>
     /// <param name="size">The parsed chunk size.</param>
-    /// <param name="end">The position to advance to after reading the line.</param>
     /// <returns><c>true</c> if the chunk size line was successfully read; otherwise <c>false</c>.</returns>
-    private static bool TryReadChunkSizeLine(ref SequenceReader<byte> reader, out int size, out SequencePosition end)
+    private static bool TryReadChunkSizeLine(ref SequenceReader<byte> reader, out int size)
     {
         size = 0;
-        end = default;
 
         var line = new SequenceReader<byte>(reader.Sequence);
         if (!line.TryReadTo(out ReadOnlySpan<byte> lineSpan, (byte)'\n'))
             return false;
 
         if (lineSpan.EndsWith("\r"u8))
-            lineSpan = lineSpan.Slice(0, lineSpan.Length - 1);
+            lineSpan = lineSpan[..^1];
 
         if (!int.TryParse(Encoding.ASCII.GetString(lineSpan), System.Globalization.NumberStyles.HexNumber, null, out size))
             return false;
 
-        end = line.Position;
         reader.Advance(lineSpan.Length + 2); // +2 for \r\n
         return true;
     }

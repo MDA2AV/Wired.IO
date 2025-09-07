@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics.CodeAnalysis;
 using Wired.IO.Protocol;
+using Wired.IO.Protocol.Response;
 
 namespace Wired.IO.Mediator;
 
@@ -41,7 +42,7 @@ public class RequestHandlerWrapper<TRequest, TResponse> : IRequestHandlerWrapper
 /// <typeparam name="TContext">The type of the context used in the pipeline.</typeparam>
 [ExcludeFromCodeCoverage]
 public class ContextHandlerWrapper<TContext> : IContextHandlerWrapper<TContext>
-    where TContext : class, IContext
+    where TContext : class, IBaseContext<Protocol.Request.IBaseRequest, IBaseResponse>
 {
     /// <summary>
     /// Executes the pipeline for the given context by resolving the handler and applying all registered behaviors.

@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System.IO.Pipelines;
-using Wired.IO.Http11.Request;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Request;
 using Wired.IO.Protocol.Response;
@@ -9,7 +8,7 @@ using Wired.IO.WiredEvents;
 
 namespace Wired.IO.HttpExpress;
 
-public class HttpExpressContext : IContext
+public class HttpExpressContext : IBaseContext<IExpressRequest, IResponse>
 {
     public IReadOnlyList<IWiredEvent> WiredEvents { get; } = null!;
 
@@ -25,12 +24,12 @@ public class HttpExpressContext : IContext
 
     public PipeReader Reader { get; set; } = null!;
     public PipeWriter Writer { get; set; } = null!;
-    public IRequest Request { get; set; } = new HttpExpressRequest()
+    public IExpressRequest Request { get; set; } = new HttpExpressRequest()
     {
         Headers = new PooledDictionary<string, string>(
             capacity: 16,
             comparer: StringComparer.OrdinalIgnoreCase),
-        QueryParametersString = new PooledDictionary<string, string>(),
+        QueryParameters = new PooledDictionary<string, string>(),
     };
     public IResponse? Response { get; set; }
 

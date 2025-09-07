@@ -170,7 +170,7 @@ public static partial class WebsocketUtilities
     /// <param name="frameType">
     /// An output parameter that indicates the type of the WebSocket frame. Possible values:
     /// <list type="bullet">
-    ///   <item><description><see cref="Utf8"/>: A UTF-8 encoded text frame.</description></item>
+    ///   <item><description><see cref="WsFrameType.Utf8"/>: A UTF-8 encoded text frame.</description></item>
     ///   <item><description><see cref="WsFrameType.Binary"/>: A binary frame.</description></item>
     ///   <item><description><see cref="WsFrameType.Close"/>: A close frame.</description></item>
     /// </list>

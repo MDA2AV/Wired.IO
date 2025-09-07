@@ -1,7 +1,6 @@
 ﻿using System.Buffers;
 using System.Text;
 using Wired.IO.Http11.Websockets;
-using Wired.IO.Protocol;
 
 namespace Wired.IO.Http11.Context;
 
@@ -13,7 +12,7 @@ public static class ContextExtensions
     /// <summary>
     /// Sends a string response to the client.
     /// </summary>
-    /// <param name="context">The <see cref="IContext"/> representing the current client connection.</param>
+    /// <param name="context">The <see cref="Http11Context"/> representing the current client connection.</param>
     /// <param name="response">The response as a string.</param>
     /// <param name="cancellationToken"></param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
@@ -21,7 +20,7 @@ public static class ContextExtensions
     /// <exception cref="ObjectDisposedException"/>
     /// <exception cref="ArgumentNullException"/>
     /// <exception cref="EncoderFallbackException"/>
-    public static async Task SendAsync(this IContext context, string response, CancellationToken cancellationToken = default)
+    public static async Task SendAsync(this Http11Context context, string response, CancellationToken cancellationToken = default)
     {
         var responseBytes = new ReadOnlyMemory<byte>(Encoding.UTF8.GetBytes(response));
         await context.SendAsync(responseBytes, cancellationToken);
@@ -30,21 +29,21 @@ public static class ContextExtensions
     /// <summary>
     /// Sends a binary response to the client using <see cref="ReadOnlyMemory{T}"/>.
     /// </summary>
-    /// <param name="context">The <see cref="IContext"/> representing the current client connection.</param>
+    /// <param name="context">The <see cref="Http11Context"/> representing the current client connection.</param>
     /// <param name="responseBytes">The response as a binary payload.</param>
     /// <param name="cancellationToken"></param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     /// <exception cref="OperationCanceledException"/>
     /// <exception cref="ObjectDisposedException"/>
-    public static async Task SendAsync(this IContext context, ReadOnlyMemory<byte> responseBytes, CancellationToken cancellationToken = default)
+    public static async Task SendAsync(this Http11Context context, ReadOnlyMemory<byte> responseBytes, CancellationToken cancellationToken = default)
     {
         await context.Writer.WriteAsync(responseBytes, cancellationToken);
     }
 
     /// <summary>
-    /// Reads data from the <see cref="System.IO.Pipelines.PipeReader"/> associated with the current <see cref="IContext"/> into the specified buffer.
+    /// Reads data from the <see cref="System.IO.Pipelines.PipeReader"/> associated with the current <see cref="Http11Context"/> into the specified buffer.
     /// </summary>
-    /// <param name="context">The <see cref="IContext"/> representing the current connection context.</param>
+    /// <param name="context">The <see cref="Http11Context"/> representing the current connection context.</param>
     /// <param name="buffer">
     /// A <see cref="Memory{T}"/> buffer to copy the read data into. The size of this buffer determines the maximum number of bytes that can be read at once.
     /// </param>
@@ -68,7 +67,7 @@ public static class ContextExtensions
     /// if (bytesRead == 0) { /* End of stream */ }
     /// </code>
     /// </example>
-    public static async Task<int> ReadAsync(this IContext context, Memory<byte> buffer, CancellationToken cancellationToken = default)
+    public static async Task<int> ReadAsync(this Http11Context context, Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
         var result = await context.Reader.ReadAsync(cancellationToken);
         var readableBuffer = result.Buffer;
@@ -88,7 +87,7 @@ public static class ContextExtensions
     /// <summary>
     /// Reads a WebSocket message from the context's connection and decodes it as a string.
     /// </summary>
-    /// <param name="context">The <see cref="IContext"/> representing the current connection.</param>
+    /// <param name="context">The <see cref="Http11Context"/> representing the current connection.</param>
     /// <param name="buffer">The <see cref="Memory{T}"/> buffer to store the incoming data.</param>
     /// <param name="cancellationToken">A <see cref="CancellationToken"/> to signal operation cancellation.</param>
     /// <returns>
@@ -98,7 +97,7 @@ public static class ContextExtensions
     /// <exception cref="ArgumentOutOfRangeException"/>
     /// <exception cref="EncoderFallbackException"/>
     /// <exception cref="OperationCanceledException"/>
-    public static async Task<(ReadOnlyMemory<byte>, WsFrameType)> WsReadAsync(this IContext context, Memory<byte> buffer, CancellationToken cancellationToken = default)
+    public static async Task<(ReadOnlyMemory<byte>, WsFrameType)> WsReadAsync(this Http11Context context, Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
         var receivedBytes = await context.ReadAsync(buffer, cancellationToken);
 
@@ -124,7 +123,7 @@ public static class ContextExtensions
     /// <exception cref="ObjectDisposedException"/>
     /// <exception cref="ArrayTypeMismatchException"/>
     /// <exception cref="ArgumentOutOfRangeException"/>
-    public static async Task WsSendAsync(this IContext context, string payload, byte opcode = 0x01, CancellationToken cancellationToken = default)
+    public static async Task WsSendAsync(this Http11Context context, string payload, byte opcode = 0x01, CancellationToken cancellationToken = default)
     {
         // Send the response using the context
         await context.WsSendAsync(Encoding.UTF8.GetBytes(payload).AsMemory(), opcode, cancellationToken);
@@ -137,7 +136,7 @@ public static class ContextExtensions
     /// and sends it asynchronously to the client through the provided <paramref name="context"/>.
     /// </summary>
     /// <param name="context">
-    /// The <see cref="IContext"/> representing the connection to the WebSocket client.
+    /// The <see cref="Http11Context"/> representing the connection to the WebSocket client.
     /// This provides the communication channel through which the frame will be sent.
     /// </param>
     /// <param name="payload">
@@ -189,7 +188,7 @@ public static class ContextExtensions
     /// <exception cref="ObjectDisposedException"/>
     /// <exception cref="ArrayTypeMismatchException"/>
     /// <exception cref="ArgumentOutOfRangeException"/>
-    public static async Task WsSendAsync(this IContext context, ReadOnlyMemory<byte> payload, byte opcode = 0x01, CancellationToken cancellationToken = default)
+    public static async Task WsSendAsync(this Http11Context context, ReadOnlyMemory<byte> payload, byte opcode = 0x01, CancellationToken cancellationToken = default)
     {
         using var frameOwner = WebsocketUtilities.BuildWsFrame(payload, opcode: opcode);
         var frameMemory = frameOwner.Memory;
