@@ -3,6 +3,7 @@ using Wired.IO.Builder;
 using Wired.IO.Http11;
 using Wired.IO.Http11.Context;
 using Wired.IO.Http11.Request;
+using Wired.IO.HttpExpress;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Handlers;
 using Wired.IO.Utilities;
@@ -15,6 +16,16 @@ namespace Wired.IO.App;
 /// </summary>
 public sealed class WiredApp
 {
+    public static Builder<WiredHttpExpress<HttpExpressContext>, HttpExpressContext> CreateExpressBuilder()
+    {
+        var builder = new Builder<WiredHttpExpress<HttpExpressContext>, HttpExpressContext>(() =>
+            new WiredHttpExpress<HttpExpressContext>(), [SslApplicationProtocol.Http11]);
+
+        //builder.Services.AddDefaultMiddleware<HttpExpressContext>();
+
+        return builder;
+    }
+
     /// <summary>
     /// Creates a default HTTP/1.1 builder with built-in middleware and a default <see cref="WiredHttp11{TContext}"/> handler.
     /// </summary>

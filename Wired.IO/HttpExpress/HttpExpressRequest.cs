@@ -11,6 +11,7 @@ public class HttpExpressRequest : IRequest
     public string HttpMethod { get; set; } = null!;
 
     public PooledDictionary<string, ReadOnlyMemory<char>>? QueryParameters { get; set; } = null!;
+    public PooledDictionary<string, string>? QueryParametersString { get; set; } = null!;
 
     public PooledDictionary<string, string> Headers { get; set; } = null!;
 
@@ -23,7 +24,7 @@ public class HttpExpressRequest : IRequest
     public void Clear()
     {
         Headers?.Clear();
-        QueryParameters?.Clear();
+        QueryParametersString?.Clear();
     }
 
     private bool _disposed;

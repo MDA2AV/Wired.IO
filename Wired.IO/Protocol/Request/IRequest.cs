@@ -24,6 +24,7 @@ public interface IRequest : IDisposable
     /// typically represented as a URL-encoded string following the '?' in the URI.
     /// </summary>
     PooledDictionary<string, ReadOnlyMemory<char>>? QueryParameters { get; set; }
+    PooledDictionary<string, string>? QueryParametersString { get; set; }
 
     /// <summary>
     /// Gets the collection of HTTP request headers as raw strings, typically in the format "HeaderName: HeaderValue".

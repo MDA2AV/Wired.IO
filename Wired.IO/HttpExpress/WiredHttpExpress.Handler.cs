@@ -1,20 +1,16 @@
 ﻿using Microsoft.Extensions.ObjectPool;
-using System;
 using System.Buffers;
 using System.Collections;
-using System.Diagnostics.Metrics;
 using System.IO.Pipelines;
-using System.Reflection.PortableExecutable;
 using System.Text;
 using Wired.IO.Http11.Context;
 using Wired.IO.Protocol.Handlers;
 using Wired.IO.Protocol.Request;
-using Wired.IO.Utilities;
 
 namespace Wired.IO.HttpExpress;
 
 public class WiredHttpExpress<TContext> : IHttpHandler<TContext>
-    where TContext : Http11Context, new()
+    where TContext : HttpExpressContext, new()
 {
     /// <summary>
     /// Object pool used to recycle request contexts for reduced allocations and improved performance.
@@ -63,16 +59,8 @@ public class WiredHttpExpress<TContext> : IHttpHandler<TContext>
         try
         {
             // Loop to handle multiple requests on the same connection (keep-alive)
-            while (await ExtractHeadersAsync(context))
+            while (await ReadRequestHeaders(context))
             {
-                // Parse the HTTP request line (e.g. "GET /index.html HTTP/1.1") from the first header line
-                IEnumerator enumerator = context.Request.Headers.GetEnumerator();
-                enumerator.MoveNext();
-
-                ParseHttpRequestLine(
-                    ((KeyValuePair<string, string>)enumerator.Current).Value,
-                    context.Request);
-
                 // Invoke user-defined middleware pipeline
                 await pipeline(context);
 
@@ -80,8 +68,8 @@ public class WiredHttpExpress<TContext> : IHttpHandler<TContext>
                 context.Clear();
 
                 // If the client indicated "Connection: close", exit the loop
-                if (context.Request.ConnectionType is not ConnectionType.KeepAlive)
-                    break;
+                //if (context.Request.ConnectionType is not ConnectionType.KeepAlive)
+                //    break;
             }
         }
         catch
@@ -100,64 +88,173 @@ public class WiredHttpExpress<TContext> : IHttpHandler<TContext>
         }
     }
 
-    public static async ValueTask<Span<char>> ExtractRouteAsync(TContext context)
+    public static class Bytes
     {
+        public const byte Space = 0x20;
+        public const byte Question = 0x3F;
+        public const byte QuerySeparator = 0x26;
+        public const byte Equal = 0x3D;
+        public const byte Colon = 0x3A;
+        public const byte SemiColon = 0x3B;
+    }
+
+    private static readonly FastHashStringCache32 CachedRoutes = new FastHashStringCache32();
+    private static readonly FastHashStringCache32 CachedQueryKeys = new FastHashStringCache32();
+    private static readonly FastHashStringCache16 PreCachedHttpMethods = new FastHashStringCache16([
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH",
+        "HEAD",
+        "OPTIONS",
+        "TRACE"
+    ], 8);
+
+    private static readonly FastHashStringCache32 PreCachedHeaderKeys = new FastHashStringCache32(
+    [
+        "Host",
+        "User-Agent",
+        "Cookie",
+        "Accept",
+        "Accept-Language",
+        "Connection"
+    ]);
+
+    private static readonly FastHashStringCache32 PreCachedHeaderValues = new FastHashStringCache32([
+        "keep-alive",
+        "server",
+    ]);
+
+    public static async ValueTask<bool> ReadRequestHeaders(TContext context, bool minimal = true)
+    { 
         var reader = context.Reader;
 
         while (true)
         {
+            // Update the result from pipe reader
             var result = await reader.ReadAsync(context.CancellationToken);
             var buffer = result.Buffer;
 
-            if (buffer.Length == 0)
-            {
-                    throw new IOException("Client disconnected");
-            }
+            if (buffer.Length == 0 || result.IsCompleted) 
+                throw new IOException("Client disconnected");
 
+            // Hot path, single segment buffer
             if (buffer.IsSingleSegment)
             {
+                var bufferSpan = buffer.FirstSpan;
+                var fullHeaderIndex = bufferSpan.IndexOf("\r\n\r\n"u8);
 
+                if (fullHeaderIndex != -1)
+                {
+                    // Whole headers are present for the request
+
+                    // Parse first header
+
+                    var lineEnd = bufferSpan.IndexOf("\r\n"u8);
+                    var firstHeader = bufferSpan[..lineEnd];
+                    //var firstHeader = bufferSpan[..firstHeaderIndex];
+
+                    var firstSpace = firstHeader.IndexOf(Bytes.Space);
+                    if(firstSpace == -1)
+                        throw new InvalidOperationException("Invalid request line");
+
+                    context.Request.HttpMethod = PreCachedHttpMethods.GetOrAdd(firstHeader[..firstSpace]);
+
+                    var secondSpaceRelative = firstHeader[(firstSpace + 1)..].IndexOf(Bytes.Space);
+                    if (secondSpaceRelative == -1)
+                        throw new InvalidOperationException("Invalid request line");
+
+                    var secondSpace = firstSpace + secondSpaceRelative + 1;
+
+                    var url = firstHeader[(firstSpace + 1)..secondSpace];
+
+                    var queryStart = url.IndexOf(Bytes.Question); // (byte)'?'
+
+                    if (queryStart != -1)
+                    {
+                        // Route has params
+
+                        context.Request.Route = CachedRoutes.GetOrAdd(url[..queryStart]);
+
+                        var querySpan = url[(queryStart + 1)..];
+
+                        var current = 0;
+                        while (current < querySpan.Length)
+                        {
+                            var separator = querySpan[current..].IndexOf(Bytes.QuerySeparator); // (byte)'&'
+                            ReadOnlySpan<byte> pair;
+
+                            if (separator == -1)
+                            {
+                                pair = querySpan[current..];
+                                current = querySpan.Length;
+                            }
+                            else
+                            {
+                                pair = querySpan.Slice(current, separator);
+                                current += separator + 1;
+                            }
+
+                            var equalsIndex = pair.IndexOf(Bytes.Equal); // (byte)'='
+                            if (equalsIndex == -1)
+                            {
+                                break;
+                            }
+                            
+                            context.Request.QueryParametersString?
+                                .TryAdd(CachedQueryKeys.GetOrAdd(pair[..equalsIndex]), 
+                                        Encoding.UTF8.GetString(pair[(equalsIndex + 1)..]));
+                        }
+                    }
+                    else
+                    {
+                        // Url is same as route
+
+                        context.Request.Route = CachedRoutes.GetOrAdd(url);
+                    }
+
+                    // Parse remaining headers
+
+                    var lineStart = 0;
+                    while (true)
+                    {
+                        lineStart += lineEnd + 2;
+
+                        lineEnd = bufferSpan[lineStart..].IndexOf("\r\n"u8);
+                        if (lineEnd == 0)
+                        {
+                            // All Headers read
+                            break;
+                        }
+
+                        var header = bufferSpan.Slice(lineStart, lineEnd);
+                        var colonIndex = header.IndexOf(Bytes.Colon);
+
+                        if (colonIndex == -1)
+                        {
+                            // Malformed header
+                            continue;
+                        }
+
+                        var headerKey = header[..colonIndex];
+                        var headerValue = header[(colonIndex + 2)..];
+
+                        context.Request.Headers
+                            .TryAdd(PreCachedHeaderKeys.GetOrAdd(headerKey), PreCachedHeaderValues.GetOrAdd(headerValue));
+                    }
+                    
+
+                    reader.AdvanceTo(buffer.GetPosition(fullHeaderIndex + 4));
+
+                    return true;
+                }
             }
-            else
-            {
 
-            }
-
-            if (PipeReaderUtilities.TryAdvanceTo(new SequenceReader<byte>(buffer), "\r\n\r\n"u8, out var position))
-            {
-                var headerBytes = buffer.Slice(0, position);
-
-                // Decode directly into stack memory
-                var byteLength = (int)headerBytes.Length;
-                var byteSpan = byteLength <= 1024 ? stackalloc byte[byteLength] : new byte[byteLength];
-                headerBytes.CopyTo(byteSpan);
-
-                var charCount = Encoding.UTF8.GetCharCount(byteSpan);
-                var charSpan = charCount <= 1024 ? stackalloc char[charCount] : new char[charCount];
-                Encoding.UTF8.GetChars(byteSpan, charSpan);
-
-                // Advance past the headers
-                reader.AdvanceTo(position);
-
-                // Parse headers
-                var lineEnd = charSpan.IndexOf("\r\n");
-
-                if (lineEnd == -1)
-                    break;
-
-                var line = charSpan[..lineEnd];
-
-                context.Request.Headers.TryAdd(":Request-Line", new string(line));
-
-                return true;
-            }
-
-            reader.AdvanceTo(buffer.Start, buffer.End);
-
-            if (result.IsCompleted)
-                return false;
+            return false;
         }
     }
+
 
     private const int DelimiterLen = 4;
     private const int Keep = DelimiterLen - 1;
@@ -210,57 +307,6 @@ public class WiredHttpExpress<TContext> : IHttpHandler<TContext>
             if (result.IsCompleted)
                 throw new InvalidOperationException("Connection closed before headers completed.");
         }
-    }
-
-    private const byte Space = 0x20;
-    private static ReadOnlySequence<byte> SlicePath(in ReadOnlySequence<byte> headers, bool isSingleSegment)
-    {
-        if (isSingleSegment)
-        {
-            var span = headers.FirstSpan;
-            int firstSpace = span.IndexOf(Space);
-            int secondSpace = span.Slice(firstSpace + 1).IndexOf(Space) + firstSpace + 1;
-
-            //var pathSlice = headers.Slice(firstSpace + 1, secondSpace - (firstSpace + 1));
-            //string path = Encoding.ASCII.GetString(pathSlice.ToArray());
-
-            return headers.Slice(firstSpace + 1, secondSpace - (firstSpace + 1));
-        }
-    }
-
-    private static bool TryReadHeadersSingleSegment(ReadOnlySequence<byte> buffer, out ReadOnlySequence<byte> headers)
-    {
-        var firstSpan = buffer.FirstSpan;
-        var pos = firstSpan.IndexOf("\r\n\r\n"u8);
-
-        if (pos == -1)
-        {
-            headers = default;
-            return false;
-        }
-
-        headers = buffer.Slice(0, pos);
-        return true;
-    }
-
-    private static bool TryReadHeadersMultiSegment(ReadOnlySequence<byte> buffer, out ReadOnlySequence<byte> headers)
-    {
-        var sr = new SequenceReader<byte>(buffer);
-        if (sr.TryReadTo(out ReadOnlySequence<byte> before, "\r\n\r\n"u8, advancePastDelimiter: true))
-        {
-            // sr.Position is now AFTER the delimiter
-            var after = sr.Position;
-
-            // You want headers INCLUDING the delimiter:
-            headers = buffer.Slice(0, after);
-
-            // Consume through the delimiter
-            //reader.AdvanceTo(after, after);
-            return true;
-        }
-
-        headers = default;
-        return false;
     }
 }
 
@@ -335,4 +381,168 @@ public static class SequenceSearch
 
         return remaining.IsEmpty;
     }
+}
+
+public sealed class FastHashStringCache16
+{
+    private readonly Dictionary<ushort, string> _map; // Changed from ulong
+
+    public FastHashStringCache16(List<string>? preCacheableStrings, int capacity = 256)
+    {
+        _map = new Dictionary<ushort, string>(capacity); // Changed from ulong
+        if (preCacheableStrings is not null)
+        {
+            foreach (var preCacheableString in preCacheableStrings)
+            {
+                AddPredefined(preCacheableString);
+            }
+        }
+    }
+
+    public FastHashStringCache16(int capacity = 256)
+    {
+        _map = new Dictionary<ushort, string>(capacity); // Changed from ulong
+    }
+
+    public string GetOrAdd(ReadOnlySpan<byte> bytes)
+    {
+        ushort h = Fnv1a16(bytes); // Changed from ulong
+        if (_map.TryGetValue(h, out var s))
+            return s;                           // may be a false hit if collision
+        s = Encoders.Utf8Encoder.GetString(bytes);
+        _map[h] = s;
+        return s;
+    }
+
+    private void AddPredefined(string stringToCache)
+    {
+        var bytes = Encoders.Utf8Encoder.GetBytes(stringToCache);
+        ushort h = Fnv1a16(bytes); // Changed from ulong
+        _map[h] = stringToCache;
+    }
+
+    private static ushort Fnv1a16(ReadOnlySpan<byte> data)
+    {
+        const ushort offset = 0x811C; // 33084
+        const ushort prime = 0x0101; // 257
+        ushort h = offset;
+        for (int i = 0; i < data.Length; i++)
+        {
+            h ^= data[i];
+            h *= prime;
+        }
+        return h;
+    }
+}
+
+public sealed class FastHashStringCache32
+{
+    private readonly Dictionary<uint, string> _map; // Changed from ulong
+
+    public FastHashStringCache32(List<string>? preCacheableStrings, int capacity = 256)
+    {
+        _map = new Dictionary<uint, string>(capacity); // Changed from ulong
+        if (preCacheableStrings is not null)
+        {
+            foreach (var preCacheableString in preCacheableStrings)
+            {
+                AddPredefined(preCacheableString);
+            }
+        }
+    }
+
+    public FastHashStringCache32(int capacity = 256)
+    {
+        _map = new Dictionary<uint, string>(capacity); // Changed from ulong
+    }
+
+    public string GetOrAdd(ReadOnlySpan<byte> bytes)
+    {
+        uint h = Fnv1a32(bytes); // Changed from ulong
+        if (_map.TryGetValue(h, out var s))
+            return s;
+        s = Encoders.Utf8Encoder.GetString(bytes);
+        _map[h] = s;
+        return s;
+    }
+
+    private void AddPredefined(string stringToCache)
+    {
+        var bytes = Encoders.Utf8Encoder.GetBytes(stringToCache);
+        uint h = Fnv1a32(bytes); // Changed from ulong
+        _map[h] = stringToCache;
+    }
+
+    private static uint Fnv1a32(ReadOnlySpan<byte> data)
+    {
+        const uint offset = 2166136261u;
+        const uint prime = 16777619u;
+        uint h = offset;
+        for (int i = 0; i < data.Length; i++)
+        {
+            h ^= data[i];
+            h *= prime;
+        }
+        return h;
+    }
+}
+
+public sealed class FastHashStringCache64
+{
+    private readonly Dictionary<ulong, string> _map;
+
+    public FastHashStringCache64(List<string>? preCacheableStrings, int capacity = 256)
+    {
+        _map = new Dictionary<ulong, string>(capacity);
+
+        if (preCacheableStrings is not null)
+        {
+            foreach (var preCacheableString in preCacheableStrings)
+            {
+                AddPredefined(preCacheableString);
+            }
+        }
+    }
+
+    public FastHashStringCache64(int capacity = 256)
+    {
+        _map = new Dictionary<ulong, string>(capacity);
+    }
+
+    public string GetOrAdd(ReadOnlySpan<byte> bytes)
+    {
+        ulong h = Fnva64(bytes);                // or xxHash64, etc.
+        if (_map.TryGetValue(h, out var s))
+            return s;                           // may be a false hit if collision
+
+        s = Encoders.Utf8Encoder.GetString(bytes);     // alloc once per (colliding) hash
+        _map[h] = s;                            // last-wins policy
+        return s;
+    }
+
+    private void AddPredefined(string stringToCache)
+    {
+        var bytes = Encoders.Utf8Encoder.GetBytes(stringToCache); // ASCII safe for methods
+        ulong h = Fnva64(bytes);
+        _map[h] = stringToCache;
+    }
+
+    // FNV-1a 64-bit
+    private static ulong Fnva64(ReadOnlySpan<byte> data)
+    {
+        const ulong off = 14695981039346656037UL;  // Fixed
+        const ulong prime = 1099511628211UL;
+        ulong h = off;
+        for (int i = 0; i < data.Length; i++)
+        {
+            h ^= data[i];
+            h *= prime;
+        }
+        return h;
+    }
+}
+
+public class Encoders
+{
+    public static Encoding Utf8Encoder = Encoding.UTF8;
 }

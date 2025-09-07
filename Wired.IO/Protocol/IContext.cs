@@ -9,7 +9,24 @@ namespace Wired.IO.Protocol;
 /// <summary>
 /// Represents the context for a client connection, encapsulating the connection details, request, response, and dependency resolution.
 /// </summary>
-public interface IContext : IHasWiredEvents, IDisposable
+public interface IContext : IBaseContext
+{
+    /// <summary>
+    /// Gets or sets the HTTP request for the current connection.
+    /// This property contains all the details of the incoming HTTP request,
+    /// such as the request method, headers, URI, and body.
+    /// </summary>
+    IRequest Request { get; }
+
+    /// <summary>
+    /// Gets or sets the HTTP response to be sent back to the client.
+    /// This property holds the response data, including status code, headers, and content.
+    /// It is constructed and written to the stream after the request has been processed.
+    /// </summary>
+    IResponse? Response { get; set; }
+}
+
+public interface IBaseContext : IHasWiredEvents, IDisposable
 {
     /// <summary>
     /// Gets or sets the <see cref="PipeReader"/> used to read incoming data from the client connection.
@@ -30,13 +47,6 @@ public interface IContext : IHasWiredEvents, IDisposable
     PipeWriter Writer { get; set; }
 
     /// <summary>
-    /// Gets or sets the HTTP request for the current connection.
-    /// This property contains all the details of the incoming HTTP request,
-    /// such as the request method, headers, URI, and body.
-    /// </summary>
-    IRequest Request { get; }
-
-    /// <summary>
     /// Gets or sets the service scope for resolving scoped services during the lifecycle of the request.
     /// </summary>
     /// <value>
@@ -52,13 +62,6 @@ public interface IContext : IHasWiredEvents, IDisposable
     /// - Passed to all asynchronous operations initiated within the context.
     /// </remarks>
     CancellationToken CancellationToken { get; set; }
-
-    /// <summary>
-    /// Gets or sets the HTTP response to be sent back to the client.
-    /// This property holds the response data, including status code, headers, and content.
-    /// It is constructed and written to the stream after the request has been processed.
-    /// </summary>
-    IResponse? Response { get; set; }
 
     /// <summary>
     /// Clears the request and response state of the current context without disposing it.
