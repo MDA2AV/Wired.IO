@@ -15,40 +15,49 @@ using Wired.IO.Protocol;
 using Wired.IO.Protocol.Response;
 using Wired.IO.WiredEvents;
 
-var expressBuilder = WiredApp.CreateExpressBuilder();
 
-await expressBuilder
-    .Port(8080)
-    .MapGet("/json", scope => async ctx =>
+internal class Program
+{
+    public static async Task Main(string[] args)
     {
-        ctx.Writer.Write("HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=UTF-8\r\nContent-Length: 28\r\n\r\n {\"message\":\"Hello, World!\"}\r\n"u8);
-        await ctx.Writer.FlushAsync();
-    })
-    .Build()
-    .RunAsync();
+        var expressBuilder = WiredApp.CreateExpressBuilder();
 
-/*
-var builder = WiredApp.CreateBuilder();
+        await expressBuilder
+            .Port(8080)
+            .MapGet("/json", scope => async ctx =>
+            {
+                ctx.Writer.Write("HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=UTF-8\r\nContent-Length: 28\r\n\r\n {\"message\":\"Hello, World!\"}\r\n"u8);
+                await ctx.Writer.FlushAsync();
+            })
+            .Build()
+            .RunAsync();
+    }
 
-await builder
-    .Port(8080)
-    .MapGet("/json", scope => async ctx =>
+    /*public static async Task Main1(string[] args)
     {
-        ctx.Writer.Write("HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=UTF-8\r\nContent-Length: 28\r\n\r\n {\"message\":\"Hello, World!\"}\r\n"u8);
-        await ctx.Writer.FlushAsync();
-    })
-    .MapGet("/jsor", scope => async ctx =>
-    {
-        ctx.Respond().Content(new JsonContent(
-                new
-                {
-                    Message = "Hello, World!"
-                }, JsonSerializerOptions.Default))
-            .Type("application/json");
-    })
-    .Build()
-    .RunAsync();
-*/
+        var builder = WiredApp.CreateBuilder();
+
+        await builder
+            .Port(8080)
+            .MapGet("/json", scope => async ctx =>
+            {
+                ctx.Writer.Write("HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=UTF-8\r\nContent-Length: 28\r\n\r\n {\"message\":\"Hello, World!\"}\r\n"u8);
+                await ctx.Writer.FlushAsync();
+            })
+            .MapGet("/jsor", scope => async ctx =>
+            {
+                ctx.Respond().Content(new JsonContent(
+                        new
+                        {
+                            Message = "Hello, World!"
+                        }, JsonSerializerOptions.Default))
+                    .Type("application/json");
+            })
+            .Build()
+            .RunAsync();
+    }*/
+}
+
 
 /*
 var serviceCollection = new ServiceCollection();

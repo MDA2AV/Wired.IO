@@ -1,8 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Wired.IO.Http11.Context;
-using Wired.IO.Http11.Middleware;
 
-namespace Wired.IO.Utilities;
+namespace Wired.IO.Http11.Middleware;
 
 public static class MiddlewareUtilities
 {

@@ -96,7 +96,7 @@ public sealed partial class WiredApp<TContext>
     /// <summary>
     /// Gets or sets the HTTP handler responsible for dispatching requests and handling routing.
     /// </summary>
-    internal IHttpHandler<TContext> HttpHandler { get; set; } = null!;
+    public IHttpHandler<TContext> HttpHandler { get; set; } = null!;
 
     #endregion
 }

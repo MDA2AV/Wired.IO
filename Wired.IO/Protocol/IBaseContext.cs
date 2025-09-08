@@ -2,12 +2,11 @@
 using System.IO.Pipelines;
 using Wired.IO.Protocol.Request;
 using Wired.IO.Protocol.Response;
-using Wired.IO.WiredEvents;
 
 namespace Wired.IO.Protocol;
 
-public interface IBaseContext<out TRequest, out TResponse> : IHasWiredEvents, IDisposable 
-    where TRequest : IBaseRequest 
+public interface IBaseContext<out TRequest, out TResponse> : IDisposable 
+    where TRequest : IBaseRequest
     where TResponse : IBaseResponse
 {
     /// <summary>

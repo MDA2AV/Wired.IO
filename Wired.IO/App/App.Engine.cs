@@ -41,13 +41,13 @@ public sealed partial class WiredApp<TContext>
     private void CreateListeningSocket()
     {
         //IPv4
-        //var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+        //_socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
-        //IPv6
+        ////IPv6
         _socket = new Socket(AddressFamily.InterNetworkV6, SocketType.Stream, ProtocolType.Tcp);
-
         _socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.IPv6Only, false);
-        _socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, false);
+        _socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+        _socket.NoDelay = true;
 
         _socket.Bind(new IPEndPoint(IpAddress, Port));
         _socket.Listen(Backlog);

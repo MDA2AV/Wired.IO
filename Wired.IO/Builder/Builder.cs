@@ -9,8 +9,9 @@ using Wired.IO.Protocol;
 using Wired.IO.Protocol.Handlers;
 using Wired.IO.Protocol.Response;
 using Wired.IO.WiredEvents;
-using Wired.IO.Utilities;
 using IBaseRequest = Wired.IO.Protocol.Request.IBaseRequest;
+using Wired.IO.Http11.Response;
+using Wired.IO.Http11.Middleware;
 
 namespace Wired.IO.Builder;
 
@@ -200,7 +201,7 @@ public sealed class Builder<THandler, TContext>
     /// If <c>true</c>, will dispatch events stored in <see cref="IBaseContext{TRequest,TResponse}.WiredEvents"/>.
     /// </param>
     /// <returns>The current builder instance.</returns>
-    public Builder<THandler, TContext> AddWiredEvents(bool dispatchContextWiredEvents = true)
+    public Builder<THandler, TContext> AddWiredEvents(bool dispatchContextWiredEvents = true) 
     {
         App.ServiceCollection.AddWiredEventDispatcher();
 
@@ -211,10 +212,13 @@ public sealed class Builder<THandler, TContext>
         {
             await next(context);
 
-            var wiredEventDispatcher = scope.GetRequiredService<Func<IEnumerable<IWiredEvent>, Task>>();
+            if (context is IHasWiredEvents hasWiredEvents)
+            {
+                var wiredEventDispatcher = scope.GetRequiredService<Func<IEnumerable<IWiredEvent>, Task>>();
 
-            await wiredEventDispatcher(context.WiredEvents);
-            context.ClearWiredEvents();
+                await wiredEventDispatcher(hasWiredEvents.WiredEvents);
+                hasWiredEvents.ClearWiredEvents();
+            } 
         });
 
         return this;

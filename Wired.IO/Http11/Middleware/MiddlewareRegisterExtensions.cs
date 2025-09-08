@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Wired.IO.Builder;
 using Wired.IO.Http11.Context;
-using Wired.IO.Protocol.Request;
+using Wired.IO.Http11.Request;
 
 namespace Wired.IO.Http11.Middleware;
 

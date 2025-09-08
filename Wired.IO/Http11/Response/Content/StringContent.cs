@@ -2,6 +2,7 @@
 using System.IO.Pipelines;
 using System.Text;
 using Wired.IO.Protocol.Writers;
+using Wired.IO.Utilities;
 
 namespace Wired.IO.Http11.Response.Content;
 
@@ -17,7 +18,7 @@ public class StringContent(string data) : IResponseContent
 
     public async Task WriteAsync(ChunkedPipeWriter writer, uint bufferSize)
     {
-        writer.Write(Encoding.UTF8.GetBytes(data));
+        writer.Write(Encoders.Utf8Encoder.GetBytes(data));
 
         writer.Finish();
 
@@ -26,7 +27,7 @@ public class StringContent(string data) : IResponseContent
 
     public async Task WriteAsync(PipeWriter writer, uint bufferSize)
     {
-        writer.Write(Encoding.UTF8.GetBytes(data));
+        writer.Write(Encoders.Utf8Encoder.GetBytes(data));
 
         await writer.FlushAsync();
     }

@@ -3,6 +3,7 @@ using System.IO.Pipelines;
 using System.Reflection;
 using System.Text;
 using Wired.IO.Common.Extensions;
+using Wired.IO.Utilities;
 
 namespace Wired.IO.Http11;
 
@@ -67,14 +68,14 @@ public partial class WiredHttp11<TContext>
                 var headerString = headerBuilder.ToString();
 
                 // Determine exact byte count needed for the header to avoid over-allocation
-                var headerLength = Encoding.UTF8.GetByteCount(headerString);
+                var headerLength = Encoders.Utf8Encoder.GetByteCount(headerString);
 
                 // Rent a buffer from the shared pool for the header bytes
                 var headerBuffer = BufferPool.Rent(headerLength);
                 try
                 {
                     // Encode the header string directly into the rented buffer
-                    Encoding.UTF8.GetBytes(headerString, headerBuffer);
+                    Encoders.Utf8Encoder.GetBytes(headerString, headerBuffer);
 
                     // Send header first - use Memory slice to write only the needed bytes
                     // This avoids sending any extra space in the rented buffer
@@ -97,7 +98,7 @@ public partial class WiredHttp11<TContext>
             {
                 // File not found - send 404 response
                 const string notFoundResponse = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n";
-                var notFoundBytes = Encoding.UTF8.GetBytes(notFoundResponse);
+                var notFoundBytes = Encoders.Utf8Encoder.GetBytes(notFoundResponse);
 
                 // Write 404 response and flush the stream
                 await stream.WriteAsync(notFoundBytes.AsMemory());
@@ -143,7 +144,7 @@ public partial class WiredHttp11<TContext>
 
                     // Content-Length
                     span.WriteUtf8(ref pos, "Content-Length: ");
-                    pos += Encoding.UTF8.GetBytes(fileLength.ToString(), span[pos..]);
+                    pos += Encoders.Utf8Encoder.GetBytes(fileLength.ToString(), span[pos..]);
                     span.WriteUtf8(ref pos, "\r\n\r\n");
 
                     // Write header
@@ -232,7 +233,7 @@ public partial class WiredHttp11<TContext>
 
         // Content-Length
         span.WriteUtf8(ref pos, "Content-Length: ");
-        pos += Encoding.UTF8.GetBytes(fileLength.ToString(), span[pos..]);
+        pos += Encoders.Utf8Encoder.GetBytes(fileLength.ToString(), span[pos..]);
         span.WriteUtf8(ref pos, "\r\n\r\n");
 
         return pos;

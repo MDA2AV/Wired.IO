@@ -4,8 +4,6 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Wired.IO.Http11.Context;
 using Wired.IO.Http11.Request;
-using Wired.IO.Protocol;
-using Wired.IO.Protocol.Request;
 using Wired.IO.Utilities;
 
 namespace Wired.IO.Http11.Middleware;
@@ -57,68 +55,6 @@ public static class RequestBodyMiddleware
             }
         }
     }
-
-#if NET8_0
-
-    /// <summary>
-    /// Extracts a single chunk from a chunked HTTP request body.
-    /// </summary>
-    /// <param name="reader">The <see cref="PipeReader"/> to read from.</param>
-    /// <param name="stoppingToken">Token to cancel the operation.</param>
-    /// <returns>The chunk as a byte array, or <c>null</c> if the stream is complete or invalid.</returns>
-    /// <exception cref="OperationCanceledException"/>
-    public static async Task<byte[]?> ExtractChunk(PipeReader reader, CancellationToken stoppingToken)
-    {
-        while (true)
-        {
-            var result = await reader.ReadAsync(stoppingToken);
-            var buffer = result.Buffer;
-
-            if (TryExtractChunk(ref buffer, out var chunk, out var consumedTo))
-            {
-                reader.AdvanceTo(consumedTo);
-                return chunk;
-            }
-
-            if (result.IsCompleted)
-                return null;
-
-            reader.AdvanceTo(buffer.Start, buffer.End);
-        }
-    }
-
-    private static bool TryExtractChunk(ref ReadOnlySequence<byte> buffer, out byte[]? chunk, out SequencePosition consumed)
-    {
-        chunk = null;
-        consumed = buffer.Start;
-
-        var reader = new SequenceReader<byte>(buffer);
-
-        if (!TryReadChunkSizeLine(ref reader, out int chunkSize, out _))
-            return false;
-
-        if (chunkSize == 0)
-        {
-            if (!PipeReaderUtilities.TryAdvanceTo(reader, "\r\n"u8, out var trailerEnd))
-                return false;
-
-            consumed = trailerEnd;
-            chunk = [];
-            return true;
-        }
-
-        var chunkStart = reader.Position;
-        var chunkEnd = buffer.GetPosition(chunkSize + 2, chunkStart); // +2 for \r\n
-
-        if (buffer.Slice(chunkStart, chunkSize + 2).Length < chunkSize + 2)
-            return false;
-
-        chunk = buffer.Slice(chunkStart, chunkSize).ToArray();
-        consumed = chunkEnd;
-        return true;
-    }
-
-#elif NET9_0
 
     /// <summary>
     /// Extracts a single chunk from a chunked HTTP request body.
@@ -182,8 +118,6 @@ public static class RequestBodyMiddleware
             return chunk;
         }
     }
-
-#endif
 
     /// <summary>
     /// Attempts to read the chunk size line (in hex) from the stream.
@@ -268,7 +202,6 @@ public static class RequestBodyMiddleware
             reader.AdvanceTo(buffer.GetPosition(contentLength));
 
             return bodyBuffer;
-            //return Encoding.UTF8.GetString(bodyBuffer);
         }
 
         // Handle fragmented body (less common case)

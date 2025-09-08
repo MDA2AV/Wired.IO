@@ -14,10 +14,6 @@ public class HttpExpressRequest : IExpressRequest
 
     public PooledDictionary<string, string> Headers { get; set; } = null!;
 
-    public ReadOnlyMemory<byte> Content { get; set; }
-
-    public string ContentAsString => Encoding.UTF8.GetString(Content.Span);
-
     public ConnectionType ConnectionType { get; set; } = ConnectionType.KeepAlive;
 
     public void Clear()

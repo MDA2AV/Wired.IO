@@ -2,8 +2,9 @@
 using System.IO.Pipelines;
 using System.Text;
 using Wired.IO.Http11.Context;
-using Wired.IO.Protocol.Response;
+using Wired.IO.Http11.Response;
 using Wired.IO.Protocol.Writers;
+using Wired.IO.Utilities;
 
 namespace Wired.IO.Http11.Middleware;
 
@@ -29,11 +30,6 @@ public static class ResponseMiddleware
     /// HTTP line terminator as UTF-8 byte array (\r\n).
     /// </summary>
     private static readonly byte[] Crlf = "\r\n"u8.ToArray();
-
-    /// <summary>
-    /// UTF-8 encoding instance for string-to-byte conversions.
-    /// </summary>
-    private static readonly Encoding Utf8 = Encoding.UTF8;
 
     #endregion
 
@@ -106,15 +102,11 @@ public static class ResponseMiddleware
     /// </summary>
     private static long _lastDateUpdateTicks;
 
-#if NET9_0
     /// <summary>
     /// Lock object for synchronizing date header updates.
     /// Uses double-checked locking pattern for optimal performance.
     /// </summary>
     private static readonly Lock DateLock = new();
-#elif NET8_0
-    private static readonly object DateLock = new();
-#endif
 
     #endregion
 
@@ -289,9 +281,9 @@ public static class ResponseMiddleware
     /// </remarks>
     private static void WriteUtf8(PipeWriter writer, string text)
     {
-        var byteCount = Utf8.GetByteCount(text);
+        var byteCount = Encoders.Utf8Encoder.GetByteCount(text);
         var span = writer.GetSpan(byteCount);
-        Utf8.GetBytes(text, span);
+        Encoders.Utf8Encoder.GetBytes(text, span);
         writer.Advance(byteCount);
     }
 
@@ -430,10 +422,10 @@ public static class ResponseMiddleware
         {
             if (!IsValidHeaderValue(value)) return;
 
-            written += Utf8.GetBytes(key, buffer[written..]);
+            written += Encoders.Utf8Encoder.GetBytes(key, buffer[written..]);
             buffer[written++] = (byte)':';
             buffer[written++] = (byte)' ';
-            written += Utf8.GetBytes(value, buffer[written..]);
+            written += Encoders.Utf8Encoder.GetBytes(value, buffer[written..]);
             buffer[written++] = (byte)'\r';
             buffer[written++] = (byte)'\n';
         }

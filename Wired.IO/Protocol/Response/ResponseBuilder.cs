@@ -1,4 +1,5 @@
-﻿using Wired.IO.Http11.Response.Content;
+﻿using Wired.IO.Http11.Response;
+using Wired.IO.Http11.Response.Content;
 
 namespace Wired.IO.Protocol.Response;
 

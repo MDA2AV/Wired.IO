@@ -1,17 +1,15 @@
-﻿using Wired.IO.Utilities;
+﻿using Wired.IO.Protocol.Request;
+using Wired.IO.Utilities;
 
-namespace Wired.IO.Protocol.Request;
+namespace Wired.IO.HttpExpress;
 
-/// <summary>
-/// Represents a minimal abstraction of an HTTP request containing essential routing information.
-/// </summary>
-public interface IRequest : IBaseRequest
+public interface IExpressRequest : IBaseRequest
 {
     /// <summary>
     /// Gets the query string parameters portion of the request URI, 
     /// typically represented as a URL-encoded string following the '?' in the URI.
     /// </summary>
-    PooledDictionary<string, ReadOnlyMemory<char>>? QueryParameters { get; set; }
+    PooledDictionary<string, string>? QueryParameters { get; set; }
 
     /// <summary>
     /// Gets the collection of HTTP request headers as raw strings, typically in the format "HeaderName: HeaderValue".

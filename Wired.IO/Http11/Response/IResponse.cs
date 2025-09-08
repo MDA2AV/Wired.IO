@@ -1,7 +1,9 @@
 ﻿using Wired.IO.Http11.Response.Content;
+using Wired.IO.Protocol;
+using Wired.IO.Protocol.Response;
 using Wired.IO.Protocol.Response.Headers;
 
-namespace Wired.IO.Protocol.Response;
+namespace Wired.IO.Http11.Response;
 
 /// <summary>
 /// The response to be sent to the connected client for a given request.
@@ -70,4 +72,12 @@ public interface IResponse : IBaseResponse
     ulong? ContentLength { get; set; }
 
     #endregion
+
+    /// <summary>
+    /// Clears the response state of the current context without disposing it.
+    /// </summary>
+    /// <remarks>
+    /// This method is typically used to reset the context for reuse within a connection handling loop.
+    /// </remarks>
+    void Clear();
 }

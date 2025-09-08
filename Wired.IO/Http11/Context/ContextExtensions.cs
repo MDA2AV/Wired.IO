@@ -1,6 +1,7 @@
 ﻿using System.Buffers;
 using System.Text;
 using Wired.IO.Http11.Websockets;
+using Wired.IO.Utilities;
 
 namespace Wired.IO.Http11.Context;
 
@@ -22,7 +23,7 @@ public static class ContextExtensions
     /// <exception cref="EncoderFallbackException"/>
     public static async Task SendAsync(this Http11Context context, string response, CancellationToken cancellationToken = default)
     {
-        var responseBytes = new ReadOnlyMemory<byte>(Encoding.UTF8.GetBytes(response));
+        var responseBytes = new ReadOnlyMemory<byte>(Encoders.Utf8Encoder.GetBytes(response));
         await context.SendAsync(responseBytes, cancellationToken);
     }
 
@@ -126,7 +127,7 @@ public static class ContextExtensions
     public static async Task WsSendAsync(this Http11Context context, string payload, byte opcode = 0x01, CancellationToken cancellationToken = default)
     {
         // Send the response using the context
-        await context.WsSendAsync(Encoding.UTF8.GetBytes(payload).AsMemory(), opcode, cancellationToken);
+        await context.WsSendAsync(Encoders.Utf8Encoder.GetBytes(payload).AsMemory(), opcode, cancellationToken);
     }
 
     /// <summary>
@@ -174,7 +175,7 @@ public static class ContextExtensions
     /// </remarks>
     /// <example>
     /// <code>
-    /// var payload = Encoding.UTF8.GetBytes("Hello, WebSocket!").AsMemory();
+    /// var payload = Encoders.Utf8Encoder.GetBytes("Hello, WebSocket!").AsMemory();
     /// await context.WsSendAsync(payload, opcode: 0x01, cancellationToken: CancellationToken.None);
     /// 
     /// var binaryData = new byte[] { 0x01, 0x02, 0x03 }.AsMemory();
