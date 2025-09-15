@@ -76,7 +76,7 @@ public sealed partial class WiredApp<TContext>
     /// <summary>
     /// Gets or sets the maximum number of pending connections in the socket backlog.
     /// </summary>
-    internal int Backlog { get; set; } = 512;
+    internal int Backlog { get; set; } = 16384;
 
     /// <summary>
     /// Gets or sets a value indicating whether TLS is enabled for this server instance.
@@ -102,7 +102,7 @@ public sealed partial class WiredApp<TContext>
 }
 
 /// <summary>
-/// Contains constants representing the standard HTTP methods supported by Wired.IO.
+/// Contains constants representing the standard HTTP methods supported by Wired.IO.64
 /// </summary>
 public static class HttpConstants
 {

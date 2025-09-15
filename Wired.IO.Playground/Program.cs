@@ -1,6 +1,7 @@
 ﻿using System.Buffers;
 using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
@@ -15,9 +16,29 @@ using Wired.IO.Protocol;
 using Wired.IO.Protocol.Response;
 using Wired.IO.WiredEvents;
 
-
 internal class Program
 {
+    private static ReadOnlySpan<byte> _plaintextPreamble =>
+        "HTTP/1.1 200 OK\r\n"u8 +
+        "Server: K\r\n"u8 +
+        "Content-Type: text/plain\r\n"u8 +
+        "Content-Length: 13\r\n\r\n"u8;
+
+    private static ReadOnlySpan<byte> _plainTextBody => "Hello, World!"u8;
+    private static ReadOnlySpan<byte> _jsonPreamble =>
+        "HTTP/1.1 200 OK\r\n"u8 +
+        "Server: K\r\n"u8 +
+        "Content-Type: application/json\r\n"u8 +
+        "Content-Length: 27\r\n\r\n"u8;
+    
+    [ThreadStatic]
+    private static Utf8JsonWriter? t_writer;
+    
+    public struct JsonMessage
+    {
+        public string message { get; set; }
+    }
+    
     public static async Task Main(string[] args)
     {
         var expressBuilder = WiredApp.CreateExpressBuilder();
@@ -26,14 +47,26 @@ internal class Program
             .Port(8080)
             .MapGet("/json", scope => async ctx =>
             {
-                ctx.Writer.Write("HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=UTF-8\r\nContent-Length: 28\r\n\r\n {\"message\":\"Hello, World!\"}\r\n"u8);
-                await ctx.Writer.FlushAsync();
+                //ctx.Writer.Write("HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=UTF-8\r\nContent-Length: 27\r\n\r\n{\"message\":\"Hello, World!\"}\r\n"u8);
+                ctx.Writer.Write(_jsonPreamble);
+                var utf8JsonWriter = t_writer ??= new Utf8JsonWriter(ctx.Writer, new JsonWriterOptions { SkipValidation = true });
+                utf8JsonWriter.Reset(ctx.Writer);
+                JsonSerializer.Serialize(utf8JsonWriter, new JsonMessage { message = "Hello, World!" });
+                
+                
+                //await ctx.Writer.FlushAsync();
+            })
+            .MapGet("/plaintext", scope => async ctx =>
+            {
+                ctx.Writer.Write(_plaintextPreamble);
+                ctx.Writer.Write(_plainTextBody);
+                //await ctx.Writer.FlushAsync();
             })
             .Build()
             .RunAsync();
     }
 
-    /*public static async Task Main1(string[] args)
+    public static async Task Main1(string[] args)
     {
         var builder = WiredApp.CreateBuilder();
 
@@ -44,18 +77,20 @@ internal class Program
                 ctx.Writer.Write("HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=UTF-8\r\nContent-Length: 28\r\n\r\n {\"message\":\"Hello, World!\"}\r\n"u8);
                 await ctx.Writer.FlushAsync();
             })
-            .MapGet("/jsor", scope => async ctx =>
+            .MapGet("/jsor", scope => ctx =>
             {
-                ctx.Respond().Content(new JsonContent(
-                        new
-                        {
-                            Message = "Hello, World!"
-                        }, JsonSerializerOptions.Default))
+                ctx.Respond()
+                    .Status(ResponseStatus.Ok)
+                    .Content(new JsonContent(
+                    new
+                    {
+                        Message = "Hello, World!"
+                    }, JsonSerializerOptions.Default))
                     .Type("application/json");
             })
             .Build()
             .RunAsync();
-    }*/
+    }
 }
 
 

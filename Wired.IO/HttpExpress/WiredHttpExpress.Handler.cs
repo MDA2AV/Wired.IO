@@ -1,17 +1,9 @@
 ﻿using Microsoft.Extensions.ObjectPool;
-using Microsoft.VisualBasic;
-using System;
 using System.Buffers;
-using System.Diagnostics;
 using System.IO.Pipelines;
-using System.Net;
-using System.Reflection.PortableExecutable;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Text;
-using Wired.IO.Protocol;
 using Wired.IO.Protocol.Handlers;
-using Wired.IO.Protocol.Request;
 using Wired.IO.Protocol.Writers;
 using Wired.IO.Utilities;
 using Wired.IO.Utilities.StringCache;
@@ -25,7 +17,7 @@ public class WiredHttpExpress<TContext> : IHttpHandler<TContext>
     /// Object pool used to recycle request contexts for reduced allocations and improved performance.
     /// </summary>
     private static readonly ObjectPool<TContext> ContextPool =
-        new DefaultObjectPool<TContext>(new PipelinedContextPoolPolicy(), 512);
+        new DefaultObjectPool<TContext>(new PipelinedContextPoolPolicy(), 4096);
 
     /// <summary>
     /// Pool policy that defines how to create and reset pooled <typeparamref name="TContext"/> instances.
@@ -60,7 +52,11 @@ public class WiredHttpExpress<TContext> : IHttpHandler<TContext>
 
         // Wrap the stream in a PipeReader and PipeWriter for efficient buffered reads/writes
         context.Reader = PipeReader.Create(stream,
-            new StreamPipeReaderOptions(MemoryPool<byte>.Shared, leaveOpen: false, bufferSize: 4096, minimumReadSize: 1));
+            new StreamPipeReaderOptions(
+                MemoryPool<byte>.Shared, 
+                leaveOpen: false,
+                bufferSize: 4096*4, 
+                minimumReadSize: 1024));
 
         context.Writer = PipeWriter.Create(stream,
             new StreamPipeWriterOptions(MemoryPool<byte>.Shared, leaveOpen: false));
@@ -68,40 +64,8 @@ public class WiredHttpExpress<TContext> : IHttpHandler<TContext>
         try
         {
             // Loop to handle multiple requests on the same connection (keep-alive)
-            /*
-            while (await ReadRequestHeaders(context))
-            {
-                //_ = ProcessRequest(pipeline, context);
-
-                // Invoke user-defined middleware pipeline
-                await pipeline(context);
-
-                // Clear context state for reuse in the next request (on the same socket)
-                context.Clear();
-            }
-            */
-
-            while (true)
-            {
-                var readResult = await context.Reader.ReadAsync();
-                var buffer = readResult.Buffer;
-
-                var isCompleted = readResult.IsCompleted;
-
-                if (buffer.IsEmpty && isCompleted)
-                {
-                    return;
-                }
-
-                // Handles one or more complete HTTP requests in the buffer
-                await HandleRequestsAsync(buffer, context, pipeline, isCompleted);
-
-                //await pipeline(context);
-                //context.Clear();
-
-                //HandleRequests(ref buffer, context, pipeline, isCompleted);
-                //await context.Writer.FlushAsync();
-            }
+            await ProcessRequestsAsync(context, pipeline);
+            //await ProcessRequestsAsyncReader(context, pipeline);
         }
         catch
         {
@@ -118,529 +82,303 @@ public class WiredHttpExpress<TContext> : IHttpHandler<TContext>
             ContextPool.Return(context);
         }
     }
-
-    private static ReadOnlySpan<byte> _plaintextPreamble =>
-        "HTTP/1.1 200 OK\r\n"u8 +
-        "Server: K\r\n"u8 +
-        "Content-Type: text/plain\r\n"u8 +
-        "Content-Length: 13\r\n\r\n"u8;
-    private static ReadOnlySpan<byte> _plainTextBody => "Hello, World!\r\n"u8;
-    private static void PlainText(ref BufferWriter<WriterAdapter> writer)
+    
+    private enum State
     {
-        writer.Write(_plaintextPreamble);
-
-        // Date header
-        //writer.Write(DateHeader.HeaderBytes);
-
-        // Body
-        writer.Write(_plainTextBody);
+        StartLine,
+        Headers,
+        Body
     }
-
-    public static class Bytes
+    
+    // Consider using ValueTask here
+    private async Task ProcessRequestsAsync(TContext context, Func<TContext, Task> pipeline)
     {
-        public const byte Space = 0x20;
-        public const byte Question = 0x3F;
-        public const byte QuerySeparator = 0x26;
-        public const byte Equal = 0x3D;
-        public const byte Colon = 0x3A;
-        public const byte SemiColon = 0x3B;
-    }
-    private static readonly FastHashStringCache32 CachedRoutes = new FastHashStringCache32();
-    private static readonly FastHashStringCache32 CachedQueryKeys = new FastHashStringCache32();
-    private static readonly FastHashStringCache16 PreCachedHttpMethods = new FastHashStringCache16([
-        "GET",
-        "POST",
-        "PUT",
-        "DELETE",
-        "PATCH",
-        "HEAD",
-        "OPTIONS",
-        "TRACE"
-    ], 8);
-    private static readonly FastHashStringCache32 PreCachedHeaderKeys = new FastHashStringCache32(
-    [
-        "Host",
-        "User-Agent",
-        "Cookie",
-        "Accept",
-        "Accept-Language",
-        "Connection"
-    ]);
-    private static readonly FastHashStringCache32 PreCachedHeaderValues = new FastHashStringCache32([
-        "keep-alive",
-        "server",
-    ]);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static BufferWriter<WriterAdapter> GetWriter(PipeWriter pipeWriter, int sizeHint)
-        => new(new(pipeWriter), sizeHint);
-
-    private async Task ProcessRequest(Func<TContext, Task> pipeline, TContext context)
-    {
-        // Invoke user-defined middleware pipeline
-        await pipeline(context);
-        // Clear context state for reuse in the next request (on the same socket)
-        context.Clear();
-    }
-
-    private async Task<bool> HandleRequestsAsync(
-        ReadOnlySequence<byte> buffer,
-        TContext context,
-        Func<TContext, Task> pipeline,
-        bool isCompleted)
-    {
-        var reader = new SequenceReader<byte>(buffer);
-
         while (true)
         {
-            var requestReceived = ReadRequestHeaders2(context, ref reader, ref buffer, isCompleted);
-            //var requestReceived = ReadRequestHeadersSlim(context, ref buffer, isCompleted);
-
-
-            if (requestReceived)
+            var readResult = await context.Reader.ReadAsync();
+            var buffer = readResult.Buffer;
+            var isCompleted = readResult.IsCompleted;
+                
+            if (buffer.IsEmpty && isCompleted)
             {
-                context.Reader.AdvanceTo(reader.Position);
-            }
-            else
-            {
-                // Incomplete request, wait for more data
-                break;
+                return;
             }
 
-            await pipeline(context);
-            context.Clear();
-            //PlainText(ref writer);
+            var currentPosition = 0;
+            var flush = false;
 
-            //if (!reader.End)
-            //{
-                // More input data to parse
-            //    continue;
-            //}
+            while (true)
+            {
+                // Try to extract a request to the context
+                // Process it (async call)
+                // If there is more data in the pipe reader go again
+                
+                var requestReceived = ReadRequestHeaders2(context, ref buffer, isCompleted, ref currentPosition);
+                
+                if (!requestReceived)
+                {
+                    break;
+                }
+                
+                await pipeline(context);
+                context.Clear();
+                flush = true;
 
-            // No more input or incomplete data, Advance the Reader
-            //context.Reader.AdvanceTo(reader.Position, buffer.End);
-            break;
+                if (currentPosition == buffer.Length)
+                {
+                    // There is no more data, need to ReadAsync()
+                    break;
+                }
+            }
+            if(flush)
+                await context.Writer.FlushAsync();
         }
-
-        //writer.Commit();
-        return true;
     }
-    private bool HandleRequests(
-        ref ReadOnlySequence<byte> buffer, 
-        TContext context, 
-        Func<TContext, Task> pipeline,
-        bool isCompleted)
+    
+    private async Task ProcessRequestsAsyncReader(TContext context, Func<TContext, Task> pipeline)
     {
-        var reader = new SequenceReader<byte>(buffer);
-        var writer = GetWriter(context.Writer, sizeHint: 160 * 16); // 160*16 is for Plaintext, for Json 160 would be enough
-
+        var state = State.StartLine;
         while (true)
         {
-            var requestReceived = ReadRequestHeaders2(context, ref reader, ref buffer, isCompleted);
-            //var requestReceived = ReadRequestHeadersSlim(context, ref buffer, isCompleted);
-
-            if (requestReceived)
+            var readResult = await context.Reader.ReadAsync();
+            var buffer = readResult.Buffer;
+            var isCompleted = readResult.IsCompleted;
+                
+            if (buffer.IsEmpty && isCompleted)
             {
-                context.Reader.AdvanceTo(reader.Position);
-            }
-            else
-            {
-                // Incomplete request, wait for more data
-                break;
+                return;
             }
 
-            //_ = ProcessRequest(pipeline, context);
-            PlainText(ref writer);
+            var currentPosition = buffer.Start;
+            var flush = false;
 
-            if (!reader.End)
+            while (true)
             {
-                // More input data to parse
+                // Try to extract a request to the context
+                // Process it (async call)
+                // If there is more data in the pipe reader go again
+                
+                var requestReceived = ReadRequestHeaders(context, ref buffer, isCompleted, ref currentPosition, ref state);
+                
+                context.Reader.AdvanceTo(currentPosition, buffer.End);
+                
+                if (!requestReceived)
+                    break;
+                
+                await pipeline(context);
+                context.Clear();
+                
+                flush = true;
+                
+                state = State.StartLine;
+
+                if (buffer.Slice(currentPosition).IsEmpty)
+                //if (buffer.GetOffset(currentPosition) == buffer.GetOffset(buffer.End))
+                {
+                    // There is no more data, need to ReadAsync()
+                    break;
+                }
+            }
+
+            if (!flush) 
                 continue;
-            }
-
-            // No more input or incomplete data, Advance the Reader
-            //context.Reader.AdvanceTo(reader.Position, buffer.End);
-            break;
-        }
-
-        writer.Commit();
-        return true;
-    }
-    public static async Task<bool> ReadRequestHeaders(TContext context)
-    { 
-        var reader = context.Reader;
-
-        while (true)
-        {
-            // Update the result from pipe reader
-            var result = await reader.ReadAsync(context.CancellationToken);
-            var buffer = result.Buffer;
-
-            if (buffer.Length == 0 || result.IsCompleted) 
-                throw new IOException("Client disconnected");
-
-            // Hot path, single segment buffer
-            if (buffer.IsSingleSegment)
-            {
-                var bufferSpan = buffer.FirstSpan;
-                var fullHeaderIndex = bufferSpan.IndexOf("\r\n\r\n"u8);
-
-                if (fullHeaderIndex != -1)
-                {
-                    // Whole headers are present for the request
-
-                    // Parse first header
-
-                    var lineEnd = bufferSpan.IndexOf("\r\n"u8);
-                    var firstHeader = bufferSpan[..lineEnd];
-
-                    var firstSpace = firstHeader.IndexOf(Bytes.Space);
-                    if(firstSpace == -1)
-                        throw new InvalidOperationException("Invalid request line");
-
-                    context.Request.HttpMethod = PreCachedHttpMethods.GetOrAdd(firstHeader[..firstSpace]);
-
-                    var secondSpaceRelative = firstHeader[(firstSpace + 1)..].IndexOf(Bytes.Space);
-                    if (secondSpaceRelative == -1)
-                        throw new InvalidOperationException("Invalid request line");
-
-                    var secondSpace = firstSpace + secondSpaceRelative + 1;
-
-                    var url = firstHeader[(firstSpace + 1)..secondSpace];
-
-                    var queryStart = url.IndexOf(Bytes.Question); // (byte)'?'
-
-                    if (queryStart != -1)
-                    {
-                        // Route has params
-
-                        context.Request.Route = CachedRoutes.GetOrAdd(url[..queryStart]);
-
-                        var querySpan = url[(queryStart + 1)..];
-
-                        var current = 0;
-                        while (current < querySpan.Length)
-                        {
-                            var separator = querySpan[current..].IndexOf(Bytes.QuerySeparator); // (byte)'&'
-                            ReadOnlySpan<byte> pair;
-
-                            if (separator == -1)
-                            {
-                                pair = querySpan[current..];
-                                current = querySpan.Length;
-                            }
-                            else
-                            {
-                                pair = querySpan.Slice(current, separator);
-                                current += separator + 1;
-                            }
-
-                            var equalsIndex = pair.IndexOf(Bytes.Equal); // (byte)'='
-                            if (equalsIndex == -1)
-                            {
-                                break;
-                            }
-                            
-                            context.Request.QueryParameters?
-                                .TryAdd(CachedQueryKeys.GetOrAdd(pair[..equalsIndex]),
-                                     Encoders.Utf8Encoder.GetString(pair[(equalsIndex + 1)..]));
-                        }
-                    }
-                    else
-                    {
-                        // Url is same as route
-
-                        context.Request.Route = CachedRoutes.GetOrAdd(url);
-                    }
-
-                    // Parse remaining headers
-
-                    var lineStart = 0;
-                    while (true)
-                    {
-                        lineStart += lineEnd + 2;
-
-                        lineEnd = bufferSpan[lineStart..].IndexOf("\r\n"u8);
-                        if (lineEnd == 0)
-                        {
-                            // All Headers read
-                            break;
-                        }
-
-                        var header = bufferSpan.Slice(lineStart, lineEnd);
-                        var colonIndex = header.IndexOf(Bytes.Colon);
-
-                        if (colonIndex == -1)
-                        {
-                            // Malformed header
-                            continue;
-                        }
-
-                        var headerKey = header[..colonIndex];
-                        var headerValue = header[(colonIndex + 2)..];
-
-                        context.Request.Headers
-                            .TryAdd(PreCachedHeaderKeys.GetOrAdd(headerKey), PreCachedHeaderValues.GetOrAdd(headerValue));
-                    }
-                    
-
-                    reader.AdvanceTo(buffer.GetPosition(fullHeaderIndex + 4));
-
-                    return true;
-                }
-            }
-
-            return false;
-        }
-    }
-    public static bool ReadRequestHeadersSlim(TContext context, ref ReadOnlySequence<byte> buffer, bool isCompleted)
-    {
-        var reader = context.Reader;
-
-        while (true)
-        {
-            if (buffer.Length == 0 || isCompleted)
-                throw new IOException("Client disconnected");
-
-            // Hot path, single segment buffer
-            if (buffer.IsSingleSegment)
-            {
-                var bufferSpan = buffer.FirstSpan;
-                var fullHeaderIndex = bufferSpan.IndexOf("\r\n\r\n"u8);
-
-                if (fullHeaderIndex != -1)
-                {
-                    // Whole headers are present for the request
-
-                    // Parse first header
-
-                    var lineEnd = bufferSpan.IndexOf("\r\n"u8);
-                    var firstHeader = bufferSpan[..lineEnd];
-
-                    var firstSpace = firstHeader.IndexOf(Bytes.Space);
-                    if (firstSpace == -1)
-                        throw new InvalidOperationException("Invalid request line");
-
-                    context.Request.HttpMethod = PreCachedHttpMethods.GetOrAdd(firstHeader[..firstSpace]);
-
-                    var secondSpaceRelative = firstHeader[(firstSpace + 1)..].IndexOf(Bytes.Space);
-                    if (secondSpaceRelative == -1)
-                        throw new InvalidOperationException("Invalid request line");
-
-                    var secondSpace = firstSpace + secondSpaceRelative + 1;
-
-                    var url = firstHeader[(firstSpace + 1)..secondSpace];
-
-                    var queryStart = url.IndexOf(Bytes.Question); // (byte)'?'
-
-                    if (queryStart != -1)
-                    {
-                        // Route has params
-
-                        context.Request.Route = CachedRoutes.GetOrAdd(url[..queryStart]);
-
-                        var querySpan = url[(queryStart + 1)..];
-
-                        var current = 0;
-                        while (current < querySpan.Length)
-                        {
-                            var separator = querySpan[current..].IndexOf(Bytes.QuerySeparator); // (byte)'&'
-                            ReadOnlySpan<byte> pair;
-
-                            if (separator == -1)
-                            {
-                                pair = querySpan[current..];
-                                current = querySpan.Length;
-                            }
-                            else
-                            {
-                                pair = querySpan.Slice(current, separator);
-                                current += separator + 1;
-                            }
-
-                            var equalsIndex = pair.IndexOf(Bytes.Equal); // (byte)'='
-                            if (equalsIndex == -1)
-                            {
-                                break;
-                            }
-
-                            context.Request.QueryParameters?
-                                .TryAdd(CachedQueryKeys.GetOrAdd(pair[..equalsIndex]),
-                                     Encoders.Utf8Encoder.GetString(pair[(equalsIndex + 1)..]));
-                        }
-                    }
-                    else
-                    {
-                        // Url is same as route
-
-                        context.Request.Route = CachedRoutes.GetOrAdd(url);
-                    }
-
-                    // Parse remaining headers
-
-                    var lineStart = 0;
-                    while (true)
-                    {
-                        lineStart += lineEnd + 2;
-
-                        lineEnd = bufferSpan[lineStart..].IndexOf("\r\n"u8);
-                        if (lineEnd == 0)
-                        {
-                            // All Headers read
-                            break;
-                        }
-
-                        var header = bufferSpan.Slice(lineStart, lineEnd);
-                        var colonIndex = header.IndexOf(Bytes.Colon);
-
-                        if (colonIndex == -1)
-                        {
-                            // Malformed header
-                            continue;
-                        }
-
-                        var headerKey = header[..colonIndex];
-                        var headerValue = header[(colonIndex + 2)..];
-
-                        context.Request.Headers
-                            .TryAdd(PreCachedHeaderKeys.GetOrAdd(headerKey), PreCachedHeaderValues.GetOrAdd(headerValue));
-                    }
-
-
-                    reader.AdvanceTo(buffer.GetPosition(fullHeaderIndex + 4));
-
-                    return true;
-                }
-            }
-
-            return false;
+            await context.Writer.FlushAsync();
         }
     }
 
-    private const int DelimiterLen = 4;
-    private const int Keep = DelimiterLen - 1;
-
-    private static async ValueTask<ReadOnlySequence<byte>> ReadHeadersAsync(PipeReader reader)
-    {
-        while (true)
-        {
-            var result = await reader.ReadAsync();
-            var buffer = result.Buffer;
-
-            if (result.IsCompleted && buffer.Length == 0)
-                throw new IOException("Client disconnected");
-
-            if (buffer.IsSingleSegment)
-            {
-                var span = buffer.FirstSpan;
-                var pos = span.IndexOf("\r\n\r\n"u8);
-                if (pos >= 0)
-                {
-                    var after = buffer.GetPosition(pos + DelimiterLen, buffer.Start);
-                    var headersWithDelimiter = buffer.Slice(0, after);
-                    reader.AdvanceTo(after, after);
-                    return headersWithDelimiter;
-                }
-            }
-            else
-            {
-                var sr = new SequenceReader<byte>(buffer);
-                if (sr.TryReadTo(out ReadOnlySequence<byte> _, "\r\n\r\n"u8, advancePastDelimiter: true))
-                {
-                    var after = sr.Position;
-                    var headersWithDelimiter = buffer.Slice(0, after);
-                    reader.AdvanceTo(after, after);
-                    return headersWithDelimiter;
-                }
-            }
-
-            // Not found yet → preserve trailing 3 bytes so split delimiter can complete.
-            if (buffer.Length > Keep)
-            {
-                var consumeTo = buffer.GetPosition(buffer.Length - Keep);
-                reader.AdvanceTo(consumeTo, buffer.End);
-            }
-            else
-            {
-                reader.AdvanceTo(buffer.Start, buffer.End);
-            }
-
-            if (result.IsCompleted)
-                throw new InvalidOperationException("Connection closed before headers completed.");
-        }
-    }
-
-    private static readonly byte[] CRLF = "\r\n"u8.ToArray();
-    private static readonly byte[] CRLFCRLF = "\r\n\r\n"u8.ToArray();
-
-    public static bool ReadRequestHeaders2(
-        TContext context, 
-        ref SequenceReader<byte> sequenceReader,
+    private static bool ReadRequestHeaders(
+        TContext context,
         ref ReadOnlySequence<byte> buffer,
-        bool isCompleted)
+        bool isCompleted,
+        ref SequencePosition position,
+        ref State state)
     {
-        //var reader = context.Reader;
-
         if (buffer.Length == 0 || isCompleted)
             throw new IOException("Client disconnected");
+        
+        // Parse the complete headers, taking off from where it left off
+        var headerReader = new SequenceReader<byte>(buffer.Slice(position));
 
-        // Look for end of headers first
-        if (!sequenceReader.TryReadTo(out ReadOnlySequence<byte> headerSequence, CRLFCRLF))
+        if (state == State.StartLine)
         {
-            // Headers not complete, advance to end and continue reading
-            //reader.AdvanceTo(buffer.Start, buffer.End);
-            //continue;
-            return false;
+            if (!TryParseRequestLine(ref headerReader, context.Request))
+                return false;
         }
-
-        // Parse the complete headers
-        var headerReader = new SequenceReader<byte>(headerSequence);
-
-        // Parse request line (method, path, version)
-        if (!ParseRequestLine(ref headerReader, context.Request))
-        {
-            throw new InvalidOperationException("Invalid request line");
-        }
+        
+        // Header route was read, update state
+        position = headerReader.Position;
+        state = State.Headers;
 
         // Parse remaining headers
-        while (!headerReader.End)
+        while (true)
         {
             if (!headerReader.TryReadTo(out ReadOnlySequence<byte> headerLine, CRLF))
-                break;
-
+                return false;
+            
+            position = headerReader.Position;
+            
             if (headerLine.Length == 0)
                 break; // Empty line indicates end of headers
 
-            ParseHeaderLine(headerLine, context.Request);
-        }
+            ParseHeaderLine(in headerLine, context.Request);
 
-        // Advance past the headers in the pipe
-        //reader.AdvanceTo(sequenceReader.Position);
+            if (headerReader.End)
+                return false;
+            
+        }
+        // All headers were read
+        state = State.Body;
+        position = headerReader.Position;
         return true;
-        
     }
 
-    private static bool ParseRequestLine(ref SequenceReader<byte> reader, IExpressRequest request)
+    private bool ReadRequestHeaders(TContext context, ref ReadOnlySequence<byte> buffer, bool isCompleted, ref int position)
+    {
+       var reader = context.Reader;
+
+       while (true)
+       {
+           if (buffer.Length == 0 || isCompleted) 
+               throw new IOException("Client disconnected");
+           
+           // Hot path, single segment buffer
+           if (buffer.IsSingleSegment)
+           {
+               var bufferSpan = buffer.FirstSpan[position..];
+               var fullHeaderIndex = bufferSpan.IndexOf("\r\n\r\n"u8);
+
+               if (fullHeaderIndex != -1)
+               {
+                   // Whole headers are present for the request
+                   // Parse first header
+
+                   var lineEnd = bufferSpan.IndexOf("\r\n"u8);
+                   var firstHeader = bufferSpan[..lineEnd];
+
+                   var firstSpace = firstHeader.IndexOf(Bytes.Space);
+                   if(firstSpace == -1)
+                       throw new InvalidOperationException("Invalid request line");
+
+                   context.Request.HttpMethod = CachedData.PreCachedHttpMethods.GetOrAdd(firstHeader[..firstSpace]);
+
+                   var secondSpaceRelative = firstHeader[(firstSpace + 1)..].IndexOf(Bytes.Space);
+                   if (secondSpaceRelative == -1)
+                       throw new InvalidOperationException("Invalid request line");
+
+                   var secondSpace = firstSpace + secondSpaceRelative + 1;
+                   var url = firstHeader[(firstSpace + 1)..secondSpace];
+                   var queryStart = url.IndexOf(Bytes.Question); // (byte)'?'
+
+                   if (queryStart != -1)
+                   {
+                       // Route has params
+                       context.Request.Route = CachedData.CachedRoutes.GetOrAdd(url[..queryStart]);
+                       var querySpan = url[(queryStart + 1)..];
+                       var current = 0;
+                       while (current < querySpan.Length)
+                       {
+                           var separator = querySpan[current..].IndexOf(Bytes.QuerySeparator); // (byte)'&'
+                           ReadOnlySpan<byte> pair;
+
+                           if (separator == -1)
+                           {
+                               pair = querySpan[current..];
+                               current = querySpan.Length;
+                           }
+                           else
+                           {
+                               pair = querySpan.Slice(current, separator);
+                               current += separator + 1;
+                           }
+
+                           var equalsIndex = pair.IndexOf(Bytes.Equal); // (byte)'='
+                           if (equalsIndex == -1)
+                           {
+                               break;
+                           }
+                           
+                           context.Request.QueryParameters?
+                               .TryAdd(CachedData.CachedQueryKeys.GetOrAdd(pair[..equalsIndex]),
+                                    Encoders.Utf8Encoder.GetString(pair[(equalsIndex + 1)..]));
+                       }
+                   }
+                   else
+                   {
+                       // Url is same as route
+                       context.Request.Route = CachedData.CachedRoutes.GetOrAdd(url);
+                   }
+
+                   // Parse remaining headers
+                   var lineStart = 0;
+                   while (true)
+                   {
+                       lineStart += lineEnd + 2;
+
+                       lineEnd = bufferSpan[lineStart..].IndexOf("\r\n"u8);
+                       if (lineEnd == 0)
+                       {
+                           // All Headers read
+                           break;
+                       }
+
+                       var header = bufferSpan.Slice(lineStart, lineEnd);
+                       var colonIndex = header.IndexOf(Bytes.Colon);
+
+                       if (colonIndex == -1)
+                       {
+                           // Malformed header
+                           continue;
+                       }
+
+                       var headerKey = header[..colonIndex];
+                       var headerValue = header[(colonIndex + 2)..];
+
+                       context.Request.Headers
+                           .TryAdd(CachedData.PreCachedHeaderKeys.GetOrAdd(headerKey), CachedData.PreCachedHeaderValues.GetOrAdd(headerValue));
+                   }
+
+                   position += fullHeaderIndex + 4;
+                   reader.AdvanceTo(buffer.GetPosition(position));
+
+                   return true;
+               }
+               else
+               {
+                   // It is a single segment but the request is not complete
+                   return false;
+               }
+           }
+           else
+           {
+               // It is not a single segment, fallback to use SequenceReader
+           }
+
+           position = default;
+           return false;
+       }
+    }
+
+    private static bool TryParseRequestLine(ref SequenceReader<byte> reader, IExpressRequest request)
     {
         // Read method
         if (!reader.TryReadTo(out ReadOnlySequence<byte> methodSequence, (byte)' '))
             return false;
 
-        request.HttpMethod = PreCachedHttpMethods.GetOrAdd(methodSequence.ToSpan());
+        request.HttpMethod = CachedData.PreCachedHttpMethods.GetOrAdd(methodSequence.ToSpan());
 
         // Read URL/path
         if (!reader.TryReadTo(out ReadOnlySequence<byte> urlSequence, (byte)' '))
             return false;
-
-        ParseUrl(urlSequence, request);
+        
+        ParseUrl(in urlSequence, request);
 
         // Skip HTTP version (read to end of line)
         if (!reader.TryReadTo(out ReadOnlySequence<byte> _, CRLF))
             return false;
-
+        
         return true;
     }
-    private static void ParseUrl(ReadOnlySequence<byte> urlSequence, IExpressRequest request)
+    private static void ParseUrl(in ReadOnlySequence<byte> urlSequence, IExpressRequest request)
     {
         var urlSpan = urlSequence.ToSpan();
         var queryStart = urlSpan.IndexOf((byte)'?');
@@ -649,7 +387,7 @@ public class WiredHttpExpress<TContext> : IHttpHandler<TContext>
         {
             // URL has query parameters
             var routeSpan = urlSpan[..queryStart];
-            request.Route = CachedRoutes.GetOrAdd(routeSpan);
+            request.Route = CachedData.CachedRoutes.GetOrAdd(routeSpan);
 
             // Parse query parameters
             ParseQueryParameters(urlSpan[(queryStart + 1)..], request);
@@ -657,10 +395,10 @@ public class WiredHttpExpress<TContext> : IHttpHandler<TContext>
         else
         {
             // Simple URL without query parameters  
-            request.Route = CachedRoutes.GetOrAdd(urlSpan);
+            request.Route = CachedData.CachedRoutes.GetOrAdd(urlSpan);
         }
     }
-    private static void ParseQueryParameters(ReadOnlySpan<byte> querySpan, IExpressRequest request)
+    private static void ParseQueryParameters(in ReadOnlySpan<byte> querySpan, IExpressRequest request)
     {
         var current = 0;
         while (current < querySpan.Length)
@@ -683,13 +421,13 @@ public class WiredHttpExpress<TContext> : IHttpHandler<TContext>
             if (equalsIndex == -1)
                 continue;
 
-            var key = CachedQueryKeys.GetOrAdd(pair[..equalsIndex]);
+            var key = CachedData.CachedQueryKeys.GetOrAdd(pair[..equalsIndex]);
             var value = Encoding.UTF8.GetString(pair[(equalsIndex + 1)..]);
 
             request.QueryParameters?.TryAdd(key, value);
         }
     }
-    private static void ParseHeaderLine(ReadOnlySequence<byte> headerLine, IExpressRequest request)
+    private static void ParseHeaderLine(in ReadOnlySequence<byte> headerLine, IExpressRequest request)
     {
         var headerSpan = headerLine.ToSpan();
         var colonIndex = headerSpan.IndexOf((byte)':');
@@ -707,8 +445,8 @@ public class WiredHttpExpress<TContext> : IHttpHandler<TContext>
         var headerValue = headerSpan[valueStart..];
 
         request.Headers?.TryAdd(
-            PreCachedHeaderKeys.GetOrAdd(headerKey),
-            PreCachedHeaderValues.GetOrAdd(headerValue));
+            CachedData.PreCachedHeaderKeys.GetOrAdd(headerKey),
+            CachedData.PreCachedHeaderValues.GetOrAdd(headerValue));
     }
 
     private struct WriterAdapter : IBufferWriter<byte>
@@ -727,91 +465,358 @@ public class WiredHttpExpress<TContext> : IHttpHandler<TContext>
         public Span<byte> GetSpan(int sizeHint = 0)
             => Writer.GetSpan(sizeHint);
     }
-}
+    
+    private static ReadOnlySpan<byte> CRLF => "\r\n"u8;
+    //private static readonly byte[] CRLF = "\r\n"u8.ToArray();
+    //private static readonly byte[] CRLFCRLF = "\r\n\r\n"u8.ToArray();
+    private const byte CR = (byte)'\r';
+    private const byte LF = (byte)'\n';
+    private const byte SP = (byte)' ';
+    private const byte COLON = (byte)':';
+    private const byte AMP = (byte)'&';
+    private const byte EQ = (byte)'=';
+    private const byte QMARK = (byte)'?';
 
-public static class SequenceSearch
-{
-    public static bool TryAdvanceSingleSegment(
-        in ReadOnlySequence<byte> buffer,
-        ReadOnlySpan<byte> delimiter,
-        out SequencePosition after)
+    private bool ReadRequestHeaders2(
+        TContext context, 
+        ref ReadOnlySequence<byte> buffer, 
+        bool isCompleted,
+        ref int position)
     {
-        after = default;
-
-        var span = buffer.FirstSpan;
-        var idx = span.IndexOf(delimiter);
-        if (idx < 0)
-            return false;
-
-        after = buffer.GetPosition(idx + delimiter.Length, buffer.Start);
-        return true;
-    }
-
-    public static bool TryAdvanceMultiSegment(
-        in ReadOnlySequence<byte> buffer,
-        ReadOnlySpan<byte> delimiter,
-        out SequencePosition after)
-    {
-        after = default;
-
-        if (delimiter.Length == 0)
-            throw new ArgumentException("Delimiter cannot be empty.", nameof(delimiter));
-
-        byte first = delimiter[0];
-        var searchFrom = buffer.Start;
+        var reader = context.Reader;
 
         while (true)
         {
-            var pos = buffer.Slice(searchFrom).PositionOf(first);
-            if (pos == null)
-                return false;
+            if (buffer.Length == 0 || isCompleted)
+                throw new IOException("Client disconnected");
 
-            var candidate = pos.Value;
-            if (StartsWithAt(buffer, candidate, delimiter))
+            if (buffer.IsSingleSegment)
             {
-                after = buffer.GetPosition(delimiter.Length, candidate);
+                // Hot path: single segment
+                var span = buffer.FirstSpan; // whole segment
+                if ((uint)position >= (uint)span.Length)
+                    return false;
+
+                // Find end of headers with a single linear scan: "\r\n\r\n"
+                int headerEnd = FindDoubleCRLF(span, position);
+                if (headerEnd < 0)
+                    return false; // need more data
+
+                // Parse request line: <METHOD> SP <URL> SP HTTP/...
+                int lineStart = position;
+                int lineEnd = IndexOfCRLF(span, lineStart);
+                if (lineEnd <= lineStart)
+                    throw new InvalidOperationException("Invalid request line");
+
+                // First space
+                int firstSpace = IndexOfByte(span, SP, lineStart, lineEnd);
+                if (firstSpace < 0)
+                    throw new InvalidOperationException("Invalid request line");
+
+                var methodSpan = span.Slice(lineStart, firstSpace - lineStart);
+                context.Request.HttpMethod = CachedData.PreCachedHttpMethods.GetOrAdd(methodSpan);
+
+                // Second space
+                int urlStart = firstSpace + 1;
+                int secondSpace = IndexOfByte(span, SP, urlStart, lineEnd);
+                if (secondSpace < 0)
+                    throw new InvalidOperationException("Invalid request line");
+
+                var urlSpan = span.Slice(urlStart, secondSpace - urlStart);
+
+                // Route + query parse (single pass, no extra slicing)
+                int qIdx = urlSpan.IndexOf(QMARK);
+                if (qIdx >= 0)
+                {
+                    // Route before '?'
+                    var route = urlSpan[..qIdx];
+                    context.Request.Route = CachedData.CachedRoutes.GetOrAdd(route);
+
+                    // Query after '?'
+                    var query = urlSpan[(qIdx + 1)..];
+                    int qi = 0;
+                    while (qi < query.Length)
+                    {
+                        int amp = query[qi..].IndexOf(AMP);
+                        ReadOnlySpan<byte> pair;
+                        if (amp < 0)
+                        {
+                            pair = query[qi..];
+                            qi = query.Length;
+                        }
+                        else
+                        {
+                            pair = query.Slice(qi, amp);
+                            qi += amp + 1;
+                        }
+
+                        int eq = pair.IndexOf(EQ);
+                        if (eq <= 0) // empty key or no '='
+                            continue;
+
+                        var key = pair[..eq];
+                        var value = pair[(eq + 1)..]; // URL-decoding omitted by design (fast path)
+                        context.Request.QueryParameters?.TryAdd(
+                            CachedData.CachedQueryKeys.GetOrAdd(key),
+                            Encoders.Utf8Encoder.GetString(value));
+                    }
+                }
+                else
+                {
+                    context.Request.Route = CachedData.CachedRoutes.GetOrAdd(urlSpan);
+                }
+
+                // Parse headers: from (lineEnd+2) up to headerEnd (exclusive of CRLFCRLF)
+                int p = lineEnd + 2;
+                while (p < headerEnd)
+                {
+                    // next CRLF
+                    int thisEnd = IndexOfCRLF(span, p);
+                    if (thisEnd < 0 || thisEnd > headerEnd)
+                        throw new InvalidOperationException("Malformed headers");
+
+                    if (thisEnd == p)
+                    {
+                        // blank line — should not hit before headerEnd, but guard anyway
+                        break;
+                    }
+
+                    // header: Key ":" [SP] Value
+                    int colon = IndexOfByte(span, COLON, p, thisEnd);
+                    if (colon > p)
+                    {
+                        var key = span.Slice(p, colon - p);
+
+                        int valStart = colon + 1;
+                        if (valStart < thisEnd && span[valStart] == SP)
+                            valStart++;
+
+                        if (valStart <= thisEnd)
+                        {
+                            var value = span.Slice(valStart, thisEnd - valStart);
+                            context.Request.Headers.TryAdd(
+                                CachedData.PreCachedHeaderKeys.GetOrAdd(key),
+                                CachedData.PreCachedHeaderValues.GetOrAdd(value));
+                        }
+                    }
+                    // else malformed header, ignore
+
+                    p = thisEnd + 2;
+                }
+
+                // consume including the "\r\n\r\n"
+                int newPos = headerEnd + 4;
+                position = newPos;
+
+                // Advance the PipeReader: consumed=newPos, examined=newPos (we've fully consumed through headers)
+                reader.AdvanceTo(buffer.GetPosition(newPos));
+
                 return true;
             }
-
-            searchFrom = buffer.GetPosition(1, candidate);
+            else
+            {
+                // Not enough data yet to find CRLFCRLF across segments
+                return false;
+            }
         }
     }
 
-    // Helper: check if delimiter matches starting at position
-    private static bool StartsWithAt(
-        in ReadOnlySequence<byte> buffer,
-        SequencePosition start,
-        ReadOnlySpan<byte> delimiter)
+    // ---- helpers (all inlined by JIT) ----
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int FindDoubleCRLF(ReadOnlySpan<byte> s, int start)
     {
-        var seq = buffer.Slice(start);
-        var remaining = delimiter;
-        var pos = seq.Start;
-
-        while (!remaining.IsEmpty && seq.TryGet(ref pos, out var mem, advance: true))
+        // scan for CRLFCRLF
+        for (int i = start; i + 3 < s.Length; i++)
         {
-            var span = mem.Span;
-            int take = Math.Min(span.Length, remaining.Length);
+            if (s[i] == CR && s[i + 1] == LF && s[i + 2] == CR && s[i + 3] == LF)
+                return i;
+        }
+        return -1;
+    }
 
-            if (!span.Slice(0, take).SequenceEqual(remaining.Slice(0, take)))
-                return false;
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int IndexOfCRLF(ReadOnlySpan<byte> s, int start)
+    {
+        // find "\r\n" starting at 'start'; returns index of '\r'
+        for (int i = start; i + 1 < s.Length; i++)
+        {
+            if (s[i] == CR && s[i + 1] == LF)
+                return i;
+        }
+        return -1;
+    }
 
-            remaining = remaining.Slice(take);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int IndexOfByte(ReadOnlySpan<byte> s, byte b, int start, int endExclusive)
+    {
+        var slice = s.Slice(start, endExclusive - start);
+        int rel = slice.IndexOf(b);
+        return rel < 0 ? -1 : start + rel;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool TryGetHeaderBlock(in ReadOnlySequence<byte> seq, out ReadOnlySequence<byte> block)
+    {
+        // Search for CRLFCRLF across segments using a SequenceReader (no allocs)
+        var sr = new SequenceReader<byte>(seq);
+        if (sr.TryReadTo(out ReadOnlySequence<byte> headers, CRLF, advancePastDelimiter: true)) // first CRLF (end of request line)
+        {
+            // Now look for the blank line end (CRLF just after a CRLF)
+            // We already consumed first CRLF in reader; so search for CRLFCRLF in remaining:
+            // A portable approach: search for "\r\n\r\n" from the original seq
+            // Note: small loop over sequence segments keeps it cheap.
+            var rest = seq.Slice(0, seq.Length); // work from original
+            var it = rest.GetEnumerator();
+            SequencePosition pos = rest.Start;
+            int crlfCount = 0;
+            while (it.MoveNext())
+            {
+                var span = it.Current.Span;
+                for (int i = 0; i < span.Length; i++)
+                {
+                    byte c = span[i];
+                    if (c == CR)
+                    {
+                        // peek next if possible by checking LF next
+                        if (i + 1 < span.Length && span[i + 1] == LF)
+                        {
+                            crlfCount++;
+                            if (crlfCount == 2)
+                            {
+                                var end = rest.GetPosition(i + 1, pos);           // position of LF
+                                block = rest.Slice(0, end); // up to (and including) the second CRLF’s LF
+                                return true;
+                            }
+                            i++; // skip LF
+                            continue;
+                        }
+                        else
+                        {
+                            crlfCount = 0;
+                        }
+                    }
+                    else
+                    {
+                        crlfCount = 0;
+                    }
+                }
+                pos = rest.GetPosition(span.Length, pos);
+            }
         }
 
-        return remaining.IsEmpty;
+        block = default;
+        return false;
+    }
+
+    // Re-uses the exact logic of the single-segment path against a flat span copy.
+    private static void ParseRequestFromSpan(TContext context, ReadOnlySpan<byte> span, ref int position, int headerEnd)
+    {
+        int lineStart = position;
+        int lineEnd = IndexOfCRLF(span, lineStart);
+        if (lineEnd <= lineStart) throw new InvalidOperationException("Invalid request line");
+
+        int firstSpace = IndexOfByte(span, SP, lineStart, lineEnd);
+        if (firstSpace < 0) throw new InvalidOperationException("Invalid request line");
+
+        var methodSpan = span.Slice(lineStart, firstSpace - lineStart);
+        context.Request.HttpMethod = CachedData.PreCachedHttpMethods.GetOrAdd(methodSpan);
+
+        int urlStart = firstSpace + 1;
+        int secondSpace = IndexOfByte(span, SP, urlStart, lineEnd);
+        if (secondSpace < 0) throw new InvalidOperationException("Invalid request line");
+
+        var urlSpan = span.Slice(urlStart, secondSpace - urlStart);
+
+        int qIdx = urlSpan.IndexOf(QMARK);
+        if (qIdx >= 0)
+        {
+            var route = urlSpan[..qIdx];
+            context.Request.Route = CachedData.CachedRoutes.GetOrAdd(route);
+
+            var query = urlSpan[(qIdx + 1)..];
+            int qi = 0;
+            while (qi < query.Length)
+            {
+                int amp = query[qi..].IndexOf(AMP);
+                ReadOnlySpan<byte> pair;
+                if (amp < 0) { pair = query[qi..]; qi = query.Length; }
+                else { pair = query.Slice(qi, amp); qi += amp + 1; }
+
+                int eq = pair.IndexOf(EQ);
+                if (eq <= 0) continue;
+
+                var key = pair[..eq];
+                var value = pair[(eq + 1)..];
+                context.Request.QueryParameters?.TryAdd(
+                    CachedData.CachedQueryKeys.GetOrAdd(key),
+                    Encoders.Utf8Encoder.GetString(value));
+            }
+        }
+        else
+        {
+            context.Request.Route = CachedData.CachedRoutes.GetOrAdd(urlSpan);
+        }
+
+        int p = lineEnd + 2;
+        while (p < headerEnd)
+        {
+            int thisEnd = IndexOfCRLF(span, p);
+            if (thisEnd < 0 || thisEnd > headerEnd) break;
+
+            int colon = IndexOfByte(span, COLON, p, thisEnd);
+            if (colon > p)
+            {
+                var key = span.Slice(p, colon - p);
+                int valStart = colon + 1;
+                if (valStart < thisEnd && span[valStart] == SP) valStart++;
+                var value = span.Slice(valStart, thisEnd - valStart);
+
+                context.Request.Headers.TryAdd(
+                    CachedData.PreCachedHeaderKeys.GetOrAdd(key),
+                    CachedData.PreCachedHeaderValues.GetOrAdd(value));
+            }
+
+            p = thisEnd + 2;
+        }
+
+        position = headerEnd + 4;
     }
 }
 
-// Extension method for SequenceReader to convert to span efficiently
-public static class SequenceExtensions
+internal static class Bytes
 {
-    public static ReadOnlySpan<byte> ToSpan(this ReadOnlySequence<byte> sequence)
-    {
-        if (sequence.IsSingleSegment)
-            return sequence.FirstSpan;
-
-        // Multi-segment - need to copy to contiguous memory
-        // For HTTP headers this should be rare, but handle it
-        return sequence.ToArray();
-    }
+    public const byte Space = 0x20;
+    public const byte Question = 0x3F;
+    public const byte QuerySeparator = 0x26;
+    public const byte Equal = 0x3D;
+    public const byte Colon = 0x3A;
+    public const byte SemiColon = 0x3B;
+}
+internal static class CachedData
+{
+    internal static readonly FastHashStringCache32 CachedRoutes = new FastHashStringCache32();
+    internal static readonly FastHashStringCache32 CachedQueryKeys = new FastHashStringCache32();
+    internal static readonly FastHashStringCache16 PreCachedHttpMethods = new FastHashStringCache16([
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH",
+        "HEAD",
+        "OPTIONS",
+        "TRACE"
+    ], 8);
+    internal static readonly FastHashStringCache32 PreCachedHeaderKeys = new FastHashStringCache32([
+        "Host",
+        "User-Agent",
+        "Cookie",
+        "Accept",
+        "Accept-Language",
+        "Connection"
+    ]);
+    internal static readonly FastHashStringCache32 PreCachedHeaderValues = new FastHashStringCache32([
+        "keep-alive",
+        "server",
+    ]);
 }
