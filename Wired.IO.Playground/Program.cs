@@ -66,7 +66,7 @@ internal class Program
             .RunAsync();
     }
 
-    public static async Task Main1(string[] args)
+    public static async Task Main2(string[] args)
     {
         var builder = WiredApp.CreateBuilder();
 

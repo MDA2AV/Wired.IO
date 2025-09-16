@@ -33,7 +33,6 @@ public static class RequestBodyMiddleware
             var body = await ExtractBody(ctx.Reader, request.Headers, ctx.CancellationToken);
 
             ctx.Request.Content = body;
-
         }
         else
         {

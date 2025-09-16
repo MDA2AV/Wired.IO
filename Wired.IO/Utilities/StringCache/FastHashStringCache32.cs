@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Wired.IO.Utilities.StringCache;
+﻿namespace Wired.IO.Utilities.StringCache;
 
 public sealed class FastHashStringCache32
 {
