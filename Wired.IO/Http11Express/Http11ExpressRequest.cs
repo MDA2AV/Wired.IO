@@ -1,10 +1,9 @@
-﻿using System.Text;
-using Wired.IO.Protocol.Request;
+﻿using Wired.IO.Protocol.Request;
 using Wired.IO.Utilities;
 
-namespace Wired.IO.HttpExpress;
+namespace Wired.IO.Http11Express;
 
-public class HttpExpressRequest : IExpressRequest
+public class Http11ExpressRequest : IExpressRequest
 {
     public string Route { get; set; } = null!;
 

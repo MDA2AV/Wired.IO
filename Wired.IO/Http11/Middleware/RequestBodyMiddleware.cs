@@ -8,6 +8,8 @@ using Wired.IO.Utilities;
 
 namespace Wired.IO.Http11.Middleware;
 
+// Low performance middleware
+
 /// <summary>
 /// Middleware for reading and parsing the HTTP request body, supporting both Content-Length and chunked transfer encoding.
 /// </summary>

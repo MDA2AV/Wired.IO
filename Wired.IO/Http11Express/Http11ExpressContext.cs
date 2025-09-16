@@ -4,13 +4,13 @@ using Wired.IO.Protocol;
 using Wired.IO.Protocol.Response;
 using Wired.IO.Utilities;
 
-namespace Wired.IO.HttpExpress;
+namespace Wired.IO.Http11Express;
 
-public class HttpExpressContext : IBaseContext<IExpressRequest, IBaseResponse>
+public class Http11ExpressContext : IBaseContext<IExpressRequest, IBaseResponse>
 {
     public PipeReader Reader { get; set; } = null!;
     public PipeWriter Writer { get; set; } = null!;
-    public IExpressRequest Request { get; set; } = new HttpExpressRequest()
+    public IExpressRequest Request { get; set; } = new Http11ExpressRequest()
     {
         Headers = new PooledDictionary<string, string>(
             capacity: 8,

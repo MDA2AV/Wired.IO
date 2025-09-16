@@ -3,7 +3,7 @@ using Wired.IO.Builder;
 using Wired.IO.Http11;
 using Wired.IO.Http11.Context;
 using Wired.IO.Http11.Middleware;
-using Wired.IO.HttpExpress;
+using Wired.IO.Http11Express;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Handlers;
 using Wired.IO.Protocol.Request;
@@ -17,10 +17,10 @@ namespace Wired.IO.App;
 /// </summary>
 public sealed class WiredApp
 {
-    public static Builder<WiredHttpExpress<HttpExpressContext>, HttpExpressContext> CreateExpressBuilder()
+    public static Builder<WiredHttp11Express<Http11ExpressContext>, Http11ExpressContext> CreateExpressBuilder()
     {
-        var builder = new Builder<WiredHttpExpress<HttpExpressContext>, HttpExpressContext>(() =>
-            new WiredHttpExpress<HttpExpressContext>(), [SslApplicationProtocol.Http11]);
+        var builder = new Builder<WiredHttp11Express<Http11ExpressContext>, Http11ExpressContext>(() =>
+            new WiredHttp11Express<Http11ExpressContext>(), [SslApplicationProtocol.Http11]);
 
         return builder;
     }
