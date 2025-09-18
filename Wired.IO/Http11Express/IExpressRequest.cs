@@ -15,4 +15,8 @@ public interface IExpressRequest : IBaseRequest
     /// Gets the collection of HTTP request headers as raw strings, typically in the format "HeaderName: HeaderValue".
     /// </summary>
     PooledDictionary<string, string> Headers { get; set; }
+
+    ReadOnlyMemory<byte> Content { get; set; }
+
+    string ContentAsString { get; }
 }

@@ -15,6 +15,10 @@ public class Http11ExpressRequest : IExpressRequest
 
     public ConnectionType ConnectionType { get; set; } = ConnectionType.KeepAlive;
 
+    public ReadOnlyMemory<byte> Content { get; set; }
+
+    public string ContentAsString => Encoders.Utf8Encoder.GetString(Content.Span);
+
     public void Clear()
     {
         Headers?.Clear();

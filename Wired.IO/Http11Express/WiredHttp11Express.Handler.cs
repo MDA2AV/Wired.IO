@@ -17,12 +17,12 @@ namespace Wired.IO.Http11Express;
 /// directly from a pooled <see cref="PipeReader"/> buffer and dispatches to a user-supplied pipeline.
 /// </summary>
 /// <typeparam name="TContext">
-/// Concrete context type used per-connection/request. Must inherit <see cref="Http11ExpressContext"/> and have a public parameterless constructor.
+/// Concrete context type used per-connection/request. Must inherit <see cref="Http11ExpressContext"/> and have a public parameter-less constructor.
 /// </typeparam>
 /// <remarks>
 /// <para>
 /// Designed for low-allocation scenarios. Context instances are pooled with <see cref="ObjectPool{T}"/>; the same connection
-/// can carry multiple HTTP/1.1 requests (pipelining). Parsing is specialized for the common case of a single-segment buffer,
+/// can carry multiple HTTP/1.1 requests (pipe-lining). Parsing is specialized for the common case of a single-segment buffer,
 /// and falls back to a multi-segment parser otherwise.
 /// </para>
 /// <para>
@@ -226,13 +226,30 @@ public class WiredHttp11Express<TContext> : IHttpHandler<TContext>
         }
     }
 
-    private static bool TryExtractBodyFromSingleSegment()
+    [SkipLocalsInit]
+    public static bool TryExtractBodyFromSingleSegment(TContext context, ref ReadOnlySequence<byte> buffer, ref int position)
     {
         // Check if Content-Length header is present
         // If yes, try to read that many bytes from the buffer, if there aren't enough bytes, return false
 
         // Check for Transfer-Encoding: chunked
         // If present, try to read chunks until the terminating chunk is found
+
+        var contentLengthAvailable = context.Request.Headers.TryGetValue(ContentLength, out var contentLengthHeader);
+        if (contentLengthAvailable)
+        {
+            var validContentLength = int.TryParse(contentLengthHeader, out var contentLength);
+            if (!validContentLength || contentLength < 0)
+                return false; // Invalid Content-Length header
+
+            var remainingBytes = buffer.FirstSpan.Length - position;
+
+            if(remainingBytes < contentLength)
+                return false; // Not enough bytes yet
+
+            ArrayPool<byte> pool = ArrayPool<byte>.Shared;
+            context.Request.Content = buffer.FirstSpan.Slice(position, contentLength).ToArray();
+        }
 
         return true;
     }
@@ -406,7 +423,7 @@ public class WiredHttp11Express<TContext> : IHttpHandler<TContext>
             
         }
         // All headers were read
-        state = State.Body;
+        //state = State.Body;
         position = headerReader.Position;
         return true;
     }
@@ -529,6 +546,8 @@ public class WiredHttp11Express<TContext> : IHttpHandler<TContext>
 
     /// <summary>CRLF delimiter used for line termination.</summary>
     private static ReadOnlySpan<byte> Crlf => "\r\n"u8;
+
+    private const string ContentLength = "Content-Length";
 
     private const byte Space = 0x20; // ' '
     private const byte Question = 0x3F; // '?'
