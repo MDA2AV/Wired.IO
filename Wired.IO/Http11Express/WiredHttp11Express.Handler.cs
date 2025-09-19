@@ -235,10 +235,12 @@ public class WiredHttp11Express<TContext> : IHttpHandler<TContext>
         // Check for Transfer-Encoding: chunked
         // If present, try to read chunks until the terminating chunk is found
 
-        var contentLengthAvailable = context.Request.Headers.TryGetValue(ContentLength, out var contentLengthHeader);
+
+        // Content-Length header present
+        var contentLengthAvailable = context.Request.Headers.TryGetValue(ContentLength, out var contentLengthValue);
         if (contentLengthAvailable)
         {
-            var validContentLength = int.TryParse(contentLengthHeader, out var contentLength);
+            var validContentLength = int.TryParse(contentLengthValue, out var contentLength);
             if (!validContentLength || contentLength < 0)
                 return false; // Invalid Content-Length header
 
@@ -247,11 +249,34 @@ public class WiredHttp11Express<TContext> : IHttpHandler<TContext>
             if(remainingBytes < contentLength)
                 return false; // Not enough bytes yet
 
-            ArrayPool<byte> pool = ArrayPool<byte>.Shared;
-            context.Request.Content = buffer.FirstSpan.Slice(position, contentLength).ToArray();
+            context.Request.Content = ArrayPool<byte>.Shared.Rent(contentLength);
+            buffer.FirstSpan.Slice(position, contentLength).CopyTo(context.Request.Content);
         }
 
-        return true;
+        // Transfer-Encoding header present
+        var transferEncodingAvailable = context.Request.Headers.TryGetValue(TransferEncoding, out var transferEncodingValue);
+        if (transferEncodingAvailable && transferEncodingValue.Equals("chunked", StringComparison.OrdinalIgnoreCase))
+        {
+            var bufferSpan = buffer.FirstSpan;
+
+            var isFullBodyAvailable = bufferSpan.IndexOf("0\r\n\r\n"u8);
+            if (isFullBodyAvailable == -1)
+                return false;   // Not enough bytes yet
+
+            int currentChunkSize;
+            while (true)
+            {
+                currentChunkSize = bufferSpan[position..].IndexOf(Crlf);
+                if (currentChunkSize == 0)
+                {
+                    // Last chunk detected
+                }
+
+                var chunkData = bufferSpan.Slice(position, currentChunkSize);
+            }
+        }
+
+        return false;
     }
 
     private static bool TryExtractBodyFromMultipleSegment()
@@ -548,7 +573,8 @@ public class WiredHttp11Express<TContext> : IHttpHandler<TContext>
     private static ReadOnlySpan<byte> Crlf => "\r\n"u8;
 
     private const string ContentLength = "Content-Length";
-
+    private const string TransferEncoding = "Transfer-Encoding";
+            
     private const byte Space = 0x20; // ' '
     private const byte Question = 0x3F; // '?'
     private const byte QuerySeparator = 0x26; // '&'

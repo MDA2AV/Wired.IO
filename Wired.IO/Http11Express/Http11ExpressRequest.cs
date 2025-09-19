@@ -1,8 +1,11 @@
-﻿using Wired.IO.Protocol.Request;
+﻿using System.Buffers;
+using System.Runtime.CompilerServices;
+using Wired.IO.Protocol.Request;
 using Wired.IO.Utilities;
 
 namespace Wired.IO.Http11Express;
 
+[SkipLocalsInit]
 public class Http11ExpressRequest : IExpressRequest
 {
     public string Route { get; set; } = null!;
@@ -15,12 +18,18 @@ public class Http11ExpressRequest : IExpressRequest
 
     public ConnectionType ConnectionType { get; set; } = ConnectionType.KeepAlive;
 
-    public ReadOnlyMemory<byte> Content { get; set; }
+    public byte[] Content { get; set; } = null!;
 
-    public string ContentAsString => Encoders.Utf8Encoder.GetString(Content.Span);
+    public string ContentAsString => Encoders.Utf8Encoder.GetString(Content, 0, ContentLength);
+
+    public int ContentLength { get; set; }
 
     public void Clear()
     {
+        ArrayPool<byte>.Shared.Return(Content, clearArray: false);
+        Content = [];
+        ContentLength = 0;
+
         Headers?.Clear();
         QueryParameters?.Clear();
     }

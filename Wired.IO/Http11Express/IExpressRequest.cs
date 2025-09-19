@@ -16,7 +16,9 @@ public interface IExpressRequest : IBaseRequest
     /// </summary>
     PooledDictionary<string, string> Headers { get; set; }
 
-    ReadOnlyMemory<byte> Content { get; set; }
+    byte[] Content { get; set; }
 
     string ContentAsString { get; }
+
+    int ContentLength { get; set; }
 }

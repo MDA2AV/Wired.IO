@@ -16,7 +16,7 @@ public class Http11ExpressContext : IBaseContext<IExpressRequest, IBaseResponse>
             capacity: 8,
             comparer: StringComparer.OrdinalIgnoreCase),
         QueryParameters = new PooledDictionary<string, string>(
-            capacity: 2,
+            capacity: 8,
             comparer: StringComparer.OrdinalIgnoreCase)
     };
     public IBaseResponse? Response { get; set; }
