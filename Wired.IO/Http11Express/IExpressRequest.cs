@@ -16,7 +16,7 @@ public interface IExpressRequest : IBaseRequest
     /// </summary>
     PooledDictionary<string, string> Headers { get; set; }
 
-    byte[] Content { get; set; }
+    byte[]? Content { get; set; }
 
     string ContentAsString { get; }
 

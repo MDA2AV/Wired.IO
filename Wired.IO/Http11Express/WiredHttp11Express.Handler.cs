@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.ObjectPool;
 using System.Buffers;
+using System.Globalization;
 using System.IO.Pipelines;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -144,6 +145,9 @@ public class WiredHttp11Express<TContext> : IHttpHandler<TContext>
         {
             var readResult = await context.Reader.ReadAsync();
             var buffer = readResult.Buffer;
+
+            Console.WriteLine($"Received: {Encoding.UTF8.GetString(buffer)}");
+
             var isCompleted = readResult.IsCompleted;
                 
             if (buffer.IsEmpty && isCompleted)
@@ -164,15 +168,24 @@ public class WiredHttp11Express<TContext> : IHttpHandler<TContext>
                     if (buffer.Length == 0 || isCompleted)
                         break;
 
-                    // Try to get the header
                     var requestReceived = ExtractHeaderFromSingleSegment(context, ref buffer, ref currentPosition);
-                    context.Reader.AdvanceTo(buffer.GetPosition(currentPosition));
 
                     if (!requestReceived)
+                    {
+                        context.Reader.AdvanceTo(buffer.GetPosition(0), buffer.GetPosition(buffer.FirstSpan.Length));
                         break;
+                    }
+
+                    context.Reader.AdvanceTo(buffer.GetPosition(currentPosition));
 
                     state = State.Body;
-                    // Try to get the body within the same segment, if the full body isn't read, break
+
+                    var bodyReceived = TryExtractBodyFromSingleSegment(context, ref buffer, ref currentPosition, out var bodyEmpty);
+                    if (!bodyReceived)
+                        break;
+
+                    if(!bodyEmpty)
+                        context.Reader.AdvanceTo(buffer.GetPosition(currentPosition));
 
                     await pipeline(context);
                     context.Clear();
@@ -209,6 +222,10 @@ public class WiredHttp11Express<TContext> : IHttpHandler<TContext>
                     }
 
                     //Try to get the body, if the full body isn't read, break
+                    var bodyReceived = TryExtractBodyFromMultipleSegment(context, ref buffer, ref currentPosition, ref state);
+
+                    if (!bodyReceived)
+                        break;
 
                     await pipeline(context);
                     context.Clear();
@@ -227,66 +244,182 @@ public class WiredHttp11Express<TContext> : IHttpHandler<TContext>
     }
 
     [SkipLocalsInit]
-    public static bool TryExtractBodyFromSingleSegment(TContext context, ref ReadOnlySequence<byte> buffer, ref int position)
+    public static bool TryExtractBodyFromSingleSegment(TContext context, ref ReadOnlySequence<byte> buffer, ref int position, out bool bodyEmpty)
     {
-        // Check if Content-Length header is present
-        // If yes, try to read that many bytes from the buffer, if there aren't enough bytes, return false
-
-        // Check for Transfer-Encoding: chunked
-        // If present, try to read chunks until the terminating chunk is found
-
+        bodyEmpty = true;
 
         // Content-Length header present
         var contentLengthAvailable = context.Request.Headers.TryGetValue(ContentLength, out var contentLengthValue);
         if (contentLengthAvailable)
         {
             var validContentLength = int.TryParse(contentLengthValue, out var contentLength);
-            if (!validContentLength || contentLength < 0)
-                return false; // Invalid Content-Length header
+            if (contentLength <= 0 || !validContentLength)
+            {
+                return true; // Invalid Content-Length header
+            }
+
+            bodyEmpty = false;
 
             var remainingBytes = buffer.FirstSpan.Length - position;
 
             if(remainingBytes < contentLength)
                 return false; // Not enough bytes yet
 
+            context.Request.ContentLength = contentLength;
             context.Request.Content = ArrayPool<byte>.Shared.Rent(contentLength);
             buffer.FirstSpan.Slice(position, contentLength).CopyTo(context.Request.Content);
+
+            position += contentLength;
         }
 
         // Transfer-Encoding header present
         var transferEncodingAvailable = context.Request.Headers.TryGetValue(TransferEncoding, out var transferEncodingValue);
         if (transferEncodingAvailable && transferEncodingValue.Equals("chunked", StringComparison.OrdinalIgnoreCase))
         {
-            var bufferSpan = buffer.FirstSpan;
+            var currentOffset = 0;
+            var bufferSpan = buffer.FirstSpan[position..];
 
-            var isFullBodyAvailable = bufferSpan.IndexOf("0\r\n\r\n"u8);
-            if (isFullBodyAvailable == -1)
+            var bodyEndIndex = bufferSpan.IndexOf("0\r\n\r\n"u8);
+            if (bodyEndIndex == -1)
                 return false;   // Not enough bytes yet
 
-            int currentChunkSize;
+            context.Request.Content = ArrayPool<byte>.Shared.Rent(bodyEndIndex);
+
             while (true)
             {
-                currentChunkSize = bufferSpan[position..].IndexOf(Crlf);
-                if (currentChunkSize == 0)
+                var chunkSizeEnd = bufferSpan[currentOffset..].IndexOf(Crlf);
+                var validChunkSize = int.TryParse(bufferSpan[currentOffset..(currentOffset + chunkSizeEnd)], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var currentChunkSize);
+                if (!validChunkSize)
+                    throw new InvalidOperationException("Invalid chunk size");
+
+                if (currentChunkSize == 0) // End of body detected
                 {
-                    // Last chunk detected
+                    if (chunkSizeEnd + currentOffset != bodyEndIndex + 1)
+                        throw new InvalidOperationException("Invalid chunked body termination");
+
+                    position += 5; // Move past "0\r\n\r\n"
+                    return true;
                 }
 
-                var chunkData = bufferSpan.Slice(position, currentChunkSize);
+                bodyEmpty = false;
+
+                var destinationSpan = context.Request.Content.AsSpan().Slice(currentOffset, currentChunkSize);
+                bufferSpan.Slice(chunkSizeEnd + 2, currentChunkSize).CopyTo(destinationSpan);
+
+                context.Request.ContentLength += currentChunkSize;
+                currentOffset += chunkSizeEnd + 2 + currentChunkSize + 2; // Move past chunk size line, chunk data, and trailing CRLF
+                position += currentOffset;
             }
         }
 
-        return false;
+        return true;
     }
 
-    private static bool TryExtractBodyFromMultipleSegment()
+    private static bool TryExtractBodyFromMultipleSegment(
+        TContext context,
+        ref ReadOnlySequence<byte> buffer,
+        ref SequencePosition position,
+        ref State state)
     {
-        // Check if Content-Length header is present
-        // If yes, try to read that many bytes from the buffer, if there aren't enough bytes, return false
+        // Content-Length header present
+        var contentLengthAvailable = context.Request.Headers.TryGetValue(ContentLength, out var contentLengthValue);
+        if (contentLengthAvailable)
+        {
+            var validContentLength = int.TryParse(contentLengthValue, out var contentLength);
 
-        // Check for Transfer-Encoding: chunked
-        // If present, try to read chunks until the terminating chunk is found
+            if (!validContentLength || contentLength < 0)
+                return false; // Invalid Content-Length header
+
+            if (buffer.Slice(position).Length < contentLength)
+                return false; // Not enough bytes yet
+
+            context.Request.Content = ArrayPool<byte>.Shared.Rent(contentLength);
+            buffer.Slice(position, contentLength).CopyTo(context.Request.Content);
+
+            context.Request.ContentLength = contentLength;
+
+            position = buffer.GetPosition(contentLength, position);
+        }
+
+        var transferEncodingAvailable = context.Request.Headers.TryGetValue(TransferEncoding, out var transferEncodingValue);
+        if (transferEncodingAvailable && transferEncodingValue.Equals("chunked", StringComparison.OrdinalIgnoreCase))
+        {
+            var reader = new SequenceReader<byte>(buffer.Slice(position));
+            var currentOffset = context.Request.Content != null ? context.Request.ContentLength : 0;
+
+            while (true)
+            {
+                if (!reader.TryReadTo(out ReadOnlySequence<byte> chunkSizeSequence, Crlf))
+                    return false; // Not enough bytes yet
+
+                var chunkSizeSpan = chunkSizeSequence.ToSpan();
+                if (!TryParseChunkSize(chunkSizeSpan, out var chunkSize))
+                    throw new InvalidOperationException("Invalid chunk size");
+
+                if (chunkSize == 0) // End of body detected
+                {
+                    if (!reader.TryReadTo(out ReadOnlySequence<byte> _, Crlf))
+                        return false; // Not enough bytes yet
+
+                    position = reader.Position;
+                    break;
+                }
+
+                if (reader.Remaining < chunkSize + 2) // +2 for trailing CRLF
+                    return false; // Not enough bytes yet
+
+                if (context.Request.Content == null)
+                {
+                    // Estimate a reasonable buffer size for the first chunk, will be re-rented if more chunks arrive
+                    context.Request.Content = ArrayPool<byte>.Shared.Rent(chunkSize);
+                }
+                else if (context.Request.Content.Length < currentOffset + chunkSize)
+                {
+                    // Grow the buffer if needed
+                    var newBuffer = ArrayPool<byte>.Shared.Rent(currentOffset + chunkSize);
+                    context.Request.Content.AsSpan(0, currentOffset).CopyTo(newBuffer);
+                    ArrayPool<byte>.Shared.Return(context.Request.Content);
+                    context.Request.Content = newBuffer;
+                }
+
+                var destinationSpan = context.Request.Content.AsSpan(currentOffset, chunkSize);
+                if (!reader.TryCopyTo(destinationSpan))
+                    return false; // Not enough bytes yet
+
+                currentOffset += chunkSize;
+
+                // Advance past chunk data and trailing CRLF
+                reader.Advance(chunkSize);
+                if (!reader.TryReadTo(out ReadOnlySequence<byte> _, Crlf))
+                    return false; // Not enough bytes yet
+            }
+
+            context.Request.ContentLength = currentOffset;
+            position = reader.Position;
+        }
+
         return true;
+    }
+
+    // Helper for parsing chunk size (hex)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool TryParseChunkSize(ReadOnlySpan<byte> span, out int value)
+    {
+        value = 0;
+        int i = 0;
+        for (; i < span.Length; i++)
+        {
+            byte b = span[i];
+            if (b >= '0' && b <= '9')
+                value = (value << 4) + (b - '0');
+            else if (b >= 'A' && b <= 'F')
+                value = (value << 4) + (b - 'A' + 10);
+            else if (b >= 'a' && b <= 'f')
+                value = (value << 4) + (b - 'a' + 10);
+            else
+                return false;
+        }
+        return i > 0;
     }
 
     /// <summary>
@@ -399,6 +532,116 @@ public class WiredHttp11Express<TContext> : IHttpHandler<TContext>
         position += fullHeaderIndex + 4;
         //context.Reader.AdvanceTo(buffer.GetPosition(position));
 
+        return true;
+    }
+
+    [SkipLocalsInit]
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+    private static bool ExtractHeaderFromSingleSegment2(
+        TContext context,
+        ref ReadOnlySequence<byte> buffer,
+        ref int position)
+    {
+        ReadOnlySpan<byte> first = buffer.FirstSpan;
+        if ((uint)position >= (uint)first.Length) return false;
+
+        // ✅ Only parse the unconsumed tail
+        ReadOnlySpan<byte> bufferSpan = first[position..];
+
+        // Fast completeness check: CRLFCRLF
+        int headerEndRel = bufferSpan.IndexOf("\r\n\r\n"u8);
+        if (headerEndRel < 0) return false;
+
+        int advance = headerEndRel + 4;
+
+        // ----- Request line -----
+        int reqLineEnd = bufferSpan.IndexOf("\r\n"u8);
+        if ((uint)reqLineEnd >= (uint)headerEndRel)
+            throw new InvalidOperationException("Invalid request line");
+
+        ReadOnlySpan<byte> reqLine = bufferSpan[..reqLineEnd];
+
+        const byte SP = (byte)' ';
+        const byte Q = (byte)'?';
+        const byte AMP = (byte)'&';
+        const byte EQ = (byte)'=';
+        const byte COL = (byte)':';
+
+        int firstSpace = reqLine.IndexOf(SP);
+        if (firstSpace < 0) throw new InvalidOperationException("Invalid request line");
+
+        context.Request.HttpMethod = CachedData.PreCachedHttpMethods.GetOrAdd(reqLine[..firstSpace]);
+
+        int secondSpaceRel = reqLine[(firstSpace + 1)..].IndexOf(SP);
+        if (secondSpaceRel < 0) throw new InvalidOperationException("Invalid request line");
+        int secondSpace = firstSpace + 1 + secondSpaceRel;
+
+        ReadOnlySpan<byte> url = reqLine[(firstSpace + 1)..secondSpace];
+
+        // ----- Route + query -----
+        int qIdx = url.IndexOf(Q);
+        if (qIdx >= 0)
+        {
+            context.Request.Route = CachedData.CachedRoutes.GetOrAdd(url[..qIdx]);
+
+            ReadOnlySpan<byte> query = url[(qIdx + 1)..];
+            int cur = 0;
+            while (cur < query.Length)
+            {
+                int sep = query[cur..].IndexOf(AMP);
+                ReadOnlySpan<byte> pair = (sep < 0) ? query[cur..] : query.Slice(cur, sep);
+                cur = (sep < 0) ? query.Length : cur + sep + 1;
+
+                if (pair.Length == 0) continue;
+                int eq = pair.IndexOf(EQ);
+                if (eq <= 0 || eq == pair.Length - 1) continue;
+
+                var key = CachedData.CachedQueryKeys.GetOrAdd(pair[..eq]);
+                // TODO: URL-decode value bytes if needed before GetString
+                var val = Encoders.Utf8Encoder.GetString(pair[(eq + 1)..]);
+                context.Request.QueryParameters?.TryAdd(key, val);
+            }
+        }
+        else
+        {
+            context.Request.Route = CachedData.CachedRoutes.GetOrAdd(url);
+        }
+
+        // ----- Headers -----
+        int lineStart = reqLineEnd + 2; // after request line CRLF
+        while (true)
+        {
+            if (lineStart > headerEndRel) break;
+
+            int rel = bufferSpan[lineStart..].IndexOf("\r\n"u8);
+            if (rel < 0) break; // should not happen due to headerEndRel
+
+            int lineLen = rel;
+            if (lineLen == 0) break; // blank line => end of headers
+
+            ReadOnlySpan<byte> header = bufferSpan.Slice(lineStart, lineLen);
+            int colon = header.IndexOf(COL);
+            if (colon > 0)
+            {
+                ReadOnlySpan<byte> keyBytes = header[..colon];
+
+                int valStart = colon + 1;
+                if (valStart < header.Length && header[valStart] == SP) valStart++;
+
+                ReadOnlySpan<byte> valueBytes = (valStart <= header.Length)
+                    ? header[valStart..]
+                    : ReadOnlySpan<byte>.Empty;
+
+                context.Request.Headers.TryAdd(
+                    CachedData.PreCachedHeaderKeys.GetOrAdd(keyBytes),
+                    CachedData.PreCachedHeaderValues.GetOrAdd(valueBytes));
+            }
+
+            lineStart += lineLen + 2;
+        }
+
+        // Advance absolute position in the original first span
+        position += advance;
         return true;
     }
 
@@ -571,6 +814,7 @@ public class WiredHttp11Express<TContext> : IHttpHandler<TContext>
 
     /// <summary>CRLF delimiter used for line termination.</summary>
     private static ReadOnlySpan<byte> Crlf => "\r\n"u8;
+    private static ReadOnlySpan<byte> CrlfCrlf => "\r\n\r\n"u8;
 
     private const string ContentLength = "Content-Length";
     private const string TransferEncoding = "Transfer-Encoding";

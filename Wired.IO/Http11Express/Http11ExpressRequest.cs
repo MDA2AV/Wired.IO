@@ -18,16 +18,20 @@ public class Http11ExpressRequest : IExpressRequest
 
     public ConnectionType ConnectionType { get; set; } = ConnectionType.KeepAlive;
 
-    public byte[] Content { get; set; } = null!;
+    public byte[]? Content { get; set; }
 
-    public string ContentAsString => Encoders.Utf8Encoder.GetString(Content, 0, ContentLength);
+    public string ContentAsString => Encoders.Utf8Encoder.GetString(Content!, 0, ContentLength);
 
     public int ContentLength { get; set; }
 
     public void Clear()
     {
-        ArrayPool<byte>.Shared.Return(Content, clearArray: false);
-        Content = [];
+        if (Content is not null)
+        {
+            ArrayPool<byte>.Shared.Return(Content, clearArray: false);
+            Content = null;
+        }
+
         ContentLength = 0;
 
         Headers?.Clear();
