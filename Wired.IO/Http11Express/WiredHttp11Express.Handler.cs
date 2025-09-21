@@ -3,6 +3,7 @@ using System.Buffers;
 using System.Globalization;
 using System.IO.Pipelines;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices.Marshalling;
 using System.Text;
 using Wired.IO.Protocol.Handlers;
 using Wired.IO.Protocol.Writers;
@@ -31,7 +32,7 @@ namespace Wired.IO.Http11Express;
 /// It focuses on parsing the request line and headers efficiently for typical benchmarking/plaintext-style endpoints.
 /// </para>
 /// </remarks>
-public class WiredHttp11Express<TContext> : IHttpHandler<TContext>
+public partial class WiredHttp11Express<TContext> : IHttpHandler<TContext>
     where TContext : Http11ExpressContext, new()
 {
     /// <summary>
@@ -104,7 +105,10 @@ public class WiredHttp11Express<TContext> : IHttpHandler<TContext>
                 minimumReadSize: 1024));
 
         context.Writer = PipeWriter.Create(stream,
-            new StreamPipeWriterOptions(MemoryPool<byte>.Shared, leaveOpen: false));
+            new StreamPipeWriterOptions(
+                MemoryPool<byte>.Shared, 
+                leaveOpen: false,
+                minimumBufferSize: 4096));
 
         try
         {
@@ -146,8 +150,6 @@ public class WiredHttp11Express<TContext> : IHttpHandler<TContext>
             var readResult = await context.Reader.ReadAsync();
             var buffer = readResult.Buffer;
 
-            Console.WriteLine($"Received: {Encoding.UTF8.GetString(buffer)}");
-
             var isCompleted = readResult.IsCompleted;
                 
             if (buffer.IsEmpty && isCompleted)
@@ -177,18 +179,26 @@ public class WiredHttp11Express<TContext> : IHttpHandler<TContext>
                     }
 
                     context.Reader.AdvanceTo(buffer.GetPosition(currentPosition));
-
+                    
                     state = State.Body;
-
+                    
                     var bodyReceived = TryExtractBodyFromSingleSegment(context, ref buffer, ref currentPosition, out var bodyEmpty);
                     if (!bodyReceived)
                         break;
-
+                    
                     if(!bodyEmpty)
                         context.Reader.AdvanceTo(buffer.GetPosition(currentPosition));
-
+                    
+                    // Handle the request pipeline
                     await pipeline(context);
+                    
+                    // Respond
+                    
+                    
+                    // Clear context for next request
                     context.Clear();
+                    
+                    // Signal that there is something to flush
                     flush = true;
 
                     state = State.StartLine;
@@ -243,8 +253,32 @@ public class WiredHttp11Express<TContext> : IHttpHandler<TContext>
         }
     }
 
+    /// <summary>
+    /// Attempts to extract the HTTP request body from a single-segment <see cref="ReadOnlySequence{T}"/> buffer.
+    /// </summary>
+    /// <param name="context">The HTTP request context to populate with body data.</param>
+    /// <param name="buffer">The input buffer containing the body.</param>
+    /// <param name="position">
+    /// The current offset in the single segment span.  
+    /// Updated to point just after the body if extraction succeeds.
+    /// </param>
+    /// <param name="bodyEmpty">
+    /// Output flag indicating whether the request body was empty or absent.  
+    /// <c>true</c> if no body is present, otherwise <c>false</c>.
+    /// </param>
+    /// <returns>
+    /// <c>true</c> if the body was fully extracted or no body is required;  
+    /// <c>false</c> if more data is needed from the transport.
+    /// </returns>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown if the Content-Length or chunked encoding format is invalid.
+    /// </exception>
     [SkipLocalsInit]
-    public static bool TryExtractBodyFromSingleSegment(TContext context, ref ReadOnlySequence<byte> buffer, ref int position, out bool bodyEmpty)
+    private static bool TryExtractBodyFromSingleSegment(
+        TContext context, 
+        ref ReadOnlySequence<byte> buffer, 
+        ref int position, 
+        out bool bodyEmpty)
     {
         bodyEmpty = true;
 
@@ -315,6 +349,24 @@ public class WiredHttp11Express<TContext> : IHttpHandler<TContext>
         return true;
     }
 
+    
+    /// <summary>
+    /// Attempts to extract the HTTP request body from a multi-segment <see cref="ReadOnlySequence{T}"/> buffer.
+    /// </summary>
+    /// <param name="context">The HTTP request context to populate with body data.</param>
+    /// <param name="buffer">The input buffer containing the body.</param>
+    /// <param name="position">
+    /// The current position in the buffer.  
+    /// Updated to point just after the body if extraction succeeds.
+    /// </param>
+    /// <param name="state">Parser state, may be advanced after body extraction.</param>
+    /// <returns>
+    /// <c>true</c> if the body was fully extracted or no body is required;  
+    /// <c>false</c> if more data is needed from the transport.
+    /// </returns>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown if the Content-Length or chunked encoding format is invalid.
+    /// </exception>
     private static bool TryExtractBodyFromMultipleSegment(
         TContext context,
         ref ReadOnlySequence<byte> buffer,
@@ -454,7 +506,7 @@ public class WiredHttp11Express<TContext> : IHttpHandler<TContext>
             throw new InvalidOperationException("Invalid request line");
 
         context.Request.HttpMethod = CachedData.PreCachedHttpMethods.GetOrAdd(firstHeader[..firstSpace]);
-
+        
         var secondSpaceRelative = firstHeader[(firstSpace + 1)..].IndexOf(Space);
         if (secondSpaceRelative == -1)
             throw new InvalidOperationException("Invalid request line");
@@ -561,25 +613,25 @@ public class WiredHttp11Express<TContext> : IHttpHandler<TContext>
 
         ReadOnlySpan<byte> reqLine = bufferSpan[..reqLineEnd];
 
-        const byte SP = (byte)' ';
-        const byte Q = (byte)'?';
-        const byte AMP = (byte)'&';
-        const byte EQ = (byte)'=';
-        const byte COL = (byte)':';
+        //const byte SP = (byte)' ';
+        //const byte Q = (byte)'?';
+        //const byte AMP = (byte)'&';
+        //const byte EQ = (byte)'=';
+        //const byte COL = (byte)':';
 
-        int firstSpace = reqLine.IndexOf(SP);
+        int firstSpace = reqLine.IndexOf(Space);
         if (firstSpace < 0) throw new InvalidOperationException("Invalid request line");
 
         context.Request.HttpMethod = CachedData.PreCachedHttpMethods.GetOrAdd(reqLine[..firstSpace]);
 
-        int secondSpaceRel = reqLine[(firstSpace + 1)..].IndexOf(SP);
+        int secondSpaceRel = reqLine[(firstSpace + 1)..].IndexOf(Space);
         if (secondSpaceRel < 0) throw new InvalidOperationException("Invalid request line");
         int secondSpace = firstSpace + 1 + secondSpaceRel;
 
         ReadOnlySpan<byte> url = reqLine[(firstSpace + 1)..secondSpace];
 
         // ----- Route + query -----
-        int qIdx = url.IndexOf(Q);
+        int qIdx = url.IndexOf(Question);
         if (qIdx >= 0)
         {
             context.Request.Route = CachedData.CachedRoutes.GetOrAdd(url[..qIdx]);
@@ -588,12 +640,12 @@ public class WiredHttp11Express<TContext> : IHttpHandler<TContext>
             int cur = 0;
             while (cur < query.Length)
             {
-                int sep = query[cur..].IndexOf(AMP);
+                int sep = query[cur..].IndexOf(QuerySeparator);
                 ReadOnlySpan<byte> pair = (sep < 0) ? query[cur..] : query.Slice(cur, sep);
                 cur = (sep < 0) ? query.Length : cur + sep + 1;
 
                 if (pair.Length == 0) continue;
-                int eq = pair.IndexOf(EQ);
+                int eq = pair.IndexOf(Equal);
                 if (eq <= 0 || eq == pair.Length - 1) continue;
 
                 var key = CachedData.CachedQueryKeys.GetOrAdd(pair[..eq]);
@@ -620,13 +672,13 @@ public class WiredHttp11Express<TContext> : IHttpHandler<TContext>
             if (lineLen == 0) break; // blank line => end of headers
 
             ReadOnlySpan<byte> header = bufferSpan.Slice(lineStart, lineLen);
-            int colon = header.IndexOf(COL);
+            int colon = header.IndexOf(Colon);
             if (colon > 0)
             {
                 ReadOnlySpan<byte> keyBytes = header[..colon];
 
                 int valStart = colon + 1;
-                if (valStart < header.Length && header[valStart] == SP) valStart++;
+                if (valStart < header.Length && header[valStart] == Space) valStart++;
 
                 ReadOnlySpan<byte> valueBytes = (valStart <= header.Length)
                     ? header[valStart..]

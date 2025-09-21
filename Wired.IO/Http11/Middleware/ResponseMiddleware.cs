@@ -88,28 +88,6 @@ public static class ResponseMiddleware
 
     #endregion
 
-    #region Date Header Caching
-
-    /// <summary>
-    /// Cached Date header value to avoid repeated DateTime formatting.
-    /// Updated at most once per second using thread-safe operations.
-    /// </summary>
-    private static volatile string? _cachedDateHeader;
-
-    /// <summary>
-    /// Timestamp (in ticks) of the last date header update.
-    /// Used with Interlocked operations for thread-safe access.
-    /// </summary>
-    private static long _lastDateUpdateTicks;
-
-    /// <summary>
-    /// Lock object for synchronizing date header updates.
-    /// Uses double-checked locking pattern for optimal performance.
-    /// </summary>
-    private static readonly Lock DateLock = new();
-
-    #endregion
-
     #region Public API
 
     /// <summary>
@@ -139,9 +117,10 @@ public static class ResponseMiddleware
     public static async Task HandleAsync(Http11Context ctx, uint bufferSize = 65 * 1024)
     {
         if (ctx.Response is null)
-        {
             return;
-        }
+        
+        if (!ctx.Response.IsActive())
+            return;
 
         WriteStatusLine(ctx.Writer, ctx.Response.Status.RawStatus, ctx.Response.Status.Phrase);
 
@@ -292,6 +271,25 @@ public static class ResponseMiddleware
     #region Caching and Optimization Utilities
 
     /// <summary>
+    /// Cached Date header value to avoid repeated DateTime formatting.
+    /// Updated at most once per second using thread-safe operations.
+    /// </summary>
+    private static volatile string? _cachedDateHeader;
+
+    /// <summary>
+    /// Timestamp (in ticks) of the last date header update.
+    /// Used with Interlocked operations for thread-safe access.
+    /// </summary>
+    private static long _lastDateUpdateTicks;
+
+    /// <summary>
+    /// Lock object for synchronizing date header updates.
+    /// Uses double-checked locking pattern for optimal performance.
+    /// </summary>
+    private static readonly Lock DateLock = new();
+    
+
+    /// <summary>
     /// Retrieves or updates the cached Date header formatted per RFC1123.
     /// </summary>
     /// <returns>A string representing the current UTC time, formatted for HTTP headers.</returns>
@@ -308,8 +306,6 @@ public static class ResponseMiddleware
         if (cached != null && (now.Ticks - lastUpdateTicks) < TimeSpan.TicksPerSecond)
             return cached;
 
-#if NET9_0
-
         lock (DateLock)
         {
             // Double-check locking pattern
@@ -321,21 +317,6 @@ public static class ResponseMiddleware
             Interlocked.Exchange(ref _lastDateUpdateTicks, now.Ticks);
             return _cachedDateHeader;
         }
-
-#else
-
-        lock (DateLock)
-        {
-            lastUpdateTicks = Interlocked.Read(ref _lastDateUpdateTicks);
-            if (_cachedDateHeader != null && (now.Ticks - lastUpdateTicks) < TimeSpan.TicksPerSecond)
-                return _cachedDateHeader;
-
-            _cachedDateHeader = now.ToString("R");
-            Interlocked.Exchange(ref _lastDateUpdateTicks, now.Ticks);
-            return _cachedDateHeader;
-        }
-
-#endif
     }
 
     /// <summary>

@@ -1,12 +1,13 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System.IO.Pipelines;
+using Wired.IO.Http11.Response;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Response;
 using Wired.IO.Utilities;
 
 namespace Wired.IO.Http11Express;
 
-public class Http11ExpressContext : IBaseContext<IExpressRequest, IBaseResponse>
+public class Http11ExpressContext : IBaseContext<IExpressRequest, IExpressResponse>
 {
     public PipeReader Reader { get; set; } = null!;
     public PipeWriter Writer { get; set; } = null!;
@@ -19,12 +20,24 @@ public class Http11ExpressContext : IBaseContext<IExpressRequest, IBaseResponse>
             capacity: 8,
             comparer: StringComparer.OrdinalIgnoreCase)
     };
-    public IBaseResponse? Response { get; set; }
+    public IExpressResponse? Response { get; private set; }
+
+    private ExpressResponseBuilder? _responseBuilder;
+    private ExpressResponseBuilder ResponseBuilder => _responseBuilder ??= new ExpressResponseBuilder(Response!);
+    
+    public ExpressResponseBuilder Respond()
+    {
+        Response ??= new Http11ExpressResponse();
+        Response.Activate();
+        
+        return ResponseBuilder;
+    }
     public AsyncServiceScope Scope { get; set; }
     public CancellationToken CancellationToken { get; set; }
 
     public void Clear()
     {
+        Response?.Clear();
         Request.Clear();
     }
 

@@ -20,7 +20,7 @@ public class Http11ExpressRequest : IExpressRequest
 
     public byte[]? Content { get; set; }
 
-    public string ContentAsString => Encoders.Utf8Encoder.GetString(Content!, 0, ContentLength);
+    public string ContentAsString => Encoders.Utf8Encoder.GetString(Content ?? [], 0, ContentLength);
 
     public int ContentLength { get; set; }
 

@@ -1,5 +1,6 @@
 ﻿using Wired.IO.Http11.Response;
 using Wired.IO.Http11.Response.Content;
+using Wired.IO.Http11Express;
 
 namespace Wired.IO.Protocol.Response;
 
@@ -68,5 +69,4 @@ public class ResponseBuilder(IResponse response) : IResponseBuilder
         _response.ContentLength = length;
         return this;
     }
-
 }

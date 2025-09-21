@@ -10,6 +10,7 @@ using Wired.IO.Common.Attributes;
 using Wired.IO.Http11.Context;
 using Wired.IO.Http11.Response.Content;
 using Wired.IO.Http11.Websockets;
+using Wired.IO.Http11Express;
 using Wired.IO.Mediator;
 using Wired.IO.Playground;
 using Wired.IO.Protocol;
@@ -47,16 +48,11 @@ internal class Program
             .Port(8080)
             .MapGet("/json", scope => async ctx =>
             {
-                Console.WriteLine(ctx.Request.Content.Length);
-                Console.WriteLine(ctx.Request.ContentLength);
-                Console.WriteLine(ctx.Request.ContentAsString);
-
                 //ctx.Writer.Write("HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=UTF-8\r\nContent-Length: 27\r\n\r\n{\"message\":\"Hello, World!\"}\r\n"u8);
                 ctx.Writer.Write(_jsonPreamble);
                 var utf8JsonWriter = t_writer ??= new Utf8JsonWriter(ctx.Writer, new JsonWriterOptions { SkipValidation = true });
                 utf8JsonWriter.Reset(ctx.Writer);
                 JsonSerializer.Serialize(utf8JsonWriter, new JsonMessage { message = "Hello, World!" });
-                
                 
                 //await ctx.Writer.FlushAsync();
             })

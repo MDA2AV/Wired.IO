@@ -1,4 +1,5 @@
 ﻿using Wired.IO.Http11.Response.Content;
+using Wired.IO.Http11Express;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Response;
 using Wired.IO.Protocol.Response.Headers;
@@ -7,6 +8,12 @@ namespace Wired.IO.Http11.Response;
 
 public sealed class Http11Response : IResponse
 {
+    private bool _active;
+    
+    public void Activate() => _active = true;
+    
+    public bool IsActive() => _active;
+    
     private readonly ResponseHeaderCollection _headers = new();
 
     public FlexibleResponseStatus Status { get; set; } = new FlexibleResponseStatus(ResponseStatus.Ok);

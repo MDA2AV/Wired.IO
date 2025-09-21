@@ -1,9 +1,6 @@
-using Xunit;
 using Wired.IO.App;
 using Wired.IO.Http11;
-using Wired.IO.Http11.Context;
-using Wired.IO.HttpExpress;
-using System.Net.Security;
+using Wired.IO.Http11Express;
 
 public class WiredAppTests
 {
@@ -12,7 +9,7 @@ public class WiredAppTests
     {
         var builder = WiredApp.CreateExpressBuilder();
         Assert.NotNull(builder);
-        Assert.IsType<WiredHttpExpress<HttpExpressContext>>(builder.App.HttpHandler);
+        Assert.IsType<WiredHttp11Express<Http11ExpressContext>>(builder.App.HttpHandler);
     }
 
     [Fact]

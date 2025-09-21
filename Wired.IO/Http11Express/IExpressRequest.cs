@@ -16,9 +16,22 @@ public interface IExpressRequest : IBaseRequest
     /// </summary>
     PooledDictionary<string, string> Headers { get; set; }
 
+    /// <summary>
+    /// Gets or sets the raw request body as a byte array.  
+    /// May be <c>null</c> if the request does not contain a body.
+    /// </summary>
     byte[]? Content { get; set; }
 
+    /// <summary>
+    /// Gets the request body decoded as a UTF-8 string.  
+    /// Returns an empty string if <see cref="Content"/> is <c>null</c>.
+    /// </summary>
     string ContentAsString { get; }
 
+    /// <summary>
+    /// Gets or sets the length of the request body in bytes.  
+    /// Typically derived from the <c>Content-Length</c> header or from 
+    /// the total size of chunked transfer-encoding data.
+    /// </summary>
     int ContentLength { get; set; }
 }

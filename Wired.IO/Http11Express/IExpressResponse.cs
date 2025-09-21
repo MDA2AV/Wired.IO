@@ -1,14 +1,11 @@
-﻿using Wired.IO.Http11.Response.Content;
+using Wired.IO.Http11.Response.Content;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Response;
 using Wired.IO.Protocol.Response.Headers;
 
-namespace Wired.IO.Http11.Response;
+namespace Wired.IO.Http11Express;
 
-/// <summary>
-/// The response to be sent to the connected client for a given request.
-/// </summary>
-public interface IResponse : IBaseResponse
+public interface IExpressResponse : IBaseResponse
 {
     void Activate();
 
@@ -19,7 +16,7 @@ public interface IResponse : IBaseResponse
     /// <summary>
     /// The HTTP response code.
     /// </summary>
-    FlexibleResponseStatus Status { get; set; }
+    ResponseStatus Status { get; set; }
 
     #endregion
 

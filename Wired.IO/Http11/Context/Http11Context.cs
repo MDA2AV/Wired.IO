@@ -2,6 +2,7 @@
 using System.IO.Pipelines;
 using Wired.IO.Http11.Request;
 using Wired.IO.Http11.Response;
+using Wired.IO.Http11Express;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Response;
 using Wired.IO.Utilities;
