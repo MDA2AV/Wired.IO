@@ -62,6 +62,13 @@ internal class Program
                 ctx.Writer.Write(_plainTextBody);
                 //await ctx.Writer.FlushAsync();
             })
+            .MapGet("/json2", scope => async ctx =>
+            {
+                ctx
+                    .Respond()
+                    .Type("application/json"u8)
+                    .Content("{\"message\": \"ok\"}"u8);
+            })
             .Build()
             .RunAsync();
     }

@@ -1,4 +1,6 @@
-﻿using System.IO.Pipelines;
+﻿using System.Buffers;
+using System.IO.Pipelines;
+using System.Text.Json;
 using Wired.IO.Protocol.Writers;
 
 namespace Wired.IO.Http11.Response.Content;
@@ -40,4 +42,27 @@ public interface IResponseContent
     /// <param name="writer">The writer used to send the response body.</param>
     /// <param name="bufferSize">The buffer size to use during writing operations.</param>
     Task WriteAsync(PipeWriter writer, uint bufferSize);
+}
+
+
+public interface IExpressResponseContent
+{
+    ulong? Length { get; }
+
+    void Write(IBufferWriter<byte> writer);
+}
+
+public class ExpressJsonContent : IExpressResponseContent
+{
+    public ulong? Length { get; }
+
+    // Diogo here, consider ThreadStatic Utf8JsonWriter in this content type, works as long as there is no await boundaries
+    // between resetting and using it
+    Utf8JsonWriter
+
+    // IBufferWriter must be injected from the caller (context)
+    public void Write(IBufferWriter<byte> writer)
+    {
+        
+    }
 }

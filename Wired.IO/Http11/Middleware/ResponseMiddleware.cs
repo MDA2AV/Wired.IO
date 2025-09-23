@@ -380,12 +380,14 @@ public static class ResponseMiddleware
             WriteHeader(ContentTypeHeader, ctx.Response.ContentType.RawType, buffer);
         if (ctx.Response.ContentEncoding is not null)
             WriteHeader(ContentEncodingHeader, ctx.Response.ContentEncoding, buffer);
+
         if (ctx.Response.Content is null)
             WriteHeader(ContentLengthHeader, "0", buffer);
         else if (ctx.Response.Content.Length is not null)
             WriteHeader(ContentLengthHeader, FormatContentLength(ctx.Response.Content.Length ?? 0), buffer);
         else
             WriteHeader(TransferEncodingHeader, "chunked", buffer);
+
         if (ctx.Response.Modified is not null)
             WriteHeader(LastModifiedHeader, ctx.Response.Modified.Value.ToUniversalTime().ToString("R"), buffer);
         if (ctx.Response.Expires is not null)

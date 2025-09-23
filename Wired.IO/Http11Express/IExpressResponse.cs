@@ -2,6 +2,7 @@ using Wired.IO.Http11.Response.Content;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Response;
 using Wired.IO.Protocol.Response.Headers;
+using Wired.IO.Utilities;
 
 namespace Wired.IO.Http11Express;
 
@@ -44,6 +45,8 @@ public interface IExpressResponse : IBaseResponse
     /// </summary>
     IEditableHeaderCollection Headers { get; }
 
+    PooledDictionary<Utf8View, Utf8View> Utf8Headers { get; set; }
+
     #endregion
 
     #region Content
@@ -56,10 +59,12 @@ public interface IExpressResponse : IBaseResponse
     /// </remarks>
     IResponseContent? Content { get; set; }
 
+    Utf8View Utf8Content { get; set; }
+
     /// <summary>
     /// The type of the content.
     /// </summary>
-    FlexibleContentType? ContentType { get; set; }
+    Utf8View ContentType { get; set; }
 
     /// <summary>
     /// The encoding of the content (e.g. "br").
@@ -69,7 +74,9 @@ public interface IExpressResponse : IBaseResponse
     /// <summary>
     /// The number of bytes the content consists of.
     /// </summary>
-    ulong? ContentLength { get; set; }
+    ulong ContentLength { get; set; }
+
+    ContentLengthStrategy ContentLengthStrategy { get; set; }
 
     #endregion
 

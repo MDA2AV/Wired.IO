@@ -191,10 +191,10 @@ public partial class WiredHttp11Express<TContext> : IHttpHandler<TContext>
                     
                     // Handle the request pipeline
                     await pipeline(context);
-                    
+
                     // Respond
-                    
-                    
+                    WriteResponse(context);
+
                     // Clear context for next request
                     context.Clear();
                     
