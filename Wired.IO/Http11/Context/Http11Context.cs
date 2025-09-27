@@ -45,6 +45,7 @@ public class Http11Context : IBaseContext<IRequest, IResponse>, IHasWiredEvents
     public IResponseBuilder Respond()
     {
         Response = new Http11Response();
+        Response.Activate();
         return new ResponseBuilder(Response).Status(ResponseStatus.Ok);
     }
 

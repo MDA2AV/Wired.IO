@@ -34,18 +34,11 @@ public interface IExpressResponse : IBaseResponse
     DateTime? Modified { get; set; }
 
     /// <summary>
-    /// Retrieve or set the value of a header field.
-    /// </summary>
-    /// <param name="field">The name of the header field</param>
-    /// <returns>The value of the header field</returns>
-    string? this[string field] { get; set; }
-
-    /// <summary>
     /// The headers of the HTTP response.
     /// </summary>
     IEditableHeaderCollection Headers { get; }
 
-    PooledDictionary<Utf8View, Utf8View> Utf8Headers { get; set; }
+    PooledDictionary<Utf8View, Utf8View>? Utf8Headers { get; set; }
 
     #endregion
 
@@ -57,7 +50,7 @@ public interface IExpressResponse : IBaseResponse
     /// <remarks>
     /// This content will be streamed to the client using either content-length or chunked transfer encoding.
     /// </remarks>
-    IResponseContent? Content { get; set; }
+    IExpressResponseContent? Content { get; set; }
 
     Utf8View Utf8Content { get; set; }
 

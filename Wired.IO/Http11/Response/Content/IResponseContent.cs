@@ -1,6 +1,7 @@
 ﻿using System.Buffers;
 using System.IO.Pipelines;
 using System.Text.Json;
+using Microsoft.Extensions.ObjectPool;
 using Wired.IO.Protocol.Writers;
 
 namespace Wired.IO.Http11.Response.Content;
@@ -49,20 +50,142 @@ public interface IExpressResponseContent
 {
     ulong? Length { get; }
 
-    void Write(IBufferWriter<byte> writer);
+    void Write(PipeWriter writer);
 }
 
-public class ExpressJsonContent : IExpressResponseContent
+// Consider in IExpressResponseContent that its always chunked, there is really no easy way to know the content length for json
+// For non json responses, might be a shot to have a known content length! This content length can be calculated in the IExpressResponseContent?
+// This approach is likely always slower since an object has to be created every request. Maybe cache the IExpressResponseContent.. makes sense
+// for repeated requests yes.
+
+public static class Writers
 {
-    public ulong? Length { get; }
+    [ThreadStatic]
+    public static Utf8JsonWriter? TWriter;
 
-    // Diogo here, consider ThreadStatic Utf8JsonWriter in this content type, works as long as there is no await boundaries
-    // between resetting and using it
-    Utf8JsonWriter
+    public static readonly DefaultObjectPool<ChunkedWriter> ChunkedWriterPool
+        = new(new ChunkedWriterObjectPolicy());
 
-    // IBufferWriter must be injected from the caller (context)
-    public void Write(IBufferWriter<byte> writer)
+    private sealed class ChunkedWriterObjectPolicy : IPooledObjectPolicy<ChunkedWriter>
+    {
+        public ChunkedWriter Create() => new();
+
+        public bool Return(ChunkedWriter writer)
+        {
+            writer.Reset();
+            return true;
+        }
+    }
+}
+
+public class ExpressJsonContent(object data, ulong? length = null) : IExpressResponseContent
+{
+    public ulong? Length { get; } = length;
+
+    //[ThreadStatic]
+    //private static Utf8JsonWriter? _tWriter;
+
+    public void Write(PipeWriter writer)
+    {
+        if (Length is not null)
+        {
+
+            Writers.TWriter ??= new Utf8JsonWriter(writer, new JsonWriterOptions { SkipValidation = true });
+            Writers.TWriter.Reset(writer);
+
+            JsonSerializer.Serialize(Writers.TWriter, data);
+
+            return;
+        }
+
+        var chunkedWriter = Writers.ChunkedWriterPool.Get();
+        chunkedWriter.SetOutput(writer);
+
+        Writers.TWriter ??= new Utf8JsonWriter(chunkedWriter, new JsonWriterOptions { SkipValidation = true });
+        Writers.TWriter.Reset(chunkedWriter);
+
+        JsonSerializer.Serialize(Writers.TWriter, data);
+
+        chunkedWriter.Complete();
+    }
+}
+
+public class ExpressJsonContent2 : IExpressResponseContent
+{
+    public ExpressJsonContent2()
     {
         
+    }
+
+    private object _data;
+
+    public ExpressJsonContent2 Set(object data, ulong? length = null)
+    {
+        Length = length;
+        _data = data;
+
+        return this;
+    }
+
+    public ulong? Length { get; set; }
+
+    //[ThreadStatic]
+    //private static Utf8JsonWriter? _tWriter;
+
+    public void Write(PipeWriter writer)
+    {
+        if (Length is not null)
+        {
+
+            Writers.TWriter ??= new Utf8JsonWriter(writer, new JsonWriterOptions { SkipValidation = true });
+            Writers.TWriter.Reset(writer);
+
+            JsonSerializer.Serialize(Writers.TWriter, _data);
+
+            return;
+        }
+
+        var chunkedWriter = Writers.ChunkedWriterPool.Get();
+        chunkedWriter.SetOutput(writer);
+
+        Writers.TWriter ??= new Utf8JsonWriter(chunkedWriter, new JsonWriterOptions { SkipValidation = true });
+        Writers.TWriter.Reset(chunkedWriter);
+
+        JsonSerializer.Serialize(Writers.TWriter, _data);
+
+        chunkedWriter.Complete();
+    }
+}
+
+
+public class ExpressJsonContent<T>(T data, ulong? length = null) : IExpressResponseContent
+{
+    public ulong? Length { get; } = length;
+
+    //[ThreadStatic]
+    //private static Utf8JsonWriter? _tWriter;
+
+    public void Write(PipeWriter writer)
+    {
+        if (Length is not null)
+        {
+
+            Writers.TWriter ??= new Utf8JsonWriter(writer, new JsonWriterOptions { SkipValidation = true });
+            Writers.TWriter.Reset(writer);
+
+            JsonSerializer.Serialize(Writers.TWriter, data);
+
+            return;
+        }
+
+        var chunkedWriter = Writers.ChunkedWriterPool.Get();
+        chunkedWriter.SetOutput(writer);
+
+        Writers.TWriter ??= new Utf8JsonWriter(chunkedWriter, new JsonWriterOptions { SkipValidation = true });
+        Writers.TWriter.Reset(chunkedWriter);
+
+        JsonSerializer.Serialize(Writers.TWriter, data);
+
+        chunkedWriter.Complete();
     }
 }

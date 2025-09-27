@@ -15,6 +15,7 @@ public partial class WiredHttp11Express<TContext>
     private static ReadOnlySpan<byte> ContentLengthHeader => "Content-Length: "u8;
     private static ReadOnlySpan<byte> ContentEncodingHeader => "Content-Encoding: "u8;
     private static ReadOnlySpan<byte> TransferEncodingHeader  => "Transfer-Encoding: "u8;
+    private static ReadOnlySpan<byte> TransferEncodingChunkedHeader  => "Transfer-Encoding: chunked\r\n"u8;
     private static ReadOnlySpan<byte> LastModifiedHeader => "Last-Modified: "u8;
     private static ReadOnlySpan<byte> ExpiresHeader => "Expires: "u8;
     private static ReadOnlySpan<byte> ConnectionHeader => "Connection: "u8;
@@ -31,9 +32,19 @@ public partial class WiredHttp11Express<TContext>
 
         WriteHeaders(context);
 
-        // TODO: Improve body writing to support IResponseContent and chunked transfer encoding
-        // Provide static methods to avoid IResponseContent in all flows
-        context.Writer.Write(context.Response.Utf8Content.AsSpan());
+        WriteBody(context);
+    }
+
+    [SkipLocalsInit]
+    private static void WriteBody(TContext context)
+    {
+        if (context.Response!.ContentLengthStrategy is ContentLengthStrategy.KnownDirect)
+        {
+            context.Writer.Write(context.Response.Utf8Content.AsSpan());
+            return;
+        }
+
+        context.Response.Content?.Write(context.Writer);
     }
 
     [SkipLocalsInit]
@@ -72,13 +83,13 @@ public partial class WiredHttp11Express<TContext>
         }
         else if (context.Response.ContentLengthStrategy == ContentLengthStrategy.Chunked)
         {
-
+            writer.Write(TransferEncodingChunkedHeader);
         }
 
-        foreach (var header in context.Response!.Utf8Headers)
+        /*foreach (var header in context.Response!.Utf8Headers)
         {
 
-        }
+        }*/
 
         // TODO: Add Modified and Expires headers
 

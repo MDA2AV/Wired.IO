@@ -7,7 +7,7 @@ using System.Runtime.CompilerServices;
 
 namespace Wired.IO.Protocol.Writers;
 
-internal sealed class ChunkedWriter : PipeWriter
+public sealed class ChunkedWriter : PipeWriter
 {
     private const int DefaultChunkSizeHint = 2048;
     private static readonly StandardFormat DefaultHexFormat = GetHexFormat(DefaultChunkSizeHint);
@@ -112,7 +112,8 @@ internal sealed class ChunkedWriter : PipeWriter
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int CountHexDigits(int n) => n <= 16 ? 1 : (BitOperations.Log2((uint)n) >> 2) + 1;
+    //private static int CountHexDigits(int n) => n <= 16 ? 1 : (BitOperations.Log2((uint)n) >> 2) + 1;
+    private static int CountHexDigits(int n) => n < 16 ? 1 : (BitOperations.Log2((uint)n) >> 2) + 1;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void StartNewChunk(int sizeHint, bool isFirst = false)
@@ -164,8 +165,8 @@ internal sealed class ChunkedWriter : PipeWriter
             {
                 throw new NotSupportedException("Chunk size too large");
             }
-            Debug.Assert(chunkLengthHexDigitsLength == bytesWritten, "HEX formatting math problem.");
-            var headerLength = chunkLengthHexDigitsLength + 2;
+            //Debug.Assert(chunkLengthHexDigitsLength == bytesWritten, "HEX formatting math problem.");
+            var headerLength = bytesWritten + 2;
 
             // Total chunk length: content length as HEX string + \r\n + content + \r\n
             var spanOffset = headerLength + contentLength;

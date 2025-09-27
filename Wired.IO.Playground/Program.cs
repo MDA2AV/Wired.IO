@@ -1,10 +1,11 @@
-﻿using System.Buffers;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Console;
+using Microsoft.Extensions.ObjectPool;
+using System.Buffers;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Console;
 using Wired.IO.App;
 using Wired.IO.Common.Attributes;
 using Wired.IO.Http11.Context;
@@ -15,6 +16,7 @@ using Wired.IO.Mediator;
 using Wired.IO.Playground;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Response;
+using Wired.IO.Protocol.Writers;
 using Wired.IO.WiredEvents;
 
 internal class Program
@@ -39,7 +41,23 @@ internal class Program
     {
         public string message { get; set; }
     }
-    
+
+    public static readonly DefaultObjectPool<ExpressJsonContent2> JsonContentPool
+        = new(new JsonContentObjectPolicy());
+
+    private sealed class JsonContentObjectPolicy : IPooledObjectPolicy<ExpressJsonContent2>
+    {
+        public ExpressJsonContent2 Create()
+        {
+            return new ExpressJsonContent2();
+        }
+
+        public bool Return(ExpressJsonContent2 content)
+        {
+            return true;
+        }
+    }
+
     public static async Task Main(string[] args)
     {
         var expressBuilder = WiredApp.CreateExpressBuilder();
@@ -69,11 +87,20 @@ internal class Program
                     .Type("application/json"u8)
                     .Content("{\"message\": \"ok\"}"u8);
             })
+            .MapGet("/json3", scope => async ctx =>
+            {
+                ctx
+                    .Respond()
+                    .Type("application/json"u8)
+                    .Content(JsonContentPool
+                        .Get()
+                        .Set(new { Message = "Ok" }));
+            })
             .Build()
             .RunAsync();
     }
 
-    public static async Task Main2(string[] args)
+    public static async Task Main1(string[] args)
     {
         var builder = WiredApp.CreateBuilder();
 

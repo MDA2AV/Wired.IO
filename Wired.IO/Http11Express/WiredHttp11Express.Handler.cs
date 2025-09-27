@@ -108,7 +108,7 @@ public partial class WiredHttp11Express<TContext> : IHttpHandler<TContext>
             new StreamPipeWriterOptions(
                 MemoryPool<byte>.Shared, 
                 leaveOpen: false,
-                minimumBufferSize: 4096));
+                minimumBufferSize: 256));
 
         try
         {

@@ -13,7 +13,7 @@ public class Http11ExpressResponse : IExpressResponse
     
     public bool IsActive() => _active;
 
-    public PooledDictionary<Utf8View, Utf8View> Utf8Headers { get; set; } = null!;
+    public PooledDictionary<Utf8View, Utf8View>? Utf8Headers { get; set; }
 
     private readonly ResponseHeaderCollection _headers = new();
 
@@ -22,28 +22,12 @@ public class Http11ExpressResponse : IExpressResponse
     public DateTime? Expires { get; set; }
 
     public DateTime? Modified { get; set; }
-    
-    public string? this[string field]
-    {
-        get => _headers.GetValueOrDefault(field);
-        set
-        {
-            if (value is not null)
-            {
-                _headers[field] = value;
-            }
-            else
-            {
-                _headers.Remove(field);
-            }
-        }
-    }
 
     public IEditableHeaderCollection Headers => _headers;
 
     public Utf8View ContentType { get; set; }
 
-    public IResponseContent? Content { get; set; }
+    public IExpressResponseContent? Content { get; set; }
 
     public Utf8View Utf8Content { get; set; }
 
@@ -63,7 +47,7 @@ public class Http11ExpressResponse : IExpressResponse
         ContentLength = 0;
         ContentLengthStrategy = ContentLengthStrategy.None;
 
-        Utf8Headers.Clear();
+        Utf8Headers?.Clear();
         Headers.Clear();
     }
 

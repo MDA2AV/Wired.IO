@@ -1,4 +1,5 @@
-﻿using Wired.IO.Http11.Response.Content;
+﻿using System.Runtime.CompilerServices;
+using Wired.IO.Http11.Response.Content;
 using Wired.IO.Http11Express;
 using Wired.IO.Utilities;
 
@@ -8,15 +9,20 @@ public enum ContentLengthStrategy
 {
     None,
     Known,
+    KnownDirect,
     Chunked,
 }
 
 public class ExpressResponseBuilder(IExpressResponse response)
 {
-    public ExpressResponseBuilder Content(IResponseContent content)
+    public ExpressResponseBuilder Content(IExpressResponseContent content)
     {
         response.Content = content;
         response.ContentLength = content.Length ?? 0;
+
+        response.ContentLengthStrategy = content.Length is not null
+            ? ContentLengthStrategy.Known
+            : ContentLengthStrategy.Chunked;
 
         return this;
     }
@@ -26,7 +32,7 @@ public class ExpressResponseBuilder(IExpressResponse response)
         response.Utf8Content = Utf8View.FromLiteral(content);
         response.ContentLength = (ulong)content.Length;
 
-        response.ContentLengthStrategy = ContentLengthStrategy.Known;
+        response.ContentLengthStrategy = ContentLengthStrategy.KnownDirect;
 
         return this;
     }
