@@ -108,7 +108,7 @@ public partial class WiredHttp11Express<TContext> : IHttpHandler<TContext>
             new StreamPipeWriterOptions(
                 MemoryPool<byte>.Shared, 
                 leaveOpen: false,
-                minimumBufferSize: 256));
+                minimumBufferSize: 512));
 
         try
         {
@@ -193,7 +193,8 @@ public partial class WiredHttp11Express<TContext> : IHttpHandler<TContext>
                     await pipeline(context);
 
                     // Respond
-                    WriteResponse(context);
+                    if(context.Response is not null && context.Response.IsActive())
+                        WriteResponse(context);
 
                     // Clear context for next request
                     context.Clear();
@@ -454,7 +455,7 @@ public partial class WiredHttp11Express<TContext> : IHttpHandler<TContext>
     }
 
     // Helper for parsing chunk size (hex)
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    //[MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool TryParseChunkSize(ReadOnlySpan<byte> span, out int value)
     {
         value = 0;
@@ -588,7 +589,7 @@ public partial class WiredHttp11Express<TContext> : IHttpHandler<TContext>
     }
 
     [SkipLocalsInit]
-    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+    //[MethodImpl(MethodImplOptions.AggressiveOptimization)]
     private static bool ExtractHeaderFromSingleSegment2(
         TContext context,
         ref ReadOnlySequence<byte> buffer,
@@ -755,7 +756,7 @@ public partial class WiredHttp11Express<TContext> : IHttpHandler<TContext>
     /// <param name="reader">Sequence reader positioned at the start of the request line.</param>
     /// <param name="request">Target request object to populate.</param>
     /// <returns><see langword="true"/> if the full request line was parsed; otherwise <see langword="false"/>.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    //[MethodImpl(MethodImplOptions.AggressiveInlining)]
     [SkipLocalsInit]
     private static bool TryParseRequestLine(ref SequenceReader<byte> reader, IExpressRequest request)
     {
@@ -777,7 +778,7 @@ public partial class WiredHttp11Express<TContext> : IHttpHandler<TContext>
     /// <summary>
     /// Parses the URL and optional query string into the request route and query dictionary.
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    //[MethodImpl(MethodImplOptions.AggressiveInlining)]
     [SkipLocalsInit]
     private static void ParseUrl(in ReadOnlySequence<byte> urlSequence, IExpressRequest request)
     {
@@ -802,7 +803,7 @@ public partial class WiredHttp11Express<TContext> : IHttpHandler<TContext>
     /// <summary>
     /// Parses a query string in <c>key=value&amp;key2=value2</c> form into <see cref="IExpressRequest.QueryParameters"/>.
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    //[MethodImpl(MethodImplOptions.AggressiveInlining)]
     [SkipLocalsInit]
     private static void ParseQueryParameters(in ReadOnlySpan<byte> querySpan, IExpressRequest request)
     {
@@ -838,7 +839,7 @@ public partial class WiredHttp11Express<TContext> : IHttpHandler<TContext>
     /// </summary>
     /// <param name="headerLine">A buffer containing a single header line with trailing CRLF removed.</param>
     /// <param name="request">Target request.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    //[MethodImpl(MethodImplOptions.AggressiveInlining)]
     [SkipLocalsInit]
     private static void ParseHeaderLine(in ReadOnlySequence<byte> headerLine, IExpressRequest request)
     {

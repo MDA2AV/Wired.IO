@@ -23,16 +23,13 @@ public partial class WiredHttp11Express<TContext>
     
     private static void WriteResponse(TContext context)
     {
-        if (context.Response is null)
-            return;
-        if (!context.Response.IsActive())
-            return;
-
-        WriteStatusLine(context.Writer, context.Response.Status);
+        WriteStatusLine(context.Writer, context.Response!.Status);
 
         WriteHeaders(context);
 
         WriteBody(context);
+        
+        context.Response.Pool.Return(context.Response.Content);
     }
 
     [SkipLocalsInit]

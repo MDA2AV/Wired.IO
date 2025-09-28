@@ -4,8 +4,10 @@ using Microsoft.Extensions.Logging.Console;
 using Microsoft.Extensions.ObjectPool;
 using System.Buffers;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using Wired.IO.App;
 using Wired.IO.Common.Attributes;
 using Wired.IO.Http11.Context;
@@ -18,6 +20,14 @@ using Wired.IO.Protocol;
 using Wired.IO.Protocol.Response;
 using Wired.IO.Protocol.Writers;
 using Wired.IO.WiredEvents;
+
+
+[JsonSourceGenerationOptions(GenerationMode = JsonSourceGenerationMode.Serialization | JsonSourceGenerationMode.Metadata)]
+[JsonSerializable(typeof(Program.JsonMessage))]
+internal partial class JsonContext : JsonSerializerContext
+{
+}
+
 
 internal class Program
 {
@@ -33,6 +43,8 @@ internal class Program
         "Server: K\r\n"u8 +
         "Content-Type: application/json\r\n"u8 +
         "Content-Length: 27\r\n\r\n"u8;
+
+    private const string JsonBody = "Hello, World!";
     
     [ThreadStatic]
     private static Utf8JsonWriter? t_writer;
@@ -42,22 +54,24 @@ internal class Program
         public string message { get; set; }
     }
 
-    public static readonly DefaultObjectPool<ExpressJsonContent2> JsonContentPool
+    public static readonly DefaultObjectPool<IExpressResponseContent> JsonContentPool
         = new(new JsonContentObjectPolicy());
 
-    private sealed class JsonContentObjectPolicy : IPooledObjectPolicy<ExpressJsonContent2>
+    private sealed class JsonContentObjectPolicy : IPooledObjectPolicy<IExpressResponseContent>
     {
-        public ExpressJsonContent2 Create()
+        public IExpressResponseContent Create()
         {
-            return new ExpressJsonContent2();
+            return new ExpressJsonContent2<JsonMessage>();
         }
 
-        public bool Return(ExpressJsonContent2 content)
+        public bool Return(IExpressResponseContent content)
         {
             return true;
         }
     }
-
+    
+    private static readonly JsonContext SerializerContext = JsonContext.Default;
+    
     public static async Task Main(string[] args)
     {
         var expressBuilder = WiredApp.CreateExpressBuilder();
@@ -66,12 +80,13 @@ internal class Program
             .Port(8080)
             .MapGet("/json", scope => async ctx =>
             {
-                //ctx.Writer.Write("HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=UTF-8\r\nContent-Length: 27\r\n\r\n{\"message\":\"Hello, World!\"}\r\n"u8);
+                ctx.Writer.Write("HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=UTF-8\r\nContent-Length: 27\r\n\r\n{\"message\":\"Hello, World!\"}\r\n"u8);
+                /*
                 ctx.Writer.Write(_jsonPreamble);
                 var utf8JsonWriter = t_writer ??= new Utf8JsonWriter(ctx.Writer, new JsonWriterOptions { SkipValidation = true });
                 utf8JsonWriter.Reset(ctx.Writer);
                 JsonSerializer.Serialize(utf8JsonWriter, new JsonMessage { message = "Hello, World!" });
-                
+                */
                 //await ctx.Writer.FlushAsync();
             })
             .MapGet("/plaintext", scope => async ctx =>
@@ -87,14 +102,37 @@ internal class Program
                     .Type("application/json"u8)
                     .Content("{\"message\": \"ok\"}"u8);
             })
-            .MapGet("/json3", scope => async ctx =>
+            /*.MapGet("/json3", scope => async ctx =>
             {
                 ctx
                     .Respond()
                     .Type("application/json"u8)
                     .Content(JsonContentPool
                         .Get()
-                        .Set(new { Message = "Ok" }));
+                        .Set(JsonSerializer.Serialize(new JsonMessage { message = JsonBody }, SerializerContext.JsonMessage)));
+            })*/
+            .MapGet("/json4", scope => async ctx =>
+            {
+                ctx
+                    .Respond()
+                    .Type("application/json"u8)
+                    .Content(new ExpressJsonContent(new { Message = "Ok" }));
+            })
+            .MapGet("/json5", scope => async ctx =>
+            {
+                var jsonContent = JsonContentPool
+                    .Get();
+                    
+                Unsafe.As<IExpressResponseContent<JsonMessage>>(jsonContent).Set(new JsonMessage { message = JsonBody }, SerializerContext.JsonMessage);
+                
+                ctx
+                    .Respond()
+                    .Type("application/json"u8)
+                    .Content(jsonContent);
+
+                ctx.Response!.Pool = JsonContentPool;
+
+
             })
             .Build()
             .RunAsync();

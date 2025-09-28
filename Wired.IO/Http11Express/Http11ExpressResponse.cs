@@ -1,3 +1,4 @@
+using Microsoft.Extensions.ObjectPool;
 using Wired.IO.Http11.Response.Content;
 using Wired.IO.Protocol.Response;
 using Wired.IO.Protocol.Response.Headers;
@@ -36,6 +37,10 @@ public class Http11ExpressResponse : IExpressResponse
     public string? ContentEncoding { get; set; }
 
     public ulong ContentLength { get; set; }
+
+    public Action ExecuteAfterFlush { get; set; } = null!;
+
+    public DefaultObjectPool<IExpressResponseContent> Pool { get; set; } = null!;
 
     public void Clear()
     {
