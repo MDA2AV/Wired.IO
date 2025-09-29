@@ -1,4 +1,5 @@
 using Microsoft.Extensions.ObjectPool;
+using System.IO.Pipelines;
 using Wired.IO.Http11.Response.Content;
 using Wired.IO.Protocol.Response;
 using Wired.IO.Protocol.Response.Headers;
@@ -38,9 +39,7 @@ public class Http11ExpressResponse : IExpressResponse
 
     public ulong ContentLength { get; set; }
 
-    public Action ExecuteAfterFlush { get; set; } = null!;
-
-    public DefaultObjectPool<IExpressResponseContent> Pool { get; set; } = null!;
+    public Action<PipeWriter, object> StringPayloadWriter { get; set; } = null!;
 
     public void Clear()
     {

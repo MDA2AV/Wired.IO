@@ -1,4 +1,5 @@
 using Microsoft.Extensions.ObjectPool;
+using System.IO.Pipelines;
 using Wired.IO.Http11.Response.Content;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Response;
@@ -81,8 +82,6 @@ public interface IExpressResponse : IBaseResponse
     /// This method is typically used to reset the context for reuse within a connection handling loop.
     /// </remarks>
     void Clear();
-    
-    Action ExecuteAfterFlush { get; set; } 
-    
-    DefaultObjectPool<IExpressResponseContent> Pool { get; set; } 
+
+    Action<PipeWriter, object> StringPayloadWriter { get; set; } 
 }

@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.IO.Pipelines;
+using System.Runtime.CompilerServices;
 using Wired.IO.Http11.Response.Content;
 using Wired.IO.Http11Express;
 using Wired.IO.Utilities;
@@ -66,7 +67,7 @@ public class ExpressResponseBuilder(IExpressResponse response)
         response.Modified = modificationDate;
         return this;
     }
-
+    
     public ExpressResponseBuilder Encoding(string encoding)
     {
         response.ContentEncoding = encoding;

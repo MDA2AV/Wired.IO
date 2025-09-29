@@ -28,8 +28,6 @@ public partial class WiredHttp11Express<TContext>
         WriteHeaders(context);
 
         WriteBody(context);
-        
-        context.Response.Pool.Return(context.Response.Content);
     }
 
     [SkipLocalsInit]

@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
 using Microsoft.Extensions.ObjectPool;
 using System.Buffers;
+using System.IO.Pipelines;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
@@ -19,6 +20,7 @@ using Wired.IO.Playground;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Response;
 using Wired.IO.Protocol.Writers;
+using Wired.IO.Utilities;
 using Wired.IO.WiredEvents;
 
 
@@ -55,7 +57,7 @@ internal class Program
     }
 
     public static readonly DefaultObjectPool<IExpressResponseContent> JsonContentPool
-        = new(new JsonContentObjectPolicy());
+        = new(new JsonContentObjectPolicy(), 1024);
 
     private sealed class JsonContentObjectPolicy : IPooledObjectPolicy<IExpressResponseContent>
     {
@@ -120,8 +122,9 @@ internal class Program
             })
             .MapGet("/json5", scope => async ctx =>
             {
-                var jsonContent = JsonContentPool
-                    .Get();
+                //var jsonContent = JsonContentPool.Get();
+
+                var jsonContent = new ExpressJsonContent2<JsonMessage>();
                     
                 Unsafe.As<IExpressResponseContent<JsonMessage>>(jsonContent).Set(new JsonMessage { message = JsonBody }, SerializerContext.JsonMessage);
                 
@@ -130,9 +133,27 @@ internal class Program
                     .Type("application/json"u8)
                     .Content(jsonContent);
 
-                ctx.Response!.Pool = JsonContentPool;
+                //ctx.Response!.Pool = JsonContentPool;
 
 
+            })
+            .MapGet("/json6", scope => async ctx =>
+            {
+                // Reuse IExpressResponseContent if already set
+                if (ctx.Response?.Content is ExpressJsonContent3)
+                {
+                    ctx.Response.Activate();
+                    ctx.Response.ContentLength = ctx.Response.Content.Length ?? 0;
+                    ctx.Response.ContentLengthStrategy = ctx.Response.Content.Length is not null
+                        ? ContentLengthStrategy.Known
+                        : ContentLengthStrategy.Chunked;
+                    return;
+                }
+
+                ctx
+                    .Respond()
+                    .Type("application/json"u8)
+                    .Content(new ExpressJsonContent3(JsonSerializer.Serialize(new JsonMessage { message = JsonBody }, SerializerContext.JsonMessage)));
             })
             .Build()
             .RunAsync();

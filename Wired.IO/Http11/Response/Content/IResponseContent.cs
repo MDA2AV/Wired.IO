@@ -56,9 +56,9 @@ public interface IExpressResponseContent
     void Write(PipeWriter writer);
 }
 
-public interface IExpressResponseContent<T> : IExpressResponseContent
+public interface IExpressResponseContent<TSerializable> : IExpressResponseContent
 {
-    IExpressResponseContent<T> Set(T data, JsonTypeInfo<T> typeInfo, ulong? length = null);
+    IExpressResponseContent<TSerializable> Set(TSerializable data, JsonTypeInfo<TSerializable> typeInfo, ulong? length = null);
 }
 
 // Consider in IExpressResponseContent that its always chunked, there is really no easy way to know the content length for json
@@ -124,6 +124,18 @@ public class ExpressJsonContent3 : IExpressResponseContent
     private string _json;
     
     public ulong? Length { get; private set; }
+
+    // Non-accessible
+    private ExpressJsonContent3()
+    {
+        
+    }
+
+    public ExpressJsonContent3(string json)
+    {
+        Length = (ulong)json.Length;
+        _json = json;
+    }
     
     public ExpressJsonContent3 Set(string json)
     {
