@@ -55,22 +55,6 @@ internal class Program
     {
         public string message { get; set; }
     }
-
-    public static readonly DefaultObjectPool<IExpressResponseContent> JsonContentPool
-        = new(new JsonContentObjectPolicy(), 1024);
-
-    private sealed class JsonContentObjectPolicy : IPooledObjectPolicy<IExpressResponseContent>
-    {
-        public IExpressResponseContent Create()
-        {
-            return new ExpressJsonContent2<JsonMessage>();
-        }
-
-        public bool Return(IExpressResponseContent content)
-        {
-            return true;
-        }
-    }
     
     private static readonly JsonContext SerializerContext = JsonContext.Default;
     
@@ -139,21 +123,14 @@ internal class Program
             })
             .MapGet("/json6", scope => async ctx =>
             {
-                // Reuse IExpressResponseContent if already set
-                if (ctx.Response?.Content is ExpressJsonContent3)
-                {
-                    ctx.Response.Activate();
-                    ctx.Response.ContentLength = ctx.Response.Content.Length ?? 0;
-                    ctx.Response.ContentLengthStrategy = ctx.Response.Content.Length is not null
-                        ? ContentLengthStrategy.Known
-                        : ContentLengthStrategy.Chunked;
-                    return;
-                }
-
                 ctx
                     .Respond()
                     .Type("application/json"u8)
-                    .Content(new ExpressJsonContent3(JsonSerializer.Serialize(new JsonMessage { message = JsonBody }, SerializerContext.JsonMessage)));
+                    .Content<ExpressJsonStringContent, string>(
+                        (content, payload) => content.Set(payload) , 
+                        JsonSerializer.Serialize(new JsonMessage { message = JsonBody }, SerializerContext.JsonMessage),
+                        (payload, length) => new ExpressJsonStringContent(payload));
+                
             })
             .Build()
             .RunAsync();

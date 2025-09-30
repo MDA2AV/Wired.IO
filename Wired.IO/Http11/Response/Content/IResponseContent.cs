@@ -56,9 +56,14 @@ public interface IExpressResponseContent
     void Write(PipeWriter writer);
 }
 
-public interface IExpressResponseContent<TSerializable> : IExpressResponseContent
+public interface IExpressResponseContent<TPayload> : IExpressResponseContent
 {
-    IExpressResponseContent<TSerializable> Set(TSerializable data, JsonTypeInfo<TSerializable> typeInfo, ulong? length = null);
+    IExpressResponseContent<TPayload> Set(TPayload data, JsonTypeInfo<TPayload> typeInfo, ulong? length = null);
+}
+
+public interface IExpressResponseJsonContent : IExpressResponseContent
+{
+    void Set(string json);
 }
 
 // Consider in IExpressResponseContent that its always chunked, there is really no easy way to know the content length for json
@@ -119,35 +124,98 @@ public class ExpressJsonContent(object data, ulong? length = null) : IExpressRes
 }
 
 [SkipLocalsInit]
-public class ExpressJsonContent3 : IExpressResponseContent
+public class ExpressJsonStringContent : IExpressResponseJsonContent
 {
-    private string _json;
+    private string _json = null!;
     
     public ulong? Length { get; private set; }
+    
+    public ExpressJsonStringContent() { }
 
-    // Non-accessible
-    private ExpressJsonContent3()
-    {
-        
-    }
-
-    public ExpressJsonContent3(string json)
+    public ExpressJsonStringContent(string json)
     {
         Length = (ulong)json.Length;
         _json = json;
     }
     
-    public ExpressJsonContent3 Set(string json)
+    public void Set(string json)
     {
         Length = (ulong)json.Length;
         _json = json;
-
-        return this;
     }
     
     public void Write(PipeWriter writer)
     {
         writer.Write(Encoders.Utf8Encoder.GetBytes(_json));
+    }
+}
+
+[SkipLocalsInit]
+public class ExpressJsonObjectContent<T> : IExpressResponseContent<T>
+{
+    [ThreadStatic]
+    private static Utf8JsonWriter? _writer;
+
+    private static readonly DefaultObjectPool<ChunkedWriter> ChunkedWriterPool
+        = new(new ChunkedWriterObjectPolicy());
+
+    private sealed class ChunkedWriterObjectPolicy : IPooledObjectPolicy<ChunkedWriter>
+    {
+        public ChunkedWriter Create() => new();
+
+        public bool Return(ChunkedWriter writer)
+        {
+            writer.Reset();
+            return true;
+        }
+    }
+
+    private T _data;
+    
+    private JsonTypeInfo<T> _jsonTypeInfo;
+
+    public ExpressJsonObjectContent<T> Set(T data, ulong? length = null)
+    {
+        Length = length;
+        _data = data;
+
+        return this;
+    }
+    
+    public IExpressResponseContent<T> Set(T data, JsonTypeInfo<T> typeInfo, ulong? length = null)
+    {
+        Length = length;
+        _data = data;
+        _jsonTypeInfo = typeInfo;
+
+        return this;
+    }
+
+    public ulong? Length { get; private set; }
+
+    public void Write(PipeWriter writer)
+    {
+        if (Length is not null)
+        {
+            _writer ??= new Utf8JsonWriter(writer, new JsonWriterOptions { SkipValidation = true });
+            _writer.Reset(writer);
+
+            JsonSerializer.Serialize(_writer, _data);
+
+            return;
+        }
+
+        var chunkedWriter = ChunkedWriterPool.Get();
+        chunkedWriter.SetOutput(writer);
+
+        _writer ??= new Utf8JsonWriter(chunkedWriter, new JsonWriterOptions { SkipValidation = true });
+        _writer.Reset(chunkedWriter);
+        
+        JsonSerializer.Serialize(_writer, _data, _jsonTypeInfo);
+        
+        chunkedWriter.Complete();
+        
+        ChunkedWriterPool.Return(chunkedWriter);
     }
 }
 

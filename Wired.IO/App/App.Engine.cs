@@ -62,7 +62,8 @@ public sealed partial class WiredApp<TContext>
     private async Task RunAcceptLoopAsync(Func<Socket, CancellationToken, Task> clientHandler, CancellationToken stoppingToken)
     {
         // Multiple concurrent accept loops for maximum throughput
-        var acceptTasks = new Task[Environment.ProcessorCount*2];
+        //var acceptTasks = new Task[Environment.ProcessorCount/2];
+        var acceptTasks = new Task[4];
         for (var i = 0; i < acceptTasks.Length; i++)
         {
             acceptTasks[i] = AcceptLoopAsync(clientHandler, stoppingToken);

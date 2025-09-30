@@ -1,6 +1,4 @@
-﻿using System.IO.Pipelines;
-using System.Runtime.CompilerServices;
-using Wired.IO.Http11.Response.Content;
+﻿using Wired.IO.Http11.Response.Content;
 using Wired.IO.Http11Express;
 using Wired.IO.Utilities;
 
@@ -16,6 +14,14 @@ public enum ContentLengthStrategy
 
 public class ExpressResponseBuilder(IExpressResponse response)
 {
+    private void SetContentLength(IExpressResponseContent content)
+    {
+        response.ContentLength = content.Length ?? 0;
+        response.ContentLengthStrategy = content.Length is not null
+            ? ContentLengthStrategy.Known
+            : ContentLengthStrategy.Chunked;
+    }
+    
     public ExpressResponseBuilder Content(IExpressResponseContent content)
     {
         response.Content = content;
@@ -35,6 +41,39 @@ public class ExpressResponseBuilder(IExpressResponse response)
 
         response.ContentLengthStrategy = ContentLengthStrategy.KnownDirect;
 
+        return this;
+    }
+
+    public ExpressResponseBuilder Content<TContent, TPayload>(
+        Action<TContent, TPayload> setup, 
+        TPayload payload, 
+        Func<TPayload, ulong, TContent> contentFactory, 
+        ulong length)
+        where  TContent : IExpressResponseContent
+    {
+        if (response.Content is not TContent content) 
+            return Content(contentFactory(payload, length));
+        
+        // Reuse the existing Content
+        setup(content, payload);
+        SetContentLength(content);
+        
+        return this;
+    }
+    
+    public ExpressResponseBuilder Content<TContent, TPayload>(
+        Action<TContent, TPayload> setup, 
+        TPayload payload, 
+        Func<TPayload, ulong?, TContent> contentFactory)
+        where  TContent : IExpressResponseContent
+    {
+        if (response.Content is not TContent content) 
+            return Content(contentFactory(payload, null));
+        
+        // Reuse the existing Content
+        setup(content, payload);
+        SetContentLength(content);
+        
         return this;
     }
 
