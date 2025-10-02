@@ -84,5 +84,5 @@ public interface IExpressResponse : IBaseResponse
     /// </remarks>
     void Clear();
 
-    Action<PipeWriter, object> StringPayloadWriter { get; set; } 
+    Action Handler { get; set; }
 }

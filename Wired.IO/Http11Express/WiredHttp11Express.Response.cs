@@ -33,6 +33,12 @@ public partial class WiredHttp11Express<TContext>
     [SkipLocalsInit]
     private static void WriteBody(TContext context)
     {
+        if (context.Response!.ContentLengthStrategy is ContentLengthStrategy.Action)
+        {
+            context.Response.Handler();
+            return;
+        }
+        
         if (context.Response!.ContentLengthStrategy is ContentLengthStrategy.Utf8View)
         {
             context.Writer.Write(context.Response.Utf8Content.AsSpan());
@@ -76,7 +82,7 @@ public partial class WiredHttp11Express<TContext>
 
             writer.Write("\r\n"u8);
         }
-        else if (context.Response.ContentLengthStrategy == ContentLengthStrategy.Chunked)
+        else if (context.Response.ContentLengthStrategy is ContentLengthStrategy.Chunked or ContentLengthStrategy.Action)
         {
             writer.Write(TransferEncodingChunkedHeader);
         }

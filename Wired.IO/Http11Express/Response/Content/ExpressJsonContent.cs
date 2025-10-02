@@ -10,54 +10,6 @@ using Wired.IO.Utilities;
 namespace Wired.IO.Http11Express.Response.Content;
 
 /// <summary>
-/// Represents a JSON response content that wraps a pre-serialized JSON string.
-/// </summary>
-[SkipLocalsInit]
-public class ExpressJsonContent : IExpressResponseContent
-{
-    private string _json = null!;
-
-    /// <summary>
-    /// Gets the length of the JSON payload in bytes, if known.
-    /// </summary>
-    public ulong? Length { get; private set; }
-
-    /// <summary>
-    /// Initializes a new empty instance of <see cref="ExpressJsonContent"/>.
-    /// </summary>
-    internal ExpressJsonContent() { }
-
-    /// <summary>
-    /// Initializes a new instance of <see cref="ExpressJsonContent"/> with the given JSON string.
-    /// </summary>
-    /// <param name="json">The JSON string to be written as response content.</param>
-    public ExpressJsonContent(string json)
-    {
-        Length = (ulong)json.Length;
-        _json = json;
-    }
-
-    /// <summary>
-    /// Sets the JSON payload for this response content.
-    /// </summary>
-    /// <param name="json">The JSON string to assign.</param>
-    public void Set(string json)
-    {
-        Length = (ulong)json.Length;
-        _json = json;
-    }
-
-    /// <summary>
-    /// Writes the JSON payload to the given <see cref="PipeWriter"/>.
-    /// </summary>
-    /// <param name="writer">The pipe writer to write the JSON content to.</param>
-    public void Write(PipeWriter writer)
-    {
-        writer.Write(Encoders.Utf8Encoder.GetBytes(_json));
-    }
-}
-
-/// <summary>
 /// Provides pooled writers and utilities for JSON serialization.
 /// </summary>
 public static class Writers

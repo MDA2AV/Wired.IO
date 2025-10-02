@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization.Metadata;
+﻿using System.Runtime.CompilerServices;
+using System.Text.Json.Serialization.Metadata;
 using Wired.IO.Http11Express.Response;
 using Wired.IO.Http11Express.Response.Content;
 using Wired.IO.Utilities;
@@ -10,11 +11,13 @@ public enum ContentLengthStrategy
     None,
     Known,
     Utf8View,
+    Action,
     Chunked,
 }
 
 public class ExpressResponseBuilder(IExpressResponse response)
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void SetContentLength(IExpressResponseContent content)
     {
         response.ContentLength = content.Length ?? 0;
@@ -42,6 +45,16 @@ public class ExpressResponseBuilder(IExpressResponse response)
 
         response.ContentLengthStrategy = ContentLengthStrategy.Utf8View;
 
+        return this;
+    }
+
+    public ExpressResponseBuilder Content(Action handler, ulong? length = null)
+    {
+        response.ContentLength = length ?? 0;
+        response.ContentLengthStrategy = ContentLengthStrategy.Action;
+        
+        response.Handler = handler;
+        
         return this;
     }
 

@@ -40,7 +40,7 @@ public class Http11ExpressResponse : IExpressResponse
 
     public ulong ContentLength { get; set; }
 
-    public Action<PipeWriter, object> StringPayloadWriter { get; set; } = null!;
+    public Action Handler { get; set; } = null!;
 
     public void Clear()
     {

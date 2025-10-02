@@ -52,12 +52,58 @@ internal class Program
     [ThreadStatic]
     private static Utf8JsonWriter? t_writer;
     
+    public static readonly DefaultObjectPool<ChunkedWriter> ChunkedWriterPool
+        = new(new ChunkedWriterObjectPolicy());
+    
+    private sealed class ChunkedWriterObjectPolicy : IPooledObjectPolicy<ChunkedWriter>
+    {
+        public ChunkedWriter Create() => new();
+        public bool Return(ChunkedWriter writer)
+        {
+            writer.Reset();
+            return true;
+        }
+    }
+    
     public struct JsonMessage
     {
         public string Message { get; set; }
     }
     
     private static readonly JsonContext SerializerContext = JsonContext.Default;
+
+    public Action<PipeWriter, JsonMessage> Handler;
+
+    private static readonly Action<PipeWriter, JsonMessage> StaticHandler = HandleFast;
+    private static readonly Action<PipeWriter, string> StaticHandlerString = HandleJson;
+
+    private static Action CreateBoundHandler(PipeWriter writer, JsonMessage message) => () => StaticHandler.Invoke(writer, message);
+    private static Action CreateBoundHandlerString(PipeWriter writer, string serialized) => () => StaticHandlerString.Invoke(writer, serialized);
+
+    private static void HandleFast(PipeWriter writer, JsonMessage message)
+    {
+        var utf8JsonWriter = t_writer ??= new Utf8JsonWriter(writer, new JsonWriterOptions { SkipValidation = true });
+        utf8JsonWriter.Reset(writer);
+        JsonSerializer.Serialize(utf8JsonWriter, message, SerializerContext.JsonMessage);
+    }
+    
+    private static void HandleChunked(PipeWriter writer, JsonMessage message)
+    {
+        var chunkedWriter = ChunkedWriterPool.Get();
+        chunkedWriter.SetOutput(writer);
+        t_writer ??= new Utf8JsonWriter(chunkedWriter, new JsonWriterOptions { SkipValidation = true });
+        t_writer.Reset(chunkedWriter);
+        
+        JsonSerializer.Serialize(t_writer, message, SerializerContext.JsonMessage);
+        
+        chunkedWriter.Complete();
+        ChunkedWriterPool.Return(chunkedWriter);
+    }
+    
+    private static void HandleJson(PipeWriter writer, string serialized)
+    {
+        writer.Write(Encoders.Utf8Encoder.GetBytes(serialized));
+    }
     
     public static async Task Main(string[] args)
     {
@@ -67,35 +113,79 @@ internal class Program
             .Port(8080)
             .MapGet("/jsonRaw", scope => async ctx =>
             {
-                ctx.Writer.Write("HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=UTF-8\r\nContent-Length: 27\r\n\r\n{\"message\":\"Hello, World!\"}\r\n"u8);
+                //ctx.Writer.Write("HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=UTF-8\r\nContent-Length: 27\r\n\r\n{\"message\":\"Hello, World!\"}\r\n"u8);
                 /*
                 ctx.Writer.Write(_jsonPreamble);
                 var utf8JsonWriter = t_writer ??= new Utf8JsonWriter(ctx.Writer, new JsonWriterOptions { SkipValidation = true });
                 utf8JsonWriter.Reset(ctx.Writer);
-                JsonSerializer.Serialize(utf8JsonWriter, new JsonMessage { message = "Hello, World!" });
+                JsonSerializer.Serialize(utf8JsonWriter, new JsonMessage { Message = "Hello, World!" }, SerializerContext.JsonMessage);
                 */
+                
+                var payload = new JsonMessage { Message = JsonBody };
+                var myHandler = CreateBoundHandler(ctx.Writer, payload);
+
+                ctx
+                    .Respond()
+                    .Type("application/json"u8)
+                    .Content(myHandler, 27);
+
+            })
+            .MapGet("/jsonRaw2", scope => async ctx =>
+            {
+                var payload = JsonSerializer.Serialize(new JsonMessage { Message = JsonBody },
+                    SerializerContext.JsonMessage);
+                var myHandler = CreateBoundHandlerString(ctx.Writer, payload);
+
+                ctx
+                    .Respond()
+                    .Type("application/json"u8)
+                    .Content(myHandler, (ulong)payload.Length);
+
             })
             .MapGet("/plaintext", scope => async ctx =>
             {
                 ctx.Writer.Write(_plaintextPreamble);
                 ctx.Writer.Write(_plainTextBody);
             })
+            .MapGet("/string", scope => async ctx =>
+            {
+                ctx
+                    .Respond()
+                    .Type("application/json"u8)
+                    //.Content(new ExpressStringContent("\"message\": \"Hello, World!\""));
+                    .Content(new ExpressStringContent(JsonSerializer.Serialize(new JsonMessage { Message = JsonBody }, SerializerContext.JsonMessage)));
+            })
+            .MapGet("/jsonu8", scope => async ctx =>
+            {
+                ctx
+                    .Respond()
+                    .Type("application/json"u8)
+                    .Content("\"message\": \"Hello, World!\""u8);
+            })
+            .MapGet("/jsonObj", scope => async ctx =>
+            {
+                ctx
+                    .Respond()
+                    .Type("application/json"u8)
+                    .Content(new ExpressJsonObjectContent(new JsonMessage { Message = JsonBody }));
+            })
             .MapGet("/jsonS", scope => async ctx =>
             {
                 ctx
                     .Respond()
                     .Type("application/json"u8)
-                    .Content(new ExpressJsonContent(JsonSerializer.Serialize(new JsonMessage { Message = JsonBody }, SerializerContext.JsonMessage)));
+                    .Content(new ExpressStringContent(JsonSerializer.Serialize(new JsonMessage { Message = JsonBody })));
+                    //.Content(new ExpressJsonContent(JsonSerializer.Serialize(new JsonMessage { Message = JsonBody }, SerializerContext.JsonMessage)));
             })
             .MapGet("/jsonCacheS", scope => async ctx =>
             {
                 ctx
                     .Respond()
                     .Type("application/json"u8)
-                    .Content<ExpressJsonContent, string>(
+                    .Content<ExpressStringContent, string>(
                         (content, payload) => content.Set(payload) , 
                         JsonSerializer.Serialize(new JsonMessage { Message = JsonBody }, SerializerContext.JsonMessage),
-                        (payload, length) => new ExpressJsonContent(payload));
+                        (payload, length) => new ExpressStringContent(payload));
                 
             })
             .MapGet("/json", scope => async ctx =>
