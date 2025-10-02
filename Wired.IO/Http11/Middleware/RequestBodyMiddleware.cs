@@ -4,11 +4,11 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Wired.IO.Http11.Context;
 using Wired.IO.Http11.Request;
-using Wired.IO.Protocol;
-using Wired.IO.Protocol.Request;
 using Wired.IO.Utilities;
 
 namespace Wired.IO.Http11.Middleware;
+
+// Low performance middleware
 
 /// <summary>
 /// Middleware for reading and parsing the HTTP request body, supporting both Content-Length and chunked transfer encoding.
@@ -18,7 +18,7 @@ public static class RequestBodyMiddleware
     /// <summary>
     /// Handles reading the request body and assigning it to the context's <see cref="IRequest.Content"/> property.
     /// </summary>
-    /// <param name="ctx">The <see cref="IContext"/> representing the current HTTP connection.</param>
+    /// <param name="ctx">The <see cref="Http11Context"/> representing the current HTTP connection.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     /// <remarks>
     /// This method checks if the request includes a <c>Content-Length</c> header or uses <c>Transfer-Encoding: chunked</c>,
@@ -27,7 +27,7 @@ public static class RequestBodyMiddleware
     public static async Task HandleAsync(Http11Context ctx)
     {
         var request = Unsafe.As<Http11Request>(ctx.Request);
-        var contentLengthAvailable = TryGetContentLength(request.Headers, out var contentLength);
+        var contentLengthAvailable = TryGetContentLength(request.Headers, out _);
 
         if (contentLengthAvailable)
         {
@@ -35,7 +35,6 @@ public static class RequestBodyMiddleware
             var body = await ExtractBody(ctx.Reader, request.Headers, ctx.CancellationToken);
 
             ctx.Request.Content = body;
-
         }
         else
         {
@@ -58,68 +57,6 @@ public static class RequestBodyMiddleware
         }
     }
 
-#if NET8_0
-
-    /// <summary>
-    /// Extracts a single chunk from a chunked HTTP request body.
-    /// </summary>
-    /// <param name="reader">The <see cref="PipeReader"/> to read from.</param>
-    /// <param name="stoppingToken">Token to cancel the operation.</param>
-    /// <returns>The chunk as a byte array, or <c>null</c> if the stream is complete or invalid.</returns>
-    /// <exception cref="OperationCanceledException"/>
-    public static async Task<byte[]?> ExtractChunk(PipeReader reader, CancellationToken stoppingToken)
-    {
-        while (true)
-        {
-            var result = await reader.ReadAsync(stoppingToken);
-            var buffer = result.Buffer;
-
-            if (TryExtractChunk(ref buffer, out var chunk, out var consumedTo))
-            {
-                reader.AdvanceTo(consumedTo);
-                return chunk;
-            }
-
-            if (result.IsCompleted)
-                return null;
-
-            reader.AdvanceTo(buffer.Start, buffer.End);
-        }
-    }
-
-    private static bool TryExtractChunk(ref ReadOnlySequence<byte> buffer, out byte[]? chunk, out SequencePosition consumed)
-    {
-        chunk = null;
-        consumed = buffer.Start;
-
-        var reader = new SequenceReader<byte>(buffer);
-
-        if (!TryReadChunkSizeLine(ref reader, out int chunkSize, out _))
-            return false;
-
-        if (chunkSize == 0)
-        {
-            if (!PipeReaderUtilities.TryAdvanceTo(reader, "\r\n"u8, out var trailerEnd))
-                return false;
-
-            consumed = trailerEnd;
-            chunk = [];
-            return true;
-        }
-
-        var chunkStart = reader.Position;
-        var chunkEnd = buffer.GetPosition(chunkSize + 2, chunkStart); // +2 for \r\n
-
-        if (buffer.Slice(chunkStart, chunkSize + 2).Length < chunkSize + 2)
-            return false;
-
-        chunk = buffer.Slice(chunkStart, chunkSize).ToArray();
-        consumed = chunkEnd;
-        return true;
-    }
-
-#elif NET9_0
-
     /// <summary>
     /// Extracts a single chunk from a chunked HTTP request body.
     /// </summary>
@@ -136,7 +73,7 @@ public static class RequestBodyMiddleware
             var sequenceReader = new SequenceReader<byte>(buffer);
 
             // Try to read chunk size line (hex number ending with \r\n)
-            if (!TryReadChunkSizeLine(ref sequenceReader, out int chunkSize, out var chunkHeaderEnd))
+            if (!TryReadChunkSizeLine(ref sequenceReader, out int chunkSize))
             {
                 if (result.IsCompleted)
                     return null;
@@ -183,31 +120,26 @@ public static class RequestBodyMiddleware
         }
     }
 
-#endif
-
     /// <summary>
     /// Attempts to read the chunk size line (in hex) from the stream.
     /// </summary>
     /// <param name="reader">The <see cref="SequenceReader{Byte}"/> positioned at the start of the chunk size line.</param>
     /// <param name="size">The parsed chunk size.</param>
-    /// <param name="end">The position to advance to after reading the line.</param>
     /// <returns><c>true</c> if the chunk size line was successfully read; otherwise <c>false</c>.</returns>
-    private static bool TryReadChunkSizeLine(ref SequenceReader<byte> reader, out int size, out SequencePosition end)
+    private static bool TryReadChunkSizeLine(ref SequenceReader<byte> reader, out int size)
     {
         size = 0;
-        end = default;
 
         var line = new SequenceReader<byte>(reader.Sequence);
         if (!line.TryReadTo(out ReadOnlySpan<byte> lineSpan, (byte)'\n'))
             return false;
 
         if (lineSpan.EndsWith("\r"u8))
-            lineSpan = lineSpan.Slice(0, lineSpan.Length - 1);
+            lineSpan = lineSpan[..^1];
 
         if (!int.TryParse(Encoding.ASCII.GetString(lineSpan), System.Globalization.NumberStyles.HexNumber, null, out size))
             return false;
 
-        end = line.Position;
         reader.Advance(lineSpan.Length + 2); // +2 for \r\n
         return true;
     }
@@ -271,7 +203,6 @@ public static class RequestBodyMiddleware
             reader.AdvanceTo(buffer.GetPosition(contentLength));
 
             return bodyBuffer;
-            //return Encoding.UTF8.GetString(bodyBuffer);
         }
 
         // Handle fragmented body (less common case)

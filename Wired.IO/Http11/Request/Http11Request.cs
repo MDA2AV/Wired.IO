@@ -15,7 +15,7 @@ public sealed class Http11Request : IRequest
 {
     public ReadOnlyMemory<byte> Content { get; set; }
 
-    public string ContentAsString => Encoding.UTF8.GetString(Content.Span);
+    public string ContentAsString => Encoders.Utf8Encoder.GetString(Content.Span);
 
     public ConnectionType ConnectionType { get; set; }
 

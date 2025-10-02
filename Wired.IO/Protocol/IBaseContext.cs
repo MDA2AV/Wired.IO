@@ -2,14 +2,12 @@
 using System.IO.Pipelines;
 using Wired.IO.Protocol.Request;
 using Wired.IO.Protocol.Response;
-using Wired.IO.WiredEvents;
 
 namespace Wired.IO.Protocol;
 
-/// <summary>
-/// Represents the context for a client connection, encapsulating the connection details, request, response, and dependency resolution.
-/// </summary>
-public interface IContext : IHasWiredEvents, IDisposable
+public interface IBaseContext<out TRequest, out TResponse> : IDisposable 
+    where TRequest : IBaseRequest
+    where TResponse : IBaseResponse
 {
     /// <summary>
     /// Gets or sets the <see cref="PipeReader"/> used to read incoming data from the client connection.
@@ -34,7 +32,14 @@ public interface IContext : IHasWiredEvents, IDisposable
     /// This property contains all the details of the incoming HTTP request,
     /// such as the request method, headers, URI, and body.
     /// </summary>
-    IRequest Request { get; }
+    TRequest Request { get; }
+
+    /// <summary>
+    /// Gets or sets the HTTP response to be sent back to the client.
+    /// This property holds the response data, including status code, headers, and content.
+    /// It is constructed and written to the stream after the request has been processed.
+    /// </summary>
+    TResponse? Response { get; }
 
     /// <summary>
     /// Gets or sets the service scope for resolving scoped services during the lifecycle of the request.
@@ -52,13 +57,6 @@ public interface IContext : IHasWiredEvents, IDisposable
     /// - Passed to all asynchronous operations initiated within the context.
     /// </remarks>
     CancellationToken CancellationToken { get; set; }
-
-    /// <summary>
-    /// Gets or sets the HTTP response to be sent back to the client.
-    /// This property holds the response data, including status code, headers, and content.
-    /// It is constructed and written to the stream after the request has been processed.
-    /// </summary>
-    IResponse? Response { get; set; }
 
     /// <summary>
     /// Clears the request and response state of the current context without disposing it.

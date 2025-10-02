@@ -1,7 +1,7 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
 using Wired.IO.Http11.Context;
-using Wired.IO.Protocol;
+using Wired.IO.Utilities;
 
 namespace Wired.IO.Http11;
 
@@ -43,7 +43,7 @@ public partial class WiredHttp11<TContext>
     /// <exception cref="ObjectDisposedException"/>
     /// <exception cref="ArgumentNullException"/>
     /// <exception cref="EncoderFallbackException"/>
-    private static async Task SendHandshakeResponse(IContext context, string request)
+    private static async Task SendHandshakeResponse(Http11Context context, string request)
     {
         await context.SendAsync(WebsocketHandshakePrefix);
         await context.SendAsync(CreateAcceptKey(request));
@@ -91,7 +91,7 @@ public partial class WiredHttp11<TContext>
         var key = keyLine.Trim();
 
         // Concatenate the extracted WebSocket key with the magic string and compute its SHA-1 hash.
-        var hash = SHA1.HashData(Encoding.UTF8.GetBytes(key.ToString() + magicString));
+        var hash = SHA1.HashData(Encoders.Utf8Encoder.GetBytes(key.ToString() + magicString));
 
         // Convert the hash to a Base64 string, as required by the WebSocket protocol.
         return Convert.ToBase64String(hash);

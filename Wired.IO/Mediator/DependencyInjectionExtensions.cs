@@ -1,10 +1,10 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
-using System.Reflection.Metadata;
 using Wired.IO.App;
 using Wired.IO.Common.Attributes;
 using Wired.IO.Protocol;
+using Wired.IO.Protocol.Response;
 
 namespace Wired.IO.Mediator;
 
@@ -21,7 +21,7 @@ public static class DependencyInjectionExtensions
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Manually handled dynamic registration of types.")]
     public static IServiceCollection AddHandlers<TContext>(this IServiceCollection services,
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Assembly assembly,
-        WiredApp<TContext> app) where TContext : IContext
+        WiredApp<TContext> app) where TContext : IBaseContext<Protocol.Request.IBaseRequest, IBaseResponse>
     {
         var handlerTypes = new List<(Type HandlerType, Type InterfaceType, RouteAttribute? RouteInfo)>();
 

@@ -4,14 +4,17 @@ using System.Security.Authentication;
 using Microsoft.Extensions.Logging;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Handlers;
+using Wired.IO.Protocol.Request;
+using Wired.IO.Protocol.Response;
 
 namespace Wired.IO.App;
 
 /// <summary>
 /// Represents the core configuration and runtime state of a Wired.IO application instance.
 /// </summary>
-/// <typeparam name="TContext">The request context type implementing <see cref="IContext"/>.</typeparam>
-public sealed partial class WiredApp<TContext> where TContext : IContext
+/// <typeparam name="TContext">The request context type implementing <see cref="IBaseContext{TRequest,TResponse}"/>.</typeparam>
+public sealed partial class WiredApp<TContext> 
+    where TContext : IBaseContext<IBaseRequest, IBaseResponse>
 {
     #region Public Properties
 
@@ -73,7 +76,7 @@ public sealed partial class WiredApp<TContext> where TContext : IContext
     /// <summary>
     /// Gets or sets the maximum number of pending connections in the socket backlog.
     /// </summary>
-    internal int Backlog { get; set; } = 512;
+    internal int Backlog { get; set; } = 16384;
 
     /// <summary>
     /// Gets or sets a value indicating whether TLS is enabled for this server instance.
@@ -93,13 +96,13 @@ public sealed partial class WiredApp<TContext> where TContext : IContext
     /// <summary>
     /// Gets or sets the HTTP handler responsible for dispatching requests and handling routing.
     /// </summary>
-    internal IHttpHandler<TContext> HttpHandler { get; set; } = null!;
+    public IHttpHandler<TContext> HttpHandler { get; set; } = null!;
 
     #endregion
 }
 
 /// <summary>
-/// Contains constants representing the standard HTTP methods supported by Wired.IO.
+/// Contains constants representing the standard HTTP methods supported by Wired.IO.64
 /// </summary>
 public static class HttpConstants
 {

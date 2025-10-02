@@ -3,6 +3,7 @@ using System.IO.Pipelines;
 using System.Text;
 using System.Text.Json;
 using Wired.IO.Protocol.Writers;
+using Wired.IO.Utilities;
 
 namespace Wired.IO.Http11.Response.Content;
 
@@ -21,7 +22,7 @@ public sealed class JsonContent(object data, JsonSerializerOptions options) : IR
     {
         var json = JsonSerializer.Serialize(data, options);
 
-        writer.Write(Encoding.UTF8.GetBytes(json));
+        writer.Write(Encoders.Utf8Encoder.GetBytes(json));
 
         writer.Finish();
 
@@ -32,7 +33,7 @@ public sealed class JsonContent(object data, JsonSerializerOptions options) : IR
     {
         var json = JsonSerializer.Serialize(data, options);
 
-        writer.Write(Encoding.UTF8.GetBytes(json));
+        writer.Write(Encoders.Utf8Encoder.GetBytes(json));
 
         await writer.FlushAsync();
     }
@@ -69,7 +70,7 @@ public sealed class JsonContent<T> : IResponseContent
 
     public async Task WriteAsync(ChunkedPipeWriter writer, uint bufferSize)
     {
-        writer.Write(Encoding.UTF8.GetBytes(_serializedData));
+        writer.Write(Encoders.Utf8Encoder.GetBytes(_serializedData));
 
         writer.Finish();
 
@@ -78,7 +79,7 @@ public sealed class JsonContent<T> : IResponseContent
 
     public async Task WriteAsync(PipeWriter writer, uint bufferSize)
     {
-        writer.Write(Encoding.UTF8.GetBytes(_serializedData));
+        writer.Write(Encoders.Utf8Encoder.GetBytes(_serializedData));
 
         await writer.FlushAsync();
     }

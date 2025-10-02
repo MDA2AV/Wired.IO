@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "Wired.IO.Playground": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:50808;http://localhost:50809"
+    }
+  }
+}

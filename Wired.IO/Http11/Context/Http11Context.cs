@@ -2,8 +2,8 @@
 using System.IO.Pipelines;
 using Wired.IO.Http11.Request;
 using Wired.IO.Http11.Response;
+using Wired.IO.Http11Express;
 using Wired.IO.Protocol;
-using Wired.IO.Protocol.Request;
 using Wired.IO.Protocol.Response;
 using Wired.IO.Utilities;
 using Wired.IO.WiredEvents;
@@ -11,13 +11,13 @@ using Wired.IO.WiredEvents;
 namespace Wired.IO.Http11.Context;
 
 /// <summary>
-/// Represents the HTTP/1.1-specific implementation of the <see cref="IContext"/> interface.
+/// Represents the HTTP/1.1-specific implementation of the <see cref="IBaseContext{IRequest, IResponse}"/> interface.
 /// </summary>
 /// <remarks>
 /// This class manages the lifetime and processing state of a single HTTP/1.1 connection, including its request, response,
 /// cancellation state, and DI service resolution scope.
 /// </remarks>
-public class Http11Context : IContext
+public class Http11Context : IBaseContext<IRequest, IResponse>, IHasWiredEvents
 {
     public PipeReader Reader { get; set; } = null!;
 
@@ -45,6 +45,7 @@ public class Http11Context : IContext
     public IResponseBuilder Respond()
     {
         Response = new Http11Response();
+        Response.Activate();
         return new ResponseBuilder(Response).Status(ResponseStatus.Ok);
     }
 

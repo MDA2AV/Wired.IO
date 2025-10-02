@@ -1,4 +1,5 @@
 ﻿using Wired.IO.Protocol;
+using Wired.IO.Protocol.Response;
 
 namespace Wired.IO.Mediator;
 
@@ -7,7 +8,7 @@ namespace Wired.IO.Mediator;
 /// through the configured pipeline (behaviors + handler).
 /// </summary>
 public interface IRequestDispatcher<in TContext>
-    where TContext : IContext
+    where TContext : IBaseContext<Protocol.Request.IBaseRequest, IBaseResponse>
 {
     /// <summary>
     /// Sends a request through the pipeline and returns the response.

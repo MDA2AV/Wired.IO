@@ -5,15 +5,28 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+      <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+      <IsTestAssetProject>true</IsTestAssetProject>
+      <ServerGarbageCollection>true</ServerGarbageCollection>
+      <TieredPGO>true</TieredPGO>
+
+      <!-- Required for self-contained publish -->
+	  <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
+      <SelfContained>true</SelfContained>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.6" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.6" />
-  </ItemGroup>
+    <!--<PropertyGroup>
+        <PublishAot>true</PublishAot>
+        <OptimizationPreference>Speed</OptimizationPreference>
+    </PropertyGroup>-->
 
   <ItemGroup>
     <ProjectReference Include="..\Wired.IO\Wired.IO.csproj" />
+      <!--<PackageReference Include="Wired.IO" Version="9.2.0" />-->
   </ItemGroup>
+
+    <ItemGroup Condition="$(PublishAot) == 'true'">
+        <RuntimeHostConfigurationOption Include="System.Threading.ThreadPool.HillClimbing.Disable" Value="true" />
+    </ItemGroup>
 
 </Project>

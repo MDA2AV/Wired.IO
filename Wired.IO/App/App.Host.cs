@@ -1,5 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Wired.IO.Protocol;
+using Wired.IO.Protocol.Request;
+using Wired.IO.Protocol.Response;
 
 namespace Wired.IO.App;
 
@@ -7,8 +9,9 @@ namespace Wired.IO.App;
 /// Represents a configured and runnable instance of a Wired.IO application.
 /// Manages the lifecycle of the server including startup, shutdown, and resource disposal.
 /// </summary>
-/// <typeparam name="TContext">The request context type that implements <see cref="IContext"/>.</typeparam>
+/// <typeparam name="TContext">The request context type that implements <see cref="IBaseContext{TRequest,TResponse}"/>.</typeparam>
 public sealed partial class WiredApp<TContext> : IDisposable
+    where TContext : IBaseContext<IBaseRequest, IBaseResponse>
 {
     /// <summary>
     /// Gets or sets the service provider for resolving dependencies at runtime.

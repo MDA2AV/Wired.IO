@@ -1,24 +1,13 @@
-﻿using Wired.IO.Utilities;
+﻿using Wired.IO.Protocol.Request;
+using Wired.IO.Utilities;
 
-namespace Wired.IO.Protocol.Request;
+namespace Wired.IO.Http11.Request;
 
 /// <summary>
 /// Represents a minimal abstraction of an HTTP request containing essential routing information.
 /// </summary>
-public interface IRequest : IDisposable
-
+public interface IRequest : IBaseRequest
 {
-    /// <summary>
-    /// Gets the route or path portion of the HTTP request, typically used to determine the target endpoint.
-    /// </summary>
-    string Route { get; set; }
-
-    /// <summary>
-    /// Gets the HTTP method of the request (e.g., "GET", "POST", "PUT", "DELETE"), 
-    /// which indicates the action to be performed on the resource.
-    /// </summary>
-    string HttpMethod { get; set; }
-
     /// <summary>
     /// Gets the query string parameters portion of the request URI, 
     /// typically represented as a URL-encoded string following the '?' in the URI.
@@ -53,12 +42,4 @@ public interface IRequest : IDisposable
     /// Indicates whether the connection should persist after the response is sent (e.g., for HTTP/1.1 Keep-Alive support).
     /// </remarks>
     ConnectionType ConnectionType { get; set; }
-
-    /// <summary>
-    /// Clears the request state of the current context without disposing it.
-    /// </summary>
-    /// <remarks>
-    /// This method is typically used to reset the context for reuse within a connection handling loop.
-    /// </remarks>
-    void Clear();
 }

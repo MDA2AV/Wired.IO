@@ -4,13 +4,14 @@ using System.Net;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Wired.IO.App;
-using Wired.IO.Http11.Context;
 using Wired.IO.Mediator;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Handlers;
 using Wired.IO.Protocol.Response;
 using Wired.IO.WiredEvents;
-using Wired.IO.Utilities;
+using IBaseRequest = Wired.IO.Protocol.Request.IBaseRequest;
+using Wired.IO.Http11.Response;
+using Wired.IO.Http11.Middleware;
 
 namespace Wired.IO.Builder;
 
@@ -19,10 +20,10 @@ namespace Wired.IO.Builder;
 /// Supports setting up dependency injection, middleware, routes, TLS options, and runtime parameters.
 /// </summary>
 /// <typeparam name="THandler">The HTTP handler type implementing <see cref="IHttpHandler{TContext}"/>.</typeparam>
-/// <typeparam name="TContext">The request context type implementing <see cref="IContext"/>.</typeparam>
+/// <typeparam name="TContext"></typeparam>
 public sealed class Builder<THandler, TContext>
+    where TContext : IBaseContext<IBaseRequest, IBaseResponse>
     where THandler : IHttpHandler<TContext>
-    where TContext : IContext
 {
     /// <summary>
     /// Gets the service collection used to register middleware, handlers, and services.
@@ -197,10 +198,10 @@ public sealed class Builder<THandler, TContext>
     /// Enables automatic dispatch of domain events ("WiredEvents") after each request completes.
     /// </summary>
     /// <param name="dispatchContextWiredEvents">
-    /// If <c>true</c>, will dispatch events stored in <see cref="IContext.WiredEvents"/>.
+    /// If <c>true</c>, will dispatch events stored in <see cref="IBaseContext{TRequest,TResponse}.WiredEvents"/>.
     /// </param>
     /// <returns>The current builder instance.</returns>
-    public Builder<THandler, TContext> AddWiredEvents(bool dispatchContextWiredEvents = true)
+    public Builder<THandler, TContext> AddWiredEvents(bool dispatchContextWiredEvents = true) 
     {
         App.ServiceCollection.AddWiredEventDispatcher();
 
@@ -211,10 +212,13 @@ public sealed class Builder<THandler, TContext>
         {
             await next(context);
 
-            var wiredEventDispatcher = scope.GetRequiredService<Func<IEnumerable<IWiredEvent>, Task>>();
+            if (context is IHasWiredEvents hasWiredEvents)
+            {
+                var wiredEventDispatcher = scope.GetRequiredService<Func<IEnumerable<IWiredEvent>, Task>>();
 
-            await wiredEventDispatcher(context.WiredEvents);
-            context.ClearWiredEvents();
+                await wiredEventDispatcher(hasWiredEvents.WiredEvents);
+                hasWiredEvents.ClearWiredEvents();
+            } 
         });
 
         return this;

@@ -1,4 +1,5 @@
 ﻿using Wired.IO.Protocol;
+using Wired.IO.Protocol.Response;
 
 namespace Wired.IO.Mediator;
 
@@ -36,7 +37,7 @@ public interface IRequestHandler<in TRequest>
 }
 
 public interface IContextHandler<in TContext>
-    where TContext : IContext
+    where TContext : IBaseContext<Protocol.Request.IBaseRequest, IBaseResponse>
 {
     /// <summary>
     /// Handles a request
@@ -81,7 +82,7 @@ public interface IRequestHandlerWrapper
 }
 
 public interface IContextHandlerWrapper<in TContext>
-    where TContext : IContext
+    where TContext : IBaseContext<Protocol.Request.IBaseRequest, IBaseResponse>
 {
     /// <summary>
     /// Handles a context by resolving its handler and pipeline from the provided <see cref="IServiceProvider"/>.

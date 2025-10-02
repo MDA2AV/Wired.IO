@@ -1,27 +1,39 @@
-﻿using System.Text;
+﻿using System.Buffers;
+using System.Runtime.CompilerServices;
 using Wired.IO.Protocol.Request;
 using Wired.IO.Utilities;
 
-namespace Wired.IO.HttpExpress;
+namespace Wired.IO.Http11Express.Request;
 
-public class HttpExpressRequest : IRequest
+[SkipLocalsInit]
+public class Http11ExpressRequest : IExpressRequest
 {
     public string Route { get; set; } = null!;
 
     public string HttpMethod { get; set; } = null!;
 
-    public PooledDictionary<string, ReadOnlyMemory<char>>? QueryParameters { get; set; } = null!;
+    public PooledDictionary<string, string>? QueryParameters { get; set; } = null!;
 
     public PooledDictionary<string, string> Headers { get; set; } = null!;
 
-    public ReadOnlyMemory<byte> Content { get; set; }
-
-    public string ContentAsString => Encoding.UTF8.GetString(Content.Span);
-
     public ConnectionType ConnectionType { get; set; } = ConnectionType.KeepAlive;
+
+    public byte[]? Content { get; set; }
+
+    public string ContentAsString => Encoders.Utf8Encoder.GetString(Content ?? [], 0, ContentLength);
+
+    public int ContentLength { get; set; }
 
     public void Clear()
     {
+        if (Content is not null)
+        {
+            ArrayPool<byte>.Shared.Return(Content, clearArray: false);
+            Content = null;
+        }
+
+        ContentLength = 0;
+
         Headers?.Clear();
         QueryParameters?.Clear();
     }

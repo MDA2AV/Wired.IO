@@ -1,5 +1,6 @@
 ﻿using System.Buffers;
 using System.Collections;
+using System.Runtime.CompilerServices;
 
 namespace Wired.IO.Utilities;
 

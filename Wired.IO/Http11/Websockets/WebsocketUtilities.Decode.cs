@@ -1,5 +1,6 @@
 ﻿using System.Buffers.Binary;
 using System.Text;
+using Wired.IO.Utilities;
 
 namespace Wired.IO.Http11.Websockets;
 
@@ -88,7 +89,7 @@ public static partial class WebsocketUtilities
             {
                 // Extract the close code
                 var closeCode = BinaryPrimitives.ReadUInt16BigEndian(span.Slice(2, 2));
-                var reason = opPayloadLength > 2 ? Encoding.UTF8.GetString(span.Slice(4, opPayloadLength - 2)) : null;
+                var reason = opPayloadLength > 2 ? Encoders.Utf8Encoder.GetString(span.Slice(4, opPayloadLength - 2)) : null;
                 return $"Close frame received. Code: {closeCode}, Reason: {reason ?? "None"}";
             }
             else
@@ -150,7 +151,7 @@ public static partial class WebsocketUtilities
         }
 
         // Decode the payload from UTF-8 and return the resulting string
-        return Encoding.UTF8.GetString(payloadSpan);
+        return Encoders.Utf8Encoder.GetString(payloadSpan);
     }
 
     /// <summary>
@@ -170,7 +171,7 @@ public static partial class WebsocketUtilities
     /// <param name="frameType">
     /// An output parameter that indicates the type of the WebSocket frame. Possible values:
     /// <list type="bullet">
-    ///   <item><description><see cref="Utf8"/>: A UTF-8 encoded text frame.</description></item>
+    ///   <item><description><see cref="WsFrameType.Utf8"/>: A UTF-8 encoded text frame.</description></item>
     ///   <item><description><see cref="WsFrameType.Binary"/>: A binary frame.</description></item>
     ///   <item><description><see cref="WsFrameType.Close"/>: A close frame.</description></item>
     /// </list>
@@ -219,12 +220,12 @@ public static partial class WebsocketUtilities
 
             // Extract the optional UTF-8 encoded reason phrase (if present).
             var reason = opPayloadLength > 2
-                ? Encoding.UTF8.GetString(span.Slice(4, opPayloadLength - 2))
+                ? Encoders.Utf8Encoder.GetString(span.Slice(4, opPayloadLength - 2))
                 : null;
 
             // Construct the close message and return it as a UTF-8 encoded memory block.
             var message = $"Close frame received. Code: {closeCode}, Reason: {reason ?? "None"}";
-            return Encoding.UTF8.GetBytes(message).AsMemory();
+            return Encoders.Utf8Encoder.GetBytes(message).AsMemory();
         }
 
         // Determine the frame type based on the opcode.

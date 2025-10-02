@@ -1,9 +1,10 @@
 ﻿using System.Buffers;
 using System.IO.Pipelines;
 using System.Text;
-using Wired.IO.Protocol;
-using Wired.IO.Protocol.Response;
+using Wired.IO.Http11.Context;
+using Wired.IO.Http11.Response;
 using Wired.IO.Protocol.Writers;
+using Wired.IO.Utilities;
 
 namespace Wired.IO.Http11.Middleware;
 
@@ -29,11 +30,6 @@ public static class ResponseMiddleware
     /// HTTP line terminator as UTF-8 byte array (\r\n).
     /// </summary>
     private static readonly byte[] Crlf = "\r\n"u8.ToArray();
-
-    /// <summary>
-    /// UTF-8 encoding instance for string-to-byte conversions.
-    /// </summary>
-    private static readonly Encoding Utf8 = Encoding.UTF8;
 
     #endregion
 
@@ -92,32 +88,6 @@ public static class ResponseMiddleware
 
     #endregion
 
-    #region Date Header Caching
-
-    /// <summary>
-    /// Cached Date header value to avoid repeated DateTime formatting.
-    /// Updated at most once per second using thread-safe operations.
-    /// </summary>
-    private static volatile string? _cachedDateHeader;
-
-    /// <summary>
-    /// Timestamp (in ticks) of the last date header update.
-    /// Used with Interlocked operations for thread-safe access.
-    /// </summary>
-    private static long _lastDateUpdateTicks;
-
-#if NET9_0
-    /// <summary>
-    /// Lock object for synchronizing date header updates.
-    /// Uses double-checked locking pattern for optimal performance.
-    /// </summary>
-    private static readonly Lock DateLock = new();
-#elif NET8_0
-    private static readonly object DateLock = new();
-#endif
-
-    #endregion
-
     #region Public API
 
     /// <summary>
@@ -144,12 +114,13 @@ public static class ResponseMiddleware
     /// </remarks>
     /// <exception cref="InvalidOperationException">Thrown when status code formatting fails.</exception>
     /// <exception cref="IOException">Thrown when stream writing fails (client disconnection).</exception>
-    public static async Task HandleAsync(IContext ctx, uint bufferSize = 65 * 1024)
+    public static async Task HandleAsync(Http11Context ctx, uint bufferSize = 65 * 1024)
     {
         if (ctx.Response is null)
-        {
             return;
-        }
+        
+        if (!ctx.Response.IsActive())
+            return;
 
         WriteStatusLine(ctx.Writer, ctx.Response.Status.RawStatus, ctx.Response.Status.Phrase);
 
@@ -200,7 +171,7 @@ public static class ResponseMiddleware
     /// - Smaller buffers reduce memory pressure for concurrent requests
     /// </remarks>
     /// <exception cref="IOException">Thrown when client disconnects during body writing.</exception>
-    private static async ValueTask WriteResponseBody(IContext ctx, PipeWriter writer, uint bufferSize)
+    private static async ValueTask WriteResponseBody(Http11Context ctx, PipeWriter writer, uint bufferSize)
     {
         if (ctx.Response!.ContentLength is null)
         {
@@ -289,15 +260,34 @@ public static class ResponseMiddleware
     /// </remarks>
     private static void WriteUtf8(PipeWriter writer, string text)
     {
-        var byteCount = Utf8.GetByteCount(text);
+        var byteCount = Encoders.Utf8Encoder.GetByteCount(text);
         var span = writer.GetSpan(byteCount);
-        Utf8.GetBytes(text, span);
+        Encoders.Utf8Encoder.GetBytes(text, span);
         writer.Advance(byteCount);
     }
 
     #endregion
 
     #region Caching and Optimization Utilities
+
+    /// <summary>
+    /// Cached Date header value to avoid repeated DateTime formatting.
+    /// Updated at most once per second using thread-safe operations.
+    /// </summary>
+    private static volatile string? _cachedDateHeader;
+
+    /// <summary>
+    /// Timestamp (in ticks) of the last date header update.
+    /// Used with Interlocked operations for thread-safe access.
+    /// </summary>
+    private static long _lastDateUpdateTicks;
+
+    /// <summary>
+    /// Lock object for synchronizing date header updates.
+    /// Uses double-checked locking pattern for optimal performance.
+    /// </summary>
+    private static readonly Lock DateLock = new();
+    
 
     /// <summary>
     /// Retrieves or updates the cached Date header formatted per RFC1123.
@@ -316,8 +306,6 @@ public static class ResponseMiddleware
         if (cached != null && (now.Ticks - lastUpdateTicks) < TimeSpan.TicksPerSecond)
             return cached;
 
-#if NET9_0
-
         lock (DateLock)
         {
             // Double-check locking pattern
@@ -329,21 +317,6 @@ public static class ResponseMiddleware
             Interlocked.Exchange(ref _lastDateUpdateTicks, now.Ticks);
             return _cachedDateHeader;
         }
-
-#else
-
-        lock (DateLock)
-        {
-            lastUpdateTicks = Interlocked.Read(ref _lastDateUpdateTicks);
-            if (_cachedDateHeader != null && (now.Ticks - lastUpdateTicks) < TimeSpan.TicksPerSecond)
-                return _cachedDateHeader;
-
-            _cachedDateHeader = now.ToString("R");
-            Interlocked.Exchange(ref _lastDateUpdateTicks, now.Ticks);
-            return _cachedDateHeader;
-        }
-
-#endif
     }
 
     /// <summary>
@@ -384,7 +357,7 @@ public static class ResponseMiddleware
     /// Writes HTTP response headers to the <see cref="PipeWriter"/> using pooled memory and efficient span logic.
     /// </summary>
     /// <param name="writer">The <see cref="PipeWriter"/> to write headers to.</param>
-    /// <param name="ctx">The <see cref="IContext"/> containing the response and headers.</param>
+    /// <param name="ctx">The <see cref="Http11Context"/> containing the response and headers.</param>
     /// <remarks>
     /// Headers written include:
     /// - Mandatory: <c>Server</c>, <c>Date</c>
@@ -393,7 +366,7 @@ public static class ResponseMiddleware
     /// 
     /// Header values are validated before writing. The method avoids dynamic allocations by batching writes into a preallocated span.
     /// </remarks>
-    private static void WriteStandardHeaders(PipeWriter writer, IContext ctx)
+    private static void WriteStandardHeaders(PipeWriter writer, Http11Context ctx)
     {
         var buffer = writer.GetSpan(512); // max 1KB header size
         var written = 0;
@@ -407,12 +380,14 @@ public static class ResponseMiddleware
             WriteHeader(ContentTypeHeader, ctx.Response.ContentType.RawType, buffer);
         if (ctx.Response.ContentEncoding is not null)
             WriteHeader(ContentEncodingHeader, ctx.Response.ContentEncoding, buffer);
+
         if (ctx.Response.Content is null)
             WriteHeader(ContentLengthHeader, "0", buffer);
         else if (ctx.Response.Content.Length is not null)
             WriteHeader(ContentLengthHeader, FormatContentLength(ctx.Response.Content.Length ?? 0), buffer);
         else
             WriteHeader(TransferEncodingHeader, "chunked", buffer);
+
         if (ctx.Response.Modified is not null)
             WriteHeader(LastModifiedHeader, ctx.Response.Modified.Value.ToUniversalTime().ToString("R"), buffer);
         if (ctx.Response.Expires is not null)
@@ -430,10 +405,10 @@ public static class ResponseMiddleware
         {
             if (!IsValidHeaderValue(value)) return;
 
-            written += Utf8.GetBytes(key, buffer[written..]);
+            written += Encoders.Utf8Encoder.GetBytes(key, buffer[written..]);
             buffer[written++] = (byte)':';
             buffer[written++] = (byte)' ';
-            written += Utf8.GetBytes(value, buffer[written..]);
+            written += Encoders.Utf8Encoder.GetBytes(value, buffer[written..]);
             buffer[written++] = (byte)'\r';
             buffer[written++] = (byte)'\n';
         }

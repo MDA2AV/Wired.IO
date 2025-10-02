@@ -1,13 +1,18 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System.IO.Pipes;
+using Microsoft.Extensions.Logging;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security;
 using System.Security.Authentication;
 using Wired.IO.MemoryBuffers;
+using Wired.IO.Protocol;
+using Wired.IO.Protocol.Request;
+using Wired.IO.Protocol.Response;
 
 namespace Wired.IO.App;
 
 public sealed partial class WiredApp<TContext>
+    where TContext : IBaseContext<IBaseRequest, IBaseResponse>
 {
     /// <summary>
     /// Handles an incoming plain (non-TLS) TCP client connection.
