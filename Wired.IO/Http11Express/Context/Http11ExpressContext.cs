@@ -1,11 +1,13 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System.IO.Pipelines;
 using Wired.IO.Http11.Response;
+using Wired.IO.Http11Express.Request;
+using Wired.IO.Http11Express.Response;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Response;
 using Wired.IO.Utilities;
 
-namespace Wired.IO.Http11Express;
+namespace Wired.IO.Http11Express.Context;
 
 public class Http11ExpressContext : IBaseContext<IExpressRequest, IExpressResponse>
 {

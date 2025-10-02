@@ -5,6 +5,8 @@ using System.IO.Pipelines;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices.Marshalling;
 using System.Text;
+using Wired.IO.Http11Express.Context;
+using Wired.IO.Http11Express.Request;
 using Wired.IO.Protocol.Handlers;
 using Wired.IO.Protocol.Writers;
 using Wired.IO.Utilities;

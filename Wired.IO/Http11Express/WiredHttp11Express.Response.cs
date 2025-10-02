@@ -33,7 +33,7 @@ public partial class WiredHttp11Express<TContext>
     [SkipLocalsInit]
     private static void WriteBody(TContext context)
     {
-        if (context.Response!.ContentLengthStrategy is ContentLengthStrategy.KnownDirect)
+        if (context.Response!.ContentLengthStrategy is ContentLengthStrategy.Utf8View)
         {
             context.Writer.Write(context.Response.Utf8Content.AsSpan());
             return;

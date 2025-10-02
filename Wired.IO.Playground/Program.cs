@@ -15,6 +15,7 @@ using Wired.IO.Http11.Context;
 using Wired.IO.Http11.Response.Content;
 using Wired.IO.Http11.Websockets;
 using Wired.IO.Http11Express;
+using Wired.IO.Http11Express.Response.Content;
 using Wired.IO.Mediator;
 using Wired.IO.Playground;
 using Wired.IO.Protocol;
@@ -53,7 +54,7 @@ internal class Program
     
     public struct JsonMessage
     {
-        public string message { get; set; }
+        public string Message { get; set; }
     }
     
     private static readonly JsonContext SerializerContext = JsonContext.Default;
@@ -64,7 +65,7 @@ internal class Program
 
         await expressBuilder
             .Port(8080)
-            .MapGet("/json", scope => async ctx =>
+            .MapGet("/jsonRaw", scope => async ctx =>
             {
                 ctx.Writer.Write("HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=UTF-8\r\nContent-Length: 27\r\n\r\n{\"message\":\"Hello, World!\"}\r\n"u8);
                 /*
@@ -73,64 +74,45 @@ internal class Program
                 utf8JsonWriter.Reset(ctx.Writer);
                 JsonSerializer.Serialize(utf8JsonWriter, new JsonMessage { message = "Hello, World!" });
                 */
-                //await ctx.Writer.FlushAsync();
             })
             .MapGet("/plaintext", scope => async ctx =>
             {
                 ctx.Writer.Write(_plaintextPreamble);
                 ctx.Writer.Write(_plainTextBody);
-                //await ctx.Writer.FlushAsync();
             })
-            .MapGet("/json2", scope => async ctx =>
+            .MapGet("/jsonS", scope => async ctx =>
             {
                 ctx
                     .Respond()
                     .Type("application/json"u8)
-                    .Content("{\"message\": \"ok\"}"u8);
+                    .Content(new ExpressJsonContent(JsonSerializer.Serialize(new JsonMessage { Message = JsonBody }, SerializerContext.JsonMessage)));
             })
-            /*.MapGet("/json3", scope => async ctx =>
+            .MapGet("/jsonCacheS", scope => async ctx =>
             {
                 ctx
                     .Respond()
                     .Type("application/json"u8)
-                    .Content(JsonContentPool
-                        .Get()
-                        .Set(JsonSerializer.Serialize(new JsonMessage { message = JsonBody }, SerializerContext.JsonMessage)));
-            })*/
-            .MapGet("/json4", scope => async ctx =>
-            {
-                ctx
-                    .Respond()
-                    .Type("application/json"u8)
-                    .Content(new ExpressJsonContent(new { Message = "Ok" }));
-            })
-            .MapGet("/json5", scope => async ctx =>
-            {
-                //var jsonContent = JsonContentPool.Get();
-
-                var jsonContent = new ExpressJsonContent2<JsonMessage>();
-                    
-                Unsafe.As<IExpressResponseContent<JsonMessage>>(jsonContent).Set(new JsonMessage { message = JsonBody }, SerializerContext.JsonMessage);
-                
-                ctx
-                    .Respond()
-                    .Type("application/json"u8)
-                    .Content(jsonContent);
-
-                //ctx.Response!.Pool = JsonContentPool;
-
-
-            })
-            .MapGet("/json6", scope => async ctx =>
-            {
-                ctx
-                    .Respond()
-                    .Type("application/json"u8)
-                    .Content<ExpressJsonStringContent, string>(
+                    .Content<ExpressJsonContent, string>(
                         (content, payload) => content.Set(payload) , 
-                        JsonSerializer.Serialize(new JsonMessage { message = JsonBody }, SerializerContext.JsonMessage),
-                        (payload, length) => new ExpressJsonStringContent(payload));
+                        JsonSerializer.Serialize(new JsonMessage { Message = JsonBody }, SerializerContext.JsonMessage),
+                        (payload, length) => new ExpressJsonContent(payload));
                 
+            })
+            .MapGet("/json", scope => async ctx =>
+            {
+                ctx.Respond()
+                    .Type("application/json"u8)
+                    .Content(new ExpressJsonContent<JsonMessage>(new JsonMessage { Message = JsonBody }, SerializerContext.JsonMessage));
+            })
+            .MapGet("/jsonCache", scope => async ctx =>
+            {
+                ctx.Respond()
+                    .Type("application/json"u8)
+                    .Content<ExpressJsonContent<JsonMessage>, JsonMessage>(
+                        (content, payload, typeInfo) => content.Set(payload, typeInfo),
+                        new JsonMessage { Message = JsonBody }, 
+                        SerializerContext.JsonMessage,
+                        (payload, typeInfo) => new ExpressJsonContent<JsonMessage>(payload, typeInfo));
             })
             .Build()
             .RunAsync();

@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 using Wired.IO.Protocol.Request;
 using Wired.IO.Utilities;
 
-namespace Wired.IO.Http11Express;
+namespace Wired.IO.Http11Express.Request;
 
 [SkipLocalsInit]
 public class Http11ExpressRequest : IExpressRequest

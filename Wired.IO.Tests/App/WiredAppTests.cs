@@ -1,6 +1,7 @@
 using Wired.IO.App;
 using Wired.IO.Http11;
 using Wired.IO.Http11Express;
+using Wired.IO.Http11Express.Context;
 
 public class WiredAppTests
 {

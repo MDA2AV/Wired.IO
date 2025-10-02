@@ -1,5 +1,6 @@
-﻿using Wired.IO.Http11.Response.Content;
-using Wired.IO.Http11Express;
+﻿using System.Text.Json.Serialization.Metadata;
+using Wired.IO.Http11Express.Response;
+using Wired.IO.Http11Express.Response.Content;
 using Wired.IO.Utilities;
 
 namespace Wired.IO.Protocol.Response;
@@ -8,7 +9,7 @@ public enum ContentLengthStrategy
 {
     None,
     Known,
-    KnownDirect,
+    Utf8View,
     Chunked,
 }
 
@@ -39,7 +40,7 @@ public class ExpressResponseBuilder(IExpressResponse response)
         response.Utf8Content = Utf8View.FromLiteral(content);
         response.ContentLength = (ulong)content.Length;
 
-        response.ContentLengthStrategy = ContentLengthStrategy.KnownDirect;
+        response.ContentLengthStrategy = ContentLengthStrategy.Utf8View;
 
         return this;
     }
@@ -54,7 +55,6 @@ public class ExpressResponseBuilder(IExpressResponse response)
         if (response.Content is not TContent content) 
             return Content(contentFactory(payload, length));
         
-        // Reuse the existing Content
         setup(content, payload);
         SetContentLength(content);
         
@@ -70,10 +70,42 @@ public class ExpressResponseBuilder(IExpressResponse response)
         if (response.Content is not TContent content) 
             return Content(contentFactory(payload, null));
         
-        // Reuse the existing Content
         setup(content, payload);
         SetContentLength(content);
         
+        return this;
+    }
+
+    public ExpressResponseBuilder Content<TContent, TPayload>(
+        Action<TContent, TPayload, JsonTypeInfo<TPayload>, ulong?> setup,
+        TPayload payload,
+        JsonTypeInfo<TPayload> typeInfo,
+        Func<TPayload, JsonTypeInfo<TPayload>, ulong, TContent> contentFactory,
+        ulong length)
+        where TContent : IExpressResponseContent
+    {
+        if (response.Content is not TContent content)
+            return Content(contentFactory(payload, typeInfo, length));
+
+        setup(content, payload, typeInfo, length);
+        SetContentLength(content);
+
+        return this;
+    }
+
+    public ExpressResponseBuilder Content<TContent, TPayload>(
+        Action<TContent, TPayload, JsonTypeInfo<TPayload>> setup,
+        TPayload payload,
+        JsonTypeInfo<TPayload> typeInfo,
+        Func<TPayload, JsonTypeInfo<TPayload>, TContent> contentFactory)
+        where TContent : IExpressResponseContent
+    {
+        if (response.Content is not TContent content)
+            return Content(contentFactory(payload, typeInfo));
+
+        setup(content, payload, typeInfo);
+        SetContentLength(content);
+
         return this;
     }
 
