@@ -57,8 +57,28 @@ public sealed partial class WiredApp<TContext>
     /// <exception cref="InvalidOperationException">Thrown if no matching endpoint is found.</exception>
     public Task EndpointInvoker(TContext context)
     {
-        var httpMethod = context.Request.HttpMethod.ToUpperInvariant();
+        //var httpMethod = context.Request.HttpMethod.ToUpperInvariant();
+        var httpMethod = context.Request.HttpMethod;
         var decodedRoute = MatchEndpoint(EncodedRoutes[httpMethod], context.Request.Route);
+
+        // If no route matched could mean a static resource request or 404
+        if (decodedRoute is null)
+        {
+            if (httpMethod.Equals("GET", StringComparison.OrdinalIgnoreCase) ||
+                httpMethod.Equals("HEAD", StringComparison.OrdinalIgnoreCase))
+            {
+
+            }
+            // Check if the route is a static resource (check for extension)
+
+            // If it's a static resource, check if the file exists and serve it
+
+            // If it's a static resource but doesn't exist, return 404
+
+
+            // If the route is not a static resource, should try to return the index.html
+        }
+
         var endpoint = Endpoints[httpMethod + "_" + decodedRoute!];
 
         return endpoint is null
@@ -140,6 +160,8 @@ public sealed partial class WiredApp<TContext>
     /// Caches matched routes for previously seen paths to speed up route resolution.
     /// </summary>
     private static readonly ConcurrentDictionary<string, string?> RouteMatchCache = new();
+
+    private static readonly List<string> StaticResourceRoutesCache = new();
 
     /// <summary>
     /// Caches compiled regular expressions for each route pattern to avoid recompilation.
