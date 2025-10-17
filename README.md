@@ -1,19 +1,12 @@
+## Wired.IO
+
 [![NuGet](https://img.shields.io/nuget/v/Wired.IO.svg)](https://www.nuget.org/packages/Wired.IO/)
-
-## License
-
-This project includes code originally from [GenHttp](https://github.com/Kaliumhexacyanoferrat/GenHTTP), which is licensed under the MIT License.
-
-Portions of this code are © [Andreas Nägeli] and used under the terms of the MIT License:
- - PooledDictionary.cs
- - PoolBufferedStream.cs
- - ContentType.cs
 
 [Full project documentation](https://mda2av.github.io/Wired.IO.Docs/)
 
-**Wired.IO** is a lightweight, high-performance HTTP server framework for .NET. Designed from the ground up for **embedding**, **extensibility**, and **raw speed**, it gives you full control over your request pipeline without the weight of traditional web frameworks.
+**Wired.IO** is a lightweight, high-performance, MIT licensed HTTP server framework for .NET. Designed from the ground up for **embedding**, **extensibility**, and **raw speed**, it gives you full control over your request pipeline without the weight of traditional web frameworks.
 
-Whether you're building APIs, embedded servers, developer tools, or hybrid applications, Wired.IO provides a focused, zero-friction foundation that runs anywhere your .NET code does — no external hosting required.
+Whether you're building APIs, embedded servers, developer tools, or hybrid applications, Wired.IO provides a focused, zero-friction foundation that runs anywhere your .NET code does - no external hosting required.
 
 ## Existing Main Features
 
@@ -165,3 +158,7 @@ class DependencyService(ILogger<DependencyService> logger) : IDisposable
         logger.LogInformation($"{nameof(DependencyService)} was disposed.");
 }
 ```
+
+## Thanks
+
+- This project includes code originating from [GenHTTP](https://github.com/Kaliumhexacyanoferrat/GenHTTP): `PooledDictionary.cs`, `PoolBufferedStream.cs`, `ContentType.cs`
