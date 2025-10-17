@@ -49,13 +49,57 @@ public sealed partial class WiredApp<TContext>
         return _cachedPipeline(context);
     }
 
-    private bool _canServeStaticFiles = false;
-
-    private static readonly List<string> StaticResourceRoutesCache = new();
-
-    private static readonly Dictionary<string, ReadOnlyMemory<byte>> CachedStaticFiles = new();
-
     private static bool IsRouteFile(string route) => Path.HasExtension(route);
+
+
+    /* Static file strategy
+     *
+     * If CanServeStaticFiles is enabled + route has extension + HttpMethod is GET
+     *
+     * Run through StaticResourceRouteToLocation checking all keys, in this case if the route starts with any of the keys
+     * (It will always match even if it's just "/")
+     *
+     * Assert whether the file exists
+     * Check a cached dictionary first, if not found, check the file system/embedded resources, if found, cache it for future requests
+     *
+     * If the files exists, build the response with the file content (on the context) and return the specific endpoint for static files
+     * This way, it still goes through the pipeline but the endpoint is already resolved to static file handler
+     *
+     * In the endpoint, it should seek for the cached file content and write it to the response, if file isn't cached yet, cache it first
+     *
+     *
+     * It is assumed that these files are static and can never change during the app lifetime
+     * For dynamic files, a different "middleware" should be used that checks the file system/embedded resources on each request
+     *
+     */
+
+    private string GetStaticResourceBaseRoute(string route)
+    {
+        ReadOnlySpan<char> input = route;
+
+        foreach (var key in StaticResourceRouteToLocation.Keys)
+        {
+            if (input.StartsWith(key.AsSpan(), StringComparison.Ordinal))
+            {
+                return key;
+            }
+        }
+
+        return "/";
+    }
+
+    private bool ResourceExists(string route, string baseRoute)
+    {
+        var location = StaticResourceRouteToLocation[baseRoute];
+
+        var routeSpan = route.AsSpan();
+        var filePath = routeSpan[baseRoute.Length..];
+
+        if (location.LocationType == LocationType.FileSystem)
+        {
+            // Diogo was here
+        }
+    }
 
     /// <summary>
     /// Resolves and invokes the endpoint matching the request method and route.
@@ -65,17 +109,28 @@ public sealed partial class WiredApp<TContext>
     /// <exception cref="InvalidOperationException">Thrown if no matching endpoint is found.</exception>
     public Task EndpointInvoker(TContext context)
     {
-        if (_canServeStaticFiles)
+        //var httpMethod = context.Request.HttpMethod.ToUpperInvariant();
+        var httpMethod = context.Request.HttpMethod;
+
+        if (CanServeStaticFiles)
         {
-            if (IsRouteFile(context.Request.Route))
+            if (Path.HasExtension(context.Request.Route))
             {
-                // Serve static file logic here
+                if (httpMethod.Equals("GET", StringComparison.OrdinalIgnoreCase))
+                {
+                    var baseRoute = GetStaticResourceBaseRoute(context.Request.Route);
+                    var resourceExists = ResourceExists(context.Request.Route, baseRoute);
+                }
             }
         }
 
-        //var httpMethod = context.Request.HttpMethod.ToUpperInvariant();
-        var httpMethod = context.Request.HttpMethod;
         var decodedRoute = MatchEndpoint(EncodedRoutes[httpMethod], context.Request.Route);
+
+        // If no matching route is found and SPA enabled, serve index.html in case the route starts with any of the SPA base routes
+        if (decodedRoute is null)
+        {
+
+        }
 
         var endpoint = Endpoints[httpMethod + "_" + decodedRoute!];
 

@@ -224,6 +224,23 @@ public sealed class Builder<THandler, TContext>
         return this;
     }
 
+    public Builder<THandler, TContext> ServeStaticFiles(string baseRoute)
+    {
+        App.StaticResourceRoutesCache.Add(baseRoute);
+        App.CanServeStaticFiles = true;
+
+        return this;
+    }
+
+    public Builder<THandler, TContext> ServeSpaFiles(string baseRoute)
+    {
+        App.StaticResourceRoutesCache.Add(baseRoute);
+        App.CanServeStaticFiles = true;
+        App.CanServeSpaFiles = true;
+
+        return this;
+    }
+
     /// <summary>
     /// Adds scoped request middleware that can intercept and process requests.
     /// </summary>
