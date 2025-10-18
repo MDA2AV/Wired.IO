@@ -1,9 +1,12 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Concurrent;
+using System.IO;
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Request;
 using Wired.IO.Protocol.Response;
+using Wired.IO.Utilities;
 
 namespace Wired.IO.App;
 
@@ -56,11 +59,12 @@ public sealed partial class WiredApp<TContext>
      *
      * If CanServeStaticFiles is enabled + route has extension + HttpMethod is GET
      *
+     * Quick cache check if this full route matches a cached static file (Short circuit)
+     *
      * Run through StaticResourceRouteToLocation checking all keys, in this case if the route starts with any of the keys
      * (It will always match even if it's just "/")
      *
-     * Assert whether the file exists
-     * Check a cached dictionary first, if not found, check the file system/embedded resources, if found, cache it for future requests
+     * Check the file system/embedded resources, if found, cache it for future requests
      *
      * If the files exists, build the response with the file content (on the context) and return the specific endpoint for static files
      * This way, it still goes through the pipeline but the endpoint is already resolved to static file handler
@@ -73,33 +77,56 @@ public sealed partial class WiredApp<TContext>
      *
      */
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private string GetStaticResourceBaseRoute(string route)
     {
         ReadOnlySpan<char> input = route;
 
         foreach (var key in StaticResourceRouteToLocation.Keys)
-        {
-            if (input.StartsWith(key.AsSpan(), StringComparison.Ordinal))
-            {
-                return key;
-            }
-        }
+            if (input.StartsWith(key.AsSpan(), StringComparison.Ordinal)) return key;
 
         return "/";
     }
 
-    private bool ResourceExists(string route, string baseRoute)
+    private bool TryReadResource(string route, out ReadOnlyMemory<byte> resource)
     {
+        var baseRoute = GetStaticResourceBaseRoute(route);
         var location = StaticResourceRouteToLocation[baseRoute];
+        var filePath = route[baseRoute.Length..];
 
-        var routeSpan = route.AsSpan();
-        var filePath = routeSpan[baseRoute.Length..];
-
+        // Check if file exists in the file system
         if (location.LocationType == LocationType.FileSystem)
         {
-            // Diogo was here
+            if (File.Exists(filePath))
+            {
+                // Read file and return it
+                resource = File.ReadAllBytes(filePath);
+                return true;
+            }
         }
+
+        // If location is EmbeddedResource, check if the resource exists in the assembly
+        if (location is { LocationType: LocationType.EmbeddedResource, Assembly: not null })
+        {
+            var resourceName = location.Assembly.GetManifestResourceNames()
+                .FirstOrDefault(rn => rn.EndsWith(filePath.Replace('/', '.'), StringComparison.Ordinal));
+
+            if (resourceName is null)
+            {
+                resource = null!;
+                return false;
+            }
+
+            // Read Embedded resource and return it
+            resource = EmbeddedResourceUtils.ReadBytes(location.Assembly, resourceName);
+            return true;
+        }
+
+        resource = null!;
+        return false;
     }
+
+    // TODO: Cache all the endpoints Dictionary<route, Func<TContext, Task>>
 
     /// <summary>
     /// Resolves and invokes the endpoint matching the request method and route.
@@ -118,8 +145,22 @@ public sealed partial class WiredApp<TContext>
             {
                 if (httpMethod.Equals("GET", StringComparison.OrdinalIgnoreCase))
                 {
-                    var baseRoute = GetStaticResourceBaseRoute(context.Request.Route);
-                    var resourceExists = ResourceExists(context.Request.Route, baseRoute);
+                    // Quick cache check
+                    if (StaticCachedResourceFiles.ContainsKey(context.Request.Route))
+                    {
+                        // Resource is already cached, short circuit to static file endpoint
+                        return Endpoints["GET_serve-static-resource"].Invoke(context);
+                    }
+
+                    // Resource is not cached, check if it exists
+                    if (TryReadResource(context.Request.Route, out var resource))
+                    {
+                        // Cache the resource for future requests and short circuit to static file endpoint
+                        StaticCachedResourceFiles[context.Request.Route] = resource;
+                        return Endpoints["GET_serve-static-resource"].Invoke(context);
+                    }
+
+                    // Else if resource does not exist, continue to normal endpoint resolution
                 }
             }
         }

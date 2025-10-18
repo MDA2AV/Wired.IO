@@ -12,11 +12,13 @@ public sealed partial class WiredApp<TContext>
     public bool CanServeStaticFiles { get; set; } = false;
     public bool CanServeSpaFiles { get; set; } = false;
 
-    public readonly List<string> StaticResourceRoutesCache = new();
+    //public readonly List<string> StaticResourceRoutesCache = new();
     //public readonly List<string> SpaResourceRoutesCache = new();
 
     // Should be sorted by key size descending so that longer matches are found first
     public readonly Dictionary<string, Location> StaticResourceRouteToLocation = new();
+
+    // Full route baseRoute + resource path
     public readonly Dictionary<string, ReadOnlyMemory<byte>> StaticCachedResourceFiles = new();
     //public readonly Dictionary<string, ReadOnlyMemory<byte>> CachedStaticSpaFiles = new();
 }
