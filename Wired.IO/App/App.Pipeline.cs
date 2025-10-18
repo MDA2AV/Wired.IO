@@ -52,6 +52,7 @@ public sealed partial class WiredApp<TContext>
         return _cachedPipeline(context);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool IsRouteFile(string route) => Path.HasExtension(route);
 
 
@@ -149,7 +150,7 @@ public sealed partial class WiredApp<TContext>
                     if (StaticCachedResourceFiles.ContainsKey(context.Request.Route))
                     {
                         // Resource is already cached, short circuit to static file endpoint
-                        return Endpoints["GET_serve-static-resource"].Invoke(context);
+                        return Endpoints["GET_/serve-static-resource"].Invoke(context);
                     }
 
                     // Resource is not cached, check if it exists
@@ -157,7 +158,7 @@ public sealed partial class WiredApp<TContext>
                     {
                         // Cache the resource for future requests and short circuit to static file endpoint
                         StaticCachedResourceFiles[context.Request.Route] = resource;
-                        return Endpoints["GET_serve-static-resource"].Invoke(context);
+                        return Endpoints["GET_/serve-static-resource"].Invoke(context);
                     }
 
                     // Else if resource does not exist, continue to normal endpoint resolution
@@ -170,7 +171,16 @@ public sealed partial class WiredApp<TContext>
         // If no matching route is found and SPA enabled, serve index.html in case the route starts with any of the SPA base routes
         if (decodedRoute is null)
         {
-
+            if (CanServeSpaFiles)
+            {
+                // Serve the index.html for the given base route
+                if (TryReadResource($"{context.Request.Route}index.html", out var resource))
+                {
+                    // Cache the resource for future requests and short circuit to static file endpoint
+                    StaticCachedResourceFiles[context.Request.Route] = resource;
+                    return Endpoints["GET_serve-static-resource"].Invoke(context);
+                }
+            }
         }
 
         var endpoint = Endpoints[httpMethod + "_" + decodedRoute!];

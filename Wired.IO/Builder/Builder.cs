@@ -1,17 +1,20 @@
-﻿using Microsoft.Extensions.Logging;
-using System.Net.Security;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using System.Formats.Tar;
+using System.IO.Pipelines;
 using System.Net;
+using System.Net.Security;
 using System.Reflection;
-using Microsoft.Extensions.DependencyInjection;
+using System.Text.Json;
 using Wired.IO.App;
+using Wired.IO.Http11.Middleware;
+using Wired.IO.Http11.Response;
 using Wired.IO.Mediator;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Handlers;
 using Wired.IO.Protocol.Response;
 using Wired.IO.WiredEvents;
 using IBaseRequest = Wired.IO.Protocol.Request.IBaseRequest;
-using Wired.IO.Http11.Response;
-using Wired.IO.Http11.Middleware;
 
 namespace Wired.IO.Builder;
 
@@ -224,21 +227,19 @@ public sealed class Builder<THandler, TContext>
         return this;
     }
 
-    public Builder<THandler, TContext> ServeStaticFiles(string baseRoute)
+    public Builder<THandler, TContext> ServeStaticFiles(string baseRoute, Location location)
     {
-        App.StaticResourceRoutesCache.Add(baseRoute);
+        App.StaticResourceRouteToLocation.Add(baseRoute, location);
         App.CanServeStaticFiles = true;
 
         return this;
     }
 
-    public Builder<THandler, TContext> ServeSpaFiles(string baseRoute)
+    public Builder<THandler, TContext> ServeSpaFiles(string baseRoute, Location location)
     {
-        App.StaticResourceRoutesCache.Add(baseRoute);
-        App.CanServeStaticFiles = true;
         App.CanServeSpaFiles = true;
 
-        return this;
+        return ServeStaticFiles(baseRoute, location);
     }
 
     /// <summary>
@@ -584,6 +585,6 @@ public sealed class Builder<THandler, TContext>
         var fullRoute = $"{httpMethod}_{route}";
         App.EncodedRoutes[httpMethod].Add(route);
 
-        App.ServiceCollection.AddKeyedScoped<Func<TContext, Task>>(fullRoute, (sp, key) => func(sp));
+        App.ServiceCollection.AddKeyedScoped<Func<TContext, Task>>(fullRoute,  (sp, key) => func(sp));
     }
 }

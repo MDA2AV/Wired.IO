@@ -19,7 +19,7 @@ public sealed partial class WiredApp<TContext>
     public readonly Dictionary<string, Location> StaticResourceRouteToLocation = new();
 
     // Full route baseRoute + resource path
-    public readonly Dictionary<string, ReadOnlyMemory<byte>> StaticCachedResourceFiles = new();
+    public static readonly Dictionary<string, ReadOnlyMemory<byte>> StaticCachedResourceFiles = new();
     //public readonly Dictionary<string, ReadOnlyMemory<byte>> CachedStaticSpaFiles = new();
 }
 
