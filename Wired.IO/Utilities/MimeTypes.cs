@@ -2,10 +2,10 @@
 
 internal static class MimeTypes
 {
-    internal static ReadOnlySpan<byte> GetMimeType(string extension)
+    internal static ReadOnlySpan<byte> GetMimeType(string route)
     {
         // Use pattern matching to return the appropriate MIME type based on the extension
-        return extension switch
+        return Path.GetExtension(route) switch
         {
             ".html" => "text/html"u8,               // HTML documents
             ".css" => "text/css"u8,                 // CSS stylesheets

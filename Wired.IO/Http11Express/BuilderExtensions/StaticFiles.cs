@@ -13,7 +13,18 @@ public static class StaticFiles
         Location location)
     {
         builder.ServeStaticFiles(baseRoute, location);
-        builder.MapGet("/serve-static-resource", StaticResources.CreateHandler<Http11ExpressContext>());
+        builder.MapGet("/serve-static-resource", StaticResources.CreateStaticResourceHandler<Http11ExpressContext>());
+
+        return builder;
+    }
+
+    public static Builder<WiredHttp11Express<Http11ExpressContext>, Http11ExpressContext> ServeSpaFilesExpress(
+        this Builder<WiredHttp11Express<Http11ExpressContext>, Http11ExpressContext> builder,
+        string baseRoute,
+        Location location)
+    {
+        builder.ServeSpaFiles(baseRoute, location);
+        builder.MapGet("/serve-spa-resource", StaticResources.CreateSpaResourceHandler<Http11ExpressContext>());
 
         return builder;
     }

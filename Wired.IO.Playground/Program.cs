@@ -114,11 +114,11 @@ internal class Program
 
         await expressBuilder
             .Port(8080)
-            .ServeStaticFilesExpress("/", new Location
+            .ServeSpaFilesExpress("/", new Location
+            //.ServeStaticFilesExpress("/", new Location
             {
-                // Diogo was here, adjust location
                 LocationType = LocationType.FileSystem,
-                Path = "./wwwroot"
+                Path = "E:/VS/angular"
             })
             .MapGet("/jsonRaw", scope => async ctx =>
             {

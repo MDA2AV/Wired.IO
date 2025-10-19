@@ -227,7 +227,7 @@ public sealed class Builder<THandler, TContext>
         return this;
     }
 
-    public Builder<THandler, TContext> ServeStaticFiles(string baseRoute, Location location)
+    internal Builder<THandler, TContext> ServeStaticFiles(string baseRoute, Location location)
     {
         App.StaticResourceRouteToLocation.Add(baseRoute, location);
         App.CanServeStaticFiles = true;
@@ -235,7 +235,7 @@ public sealed class Builder<THandler, TContext>
         return this;
     }
 
-    public Builder<THandler, TContext> ServeSpaFiles(string baseRoute, Location location)
+    internal Builder<THandler, TContext> ServeSpaFiles(string baseRoute, Location location)
     {
         App.CanServeSpaFiles = true;
 

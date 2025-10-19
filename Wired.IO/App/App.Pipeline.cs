@@ -89,19 +89,27 @@ public sealed partial class WiredApp<TContext>
         return "/";
     }
 
+    private bool TryReadFallbackSpaResource(string route, out ReadOnlyMemory<byte> resource)
+    {
+
+    }
+
     private bool TryReadResource(string route, out ReadOnlyMemory<byte> resource)
     {
         var baseRoute = GetStaticResourceBaseRoute(route);
         var location = StaticResourceRouteToLocation[baseRoute];
-        var filePath = route[baseRoute.Length..];
+        var filePath = route[(baseRoute.Length)..];
 
         // Check if file exists in the file system
         if (location.LocationType == LocationType.FileSystem)
         {
-            if (File.Exists(filePath))
+            //var fullFilePath = $"{location.Path.TrimEnd('/', '\\')}/{baseRoute.TrimStart('/', '\\')}";
+            var fullFilePath = PathUtils.Combine(location.Path, filePath);
+
+            if (File.Exists(fullFilePath))
             {
                 // Read file and return it
-                resource = File.ReadAllBytes(filePath);
+                resource = File.ReadAllBytes(fullFilePath);
                 return true;
             }
         }
@@ -150,7 +158,9 @@ public sealed partial class WiredApp<TContext>
                     if (StaticCachedResourceFiles.ContainsKey(context.Request.Route))
                     {
                         // Resource is already cached, short circuit to static file endpoint
-                        return Endpoints["GET_/serve-static-resource"].Invoke(context);
+                        return CanServeSpaFiles ?
+                            Endpoints["GET_/serve-spa-resource"].Invoke(context) : 
+                            Endpoints["GET_/serve-static-resource"].Invoke(context);
                     }
 
                     // Resource is not cached, check if it exists
@@ -158,7 +168,9 @@ public sealed partial class WiredApp<TContext>
                     {
                         // Cache the resource for future requests and short circuit to static file endpoint
                         StaticCachedResourceFiles[context.Request.Route] = resource;
-                        return Endpoints["GET_/serve-static-resource"].Invoke(context);
+                        return CanServeSpaFiles ?
+                            Endpoints["GET_/serve-spa-resource"].Invoke(context) :
+                            Endpoints["GET_/serve-static-resource"].Invoke(context);
                     }
 
                     // Else if resource does not exist, continue to normal endpoint resolution
@@ -178,7 +190,7 @@ public sealed partial class WiredApp<TContext>
                 {
                     // Cache the resource for future requests and short circuit to static file endpoint
                     StaticCachedResourceFiles[context.Request.Route] = resource;
-                    return Endpoints["GET_serve-static-resource"].Invoke(context);
+                    return Endpoints["GET_/serve-static-resource"].Invoke(context);
                 }
             }
         }

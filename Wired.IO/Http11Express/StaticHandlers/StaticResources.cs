@@ -10,9 +10,11 @@ namespace Wired.IO.Http11Express.StaticHandlers;
 
 public static class StaticResources
 {
-    public static Func<IServiceProvider, Func<TContext, Task>> CreateHandler<TContext>()
+    public static Func<IServiceProvider, Func<TContext, Task>> CreateStaticResourceHandler<TContext>()
         where TContext : class
     {
+        Console.WriteLine("StaticResources.CreateStaticResourceHandler");
+
         return static _ =>
         {
             // resolve per-scope dependencies here if you have any
@@ -25,13 +27,43 @@ public static class StaticResources
 
                 Console.WriteLine($"Serving {context.Request.Route}");
 
-                var resource = WiredApp<Http11Context>.StaticCachedResourceFiles[context.Request.Route];
+                var resource = WiredApp<Http11ExpressContext>.StaticCachedResourceFiles[context.Request.Route];
 
                 var handler = CreateBoundHandler(context.Writer, resource);
 
                 context.Respond()
                     .Type(MimeTypes.GetMimeType(context.Request.Route))
-                    .Content(handler);
+                    .Content(handler, (ulong)resource.Length);
+
+                return Task.CompletedTask; // if your write is synchronous
+            };
+        };
+    }
+
+    public static Func<IServiceProvider, Func<TContext, Task>> CreateSpaResourceHandler<TContext>()
+        where TContext : class
+    {
+        Console.WriteLine("StaticResources.CreateSpaResourceHandler");
+
+        return static _ =>
+        {
+            // resolve per-scope dependencies here if you have any
+            // var dep = sp.GetRequiredService<...>();
+
+            // return the actual request handler
+            return static ctx =>
+            {
+                var context = Unsafe.As<Http11ExpressContext>(ctx);
+
+                Console.WriteLine($"Serving {context.Request.Route}");
+
+                var resource = WiredApp<Http11ExpressContext>.StaticCachedResourceFiles[context.Request.Route];
+
+                var handler = CreateBoundHandler(context.Writer, resource);
+
+                context.Respond()
+                    .Type(MimeTypes.GetMimeType(context.Request.Route))
+                    .Content(handler, (ulong)resource.Length);
 
                 return Task.CompletedTask; // if your write is synchronous
             };
