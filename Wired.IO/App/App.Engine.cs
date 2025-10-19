@@ -63,7 +63,7 @@ public sealed partial class WiredApp<TContext>
     {
         // Multiple concurrent accept loops for maximum throughput
         //var acceptTasks = new Task[Environment.ProcessorCount/2];
-        var acceptTasks = new Task[4];
+        var acceptTasks = new Task[16];
         for (var i = 0; i < acceptTasks.Length; i++)
         {
             acceptTasks[i] = AcceptLoopAsync(clientHandler, stoppingToken);
