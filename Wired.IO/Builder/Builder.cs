@@ -227,18 +227,37 @@ public sealed class Builder<THandler, TContext>
         return this;
     }
 
+    /// <summary>
+    /// Registers static files to be served from the given base route.
+    /// </summary>
+    /// <param name="baseRoute">Route prefix (e.g. <c>"/static"</c>).</param>
+    /// <param name="location">Source location (file system or embedded).</param>
     internal Builder<THandler, TContext> ServeStaticFiles(string baseRoute, Location location)
     {
         App.StaticResourceRouteToLocation.Add(baseRoute, location);
         App.CanServeStaticFiles = true;
-
         return this;
     }
 
+    /// <summary>
+    /// Registers SPA assets and enables history-API fallback.
+    /// </summary>
+    /// <param name="baseRoute">Base route for the SPA (e.g. <c>"/app"</c>).</param>
+    /// <param name="location">SPA asset source (embedded or file system).</param>
     internal Builder<THandler, TContext> ServeSpaFiles(string baseRoute, Location location)
     {
         App.CanServeSpaFiles = true;
+        return ServeStaticFiles(baseRoute, location);
+    }
 
+    /// <summary>
+    /// Registers MPA assets under the given base route.
+    /// </summary>
+    /// <param name="baseRoute">Route prefix for the MPA (e.g. <c>"/site"</c>).</param>
+    /// <param name="location">MPA asset source.</param>
+    internal Builder<THandler, TContext> ServeMpaFiles(string baseRoute, Location location)
+    {
+        App.CanServeMpaFiles = true;
         return ServeStaticFiles(baseRoute, location);
     }
 
@@ -257,6 +276,42 @@ public sealed class Builder<THandler, TContext>
     public Builder<THandler, TContext> UseMiddleware(Func<IServiceProvider, Func<TContext, Func<TContext, Task<IResponse>>, Task<IResponse>>> func)
     {
         App.ServiceCollection.AddScoped<Func<TContext, Func<TContext, Task<IResponse>>, Task<IResponse>>>(func);
+
+        return this;
+    }
+
+    /// <summary>
+    /// Maps a <see cref="Func{TContext, Task}"/> delegate to an HTTP FlowControl endpoint for the specified route.
+    /// </summary>
+    /// <param name="route">The route pattern (e.g. <c>/users/:id</c>).</param>
+    /// <param name="func">A factory that produces a scoped request handler delegate.</param>
+    /// <returns>The current builder instance.</returns>
+    public Builder<THandler, TContext> MapFlowControl(string route, Func<IServiceProvider, Func<TContext, Task>> func)
+    {
+        AddKeyedScoped(func, "FlowControl", route);
+
+        return this;
+    }
+    /// <summary>
+    /// Maps a <see cref="Func{TContext, Task}"/> delegate to an HTTP FlowControl endpoint for the specified route.
+    /// </summary>
+    /// <param name="route">The route pattern (e.g. <c>/users/:id</c>).</param>
+    /// <param name="func">A factory that produces a scoped request handler delegate.</param>
+    /// <returns>The current builder instance.</returns>
+    public Builder<THandler, TContext> MapFlowControl(string route, Func<IServiceProvider, Action<TContext>> func)
+    {
+        Func<TContext, Task> AsyncFunc(IServiceProvider sp)
+        {
+            Action<TContext> action = func(sp);
+            return context =>
+            {
+                action(context);
+
+                return Task.CompletedTask;
+            };
+        }
+
+        AddKeyedScoped(AsyncFunc, "FlowControl", route);
 
         return this;
     }

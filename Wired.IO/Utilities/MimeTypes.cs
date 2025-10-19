@@ -1,31 +1,77 @@
 ﻿namespace Wired.IO.Utilities;
 
+/// <summary>
+/// Provides fast, allocation-free MIME type resolution utilities.
+///
+/// This class is used by the Wired.IO static and SPA file handlers to determine
+/// the correct <c>Content-Type</c> header for embedded or cached resources.
+///
+/// <para>
+/// It exposes two methods:
+/// <list type="bullet">
+///   <item><see cref="GetMimeType"/> – For strict static file serving (exact extensions only)</item>
+///   <item><see cref="GetSpaMimeType"/> – For SPAs with history API fallback and extension-less routes</item>
+/// </list>
+/// </para>
+///
+/// Implementation details:
+///  • Fully switch-based on <see cref="Path.GetExtension"/> (no allocations from string literals)  
+///  • Returns <see cref="ReadOnlySpan{Byte}"/> with UTF-8 literals (<c>"mime/type"u8</c>)  
+///  • Zero heap allocation in the hot path  
+///  • SPA variant defaults to <c>text/html</c> when no extension is present
+/// </summary>
 internal static class MimeTypes
 {
+    /// <summary>
+    /// Resolves the MIME type for a given route or file name.
+    ///
+    /// Used for *static resources* (e.g. CSS, JS, PNG) with a known file extension.
+    /// </summary>
+    /// <param name="route">The resource path or URL route.</param>
+    /// <returns>
+    /// A <see cref="ReadOnlySpan{Byte}"/> containing the MIME type as an ASCII/UTF-8 literal.
+    /// </returns>
     internal static ReadOnlySpan<byte> GetMimeType(string route)
     {
-        // Use pattern matching to return the appropriate MIME type based on the extension
+        // Use pattern matching to quickly resolve common MIME types.
         return Path.GetExtension(route) switch
         {
             ".html" => "text/html"u8,               // HTML documents
-            ".css" => "text/css"u8,                 // CSS stylesheets
-            ".js" => "application/javascript"u8,    // JavaScript files
+            ".css" => "text/css"u8,                // CSS stylesheets
+            ".js" => "application/javascript"u8,  // JavaScript files
             ".json" => "application/json"u8,        // JSON data
-            ".png" => "image/png"u8,                // PNG images
-            ".jpg" => "image/jpeg"u8,               // JPEG images
-            ".gif" => "image/gif"u8,                // GIF images
-            _ => "application/octet-stream"u8,      // Default for unknown file types
+            ".png" => "image/png"u8,               // PNG images
+            ".jpg" => "image/jpeg"u8,              // JPEG images
+            ".gif" => "image/gif"u8,               // GIF images
+            _ => "application/octet-stream"u8 // Default for unknown or binary data
         };
     }
 
+    /// <summary>
+    /// Resolves the MIME type for Single Page Application (SPA) resources.
+    ///
+    /// This variant adds:
+    /// <list type="bullet">
+    ///   <item>Fallback to <c>text/html</c> when no file extension is present (e.g. "/dashboard")</item>
+    ///   <item>Extended coverage of modern web formats (fonts, WebP, AVIF, WASM, etc.)</item>
+    /// </list>
+    ///
+    /// Used by SPA handlers when serving embedded Angular/React/Vue assets or client-side routes.
+    /// </summary>
+    /// <param name="route">The resource path or requested URL route.</param>
+    /// <returns>
+    /// A <see cref="ReadOnlySpan{Byte}"/> representing the MIME type to use in the HTTP response.
+    /// </returns>
     internal static ReadOnlySpan<byte> GetSpaMimeType(string route)
     {
-        // Extract extension (null or empty if none)
+        // Extract file extension (if any)
         var ext = Path.GetExtension(route);
 
+        // SPA fallback: routes without extension ("/users", "/dashboard") → treat as HTML page
         if (string.IsNullOrEmpty(ext))
-            return "text/html"u8; // SPA fallback: no extension → assume HTML
+            return "text/html"u8;
 
+        // Resolve known extensions
         return ext switch
         {
             // ===== HTML / Documents =====
@@ -41,9 +87,9 @@ internal static class MimeTypes
 
             // ===== Web App / SPA Assets =====
             ".js" or ".mjs" or ".cjs" => "application/javascript"u8,
-            ".jsx" or ".tsx" or ".ts" => "text/javascript"u8,
+            ".jsx" or ".tsx" or ".ts" => "text/javascript"u8, // Development bundles
             ".json" => "application/json"u8,
-            ".map" => "application/json"u8,
+            ".map" => "application/json"u8, // Source maps
             ".css" => "text/css"u8,
             ".scss" or ".sass" => "text/x-scss"u8,
             ".less" => "text/x-less"u8,

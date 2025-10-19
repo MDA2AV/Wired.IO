@@ -114,17 +114,25 @@ internal class Program
 
         await expressBuilder
             .Port(8080)
-            .ServeSpaFilesExpress("/", new Location
+            /*.ServeMpaFilesExpress("/", new Location
             {
                 LocationType = LocationType.FileSystem,
-                Path = "E:/VS/angular"
-            })
-            .ServeSpaFilesExpress("/res", new Location
+                Path = "E:\\VS\\Wired.IO.Docs\\dist"
+            })*/
+            /*.ServeSpaFilesExpress("/angular", new Location
             {
                 LocationType = LocationType.EmbeddedResource,
                 Assembly = Assembly.GetExecutingAssembly(),
-                Path = "Angular"
+                Path = "Resources.Angular"
+            })*/
+            .ServeMpaFilesExpress("/", new Location
+            {
+                LocationType = LocationType.EmbeddedResource,
+                Assembly = Assembly.GetExecutingAssembly(),
+                Path = "Resources.Docs"
             })
+
+
             .MapGet("/jsonRaw", scope => async ctx =>
             {
                 //ctx.Writer.Write("HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=UTF-8\r\nContent-Length: 27\r\n\r\n{\"message\":\"Hello, World!\"}\r\n"u8);

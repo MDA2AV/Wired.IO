@@ -8,19 +8,16 @@ namespace Wired.IO.App;
 public sealed partial class WiredApp<TContext>
     where TContext : IBaseContext<IBaseRequest, IBaseResponse>
 {
-    // This all might have to be static so that it can be seen by the middleware, avoiding a closure
     public bool CanServeStaticFiles { get; set; } = false;
     public bool CanServeSpaFiles { get; set; } = false;
-
-    //public readonly List<string> StaticResourceRoutesCache = new();
-    //public readonly List<string> SpaResourceRoutesCache = new();
+    public bool CanServeMpaFiles { get; set; } = false;
 
     // Should be sorted by key size descending so that longer matches are found first
     public readonly Dictionary<string, Location> StaticResourceRouteToLocation = new();
 
     // Full route baseRoute + resource path
     public static readonly Dictionary<string, ReadOnlyMemory<byte>> StaticCachedResourceFiles = new();
-    //public readonly Dictionary<string, ReadOnlyMemory<byte>> CachedStaticSpaFiles = new();
+
 }
 
 public class Location
