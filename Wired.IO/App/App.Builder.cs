@@ -43,6 +43,7 @@ public sealed partial class WiredApp<TContext>
         { HttpConstants.Options, [] },
         { HttpConstants.Trace, [] },
         { HttpConstants.Connect, [] },
+        { "FlowControl", [] },
     };
 
     /// <summary>

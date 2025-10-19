@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace Wired.IO.Utilities;
 
-// This is a timebomb struct to avoid allocations on FromLiteral calls
+// This is a time/bomb struct to avoid allocations on FromLiteral calls
 // It should only be used with literals that are guaranteed to live forever
 public readonly struct Utf8View : IEquatable<Utf8View>
 {

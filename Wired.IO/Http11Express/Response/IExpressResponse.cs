@@ -70,7 +70,7 @@ public interface IExpressResponse : IBaseResponse
     /// <summary>
     /// The number of bytes the content consists of.
     /// </summary>
-    ulong ContentLength { get; set; }
+    ulong? ContentLength { get; set; }
 
     ContentLengthStrategy ContentLengthStrategy { get; set; }
 

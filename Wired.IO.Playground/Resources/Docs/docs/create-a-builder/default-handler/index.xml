@@ -1,0 +1,137 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Wired.IO – Default Handler</title><link>/docs/create-a-builder/default-handler/</link><description>Recent content in Default Handler on Wired.IO</description><generator>Hugo -- gohugo.io</generator><language>en</language><atom:link href="/docs/create-a-builder/default-handler/index.xml" rel="self" type="application/rss+xml"/><item><title>Http11HandlerArgs</title><link>/docs/create-a-builder/default-handler/http11handlerargs/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>/docs/create-a-builder/default-handler/http11handlerargs/</guid><description>
+&lt;p>&lt;code>Http11HandlerArgs&lt;/code> is a configuration record used to initialize the HTTP/1.1 handler in &lt;strong>Wired.IO&lt;/strong>.&lt;/p>
+&lt;p>It allows you to control how HTTP/1.1 requests are handled — including static file serving and processing mode (blocking vs. non-blocking).&lt;/p>
+&lt;h2>Declaration&lt;span class="hx-absolute -hx-mt-20" id="declaration">&lt;/span>
+&lt;a href="#declaration" class="subheading-anchor" aria-label="Permalink for this section">&lt;/a>&lt;/h2>&lt;div class="hextra-code-block hx-relative hx-mt-6 first:hx-mt-0 hx-group/code">
+&lt;div>&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-csharp" data-lang="csharp">&lt;span class="line">&lt;span class="cl">&lt;span class="kd">public&lt;/span> &lt;span class="k">record&lt;/span> &lt;span class="nc">Http11HandlerArgs&lt;/span>&lt;span class="p">(&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">bool&lt;/span> &lt;span class="n">UseResources&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">string&lt;/span> &lt;span class="n">ResourcesPath&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">Assembly&lt;/span> &lt;span class="n">ResourcesAssembly&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">Http11HandlerType&lt;/span> &lt;span class="n">HandlerType&lt;/span> &lt;span class="p">=&lt;/span> &lt;span class="n">Http11HandlerType&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">Blocking&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">)&lt;/span> &lt;span class="p">:&lt;/span> &lt;span class="n">IHandlerArgs&lt;/span>&lt;span class="p">;&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;/div>&lt;div class="hextra-code-copy-btn-container hx-opacity-0 hx-transition group-hover/code:hx-opacity-100 hx-flex hx-gap-1 hx-absolute hx-m-[11px] hx-right-0 hx-top-0">
+&lt;button
+class="hextra-code-copy-btn hx-group/copybtn hx-transition-all active:hx-opacity-50 hx-bg-primary-700/5 hx-border hx-border-black/5 hx-text-gray-600 hover:hx-text-gray-900 hx-rounded-md hx-p-1.5 dark:hx-bg-primary-300/10 dark:hx-border-white/10 dark:hx-text-gray-400 dark:hover:hx-text-gray-50"
+title="Copy code"
+>
+&lt;div class="copy-icon group-[.copied]/copybtn:hx-hidden hx-pointer-events-none hx-h-4 hx-w-4">&lt;/div>
+&lt;div class="success-icon hx-hidden group-[.copied]/copybtn:hx-block hx-pointer-events-none hx-h-4 hx-w-4">&lt;/div>
+&lt;/button>
+&lt;/div>
+&lt;/div>
+&lt;h2>Parameters&lt;span class="hx-absolute -hx-mt-20" id="parameters">&lt;/span>
+&lt;a href="#parameters" class="subheading-anchor" aria-label="Permalink for this section">&lt;/a>&lt;/h2>&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>Parameter&lt;/th>
+&lt;th>Type&lt;/th>
+&lt;th>Description&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>&lt;code>UseResources&lt;/code>&lt;/td>
+&lt;td>&lt;code>bool&lt;/code>&lt;/td>
+&lt;td>Indicates whether to serve static files from embedded resources.&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>&lt;code>ResourcesPath&lt;/code>&lt;/td>
+&lt;td>&lt;code>string&lt;/code>&lt;/td>
+&lt;td>The virtual path prefix used to locate resources (e.g., &lt;code>&amp;quot;MyAssemblyName&amp;quot;&lt;/code>).&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>&lt;code>ResourcesAssembly&lt;/code>&lt;/td>
+&lt;td>&lt;code>Assembly&lt;/code>&lt;/td>
+&lt;td>The assembly containing embedded resources to serve (e.g., &lt;code>typeof(Program).Assembly&lt;/code>).&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>&lt;code>HandlerType&lt;/code>&lt;/td>
+&lt;td>&lt;a href="#http11handlertype" >&lt;code>Http11HandlerType&lt;/code>&lt;/a>&lt;/td>
+&lt;td>Defines the handler’s processing mode: &lt;code>Blocking&lt;/code> or &lt;code>NonBlocking&lt;/code>. Defaults to &lt;code>Blocking&lt;/code>.&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;h2>Example&lt;span class="hx-absolute -hx-mt-20" id="example">&lt;/span>
+&lt;a href="#example" class="subheading-anchor" aria-label="Permalink for this section">&lt;/a>&lt;/h2>&lt;div class="hextra-code-block hx-relative hx-mt-6 first:hx-mt-0 hx-group/code">
+&lt;div>&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-csharp" data-lang="csharp">&lt;span class="line">&lt;span class="cl">&lt;span class="kt">var&lt;/span> &lt;span class="n">handlerArgs&lt;/span> &lt;span class="p">=&lt;/span> &lt;span class="k">new&lt;/span> &lt;span class="n">Http11HandlerArgs&lt;/span>&lt;span class="p">(&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">UseResources&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="kc">true&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">ResourcesPath&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="s">&amp;#34;/assets&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">ResourcesAssembly&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="k">typeof&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">Program&lt;/span>&lt;span class="p">).&lt;/span>&lt;span class="n">Assembly&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">HandlerType&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="n">Http11HandlerType&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">NonBlocking&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">);&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;/div>&lt;div class="hextra-code-copy-btn-container hx-opacity-0 hx-transition group-hover/code:hx-opacity-100 hx-flex hx-gap-1 hx-absolute hx-m-[11px] hx-right-0 hx-top-0">
+&lt;button
+class="hextra-code-copy-btn hx-group/copybtn hx-transition-all active:hx-opacity-50 hx-bg-primary-700/5 hx-border hx-border-black/5 hx-text-gray-600 hover:hx-text-gray-900 hx-rounded-md hx-p-1.5 dark:hx-bg-primary-300/10 dark:hx-border-white/10 dark:hx-text-gray-400 dark:hover:hx-text-gray-50"
+title="Copy code"
+>
+&lt;div class="copy-icon group-[.copied]/copybtn:hx-hidden hx-pointer-events-none hx-h-4 hx-w-4">&lt;/div>
+&lt;div class="success-icon hx-hidden group-[.copied]/copybtn:hx-block hx-pointer-events-none hx-h-4 hx-w-4">&lt;/div>
+&lt;/button>
+&lt;/div>
+&lt;/div>
+&lt;h1>Http11HandlerType&lt;/h1>&lt;p>The &lt;code>Http11HandlerType&lt;/code> enum defines how the HTTP/1.1 handler processes incoming requests over a persistent connection. Defaults to Blocking, the expected behavior for a Http/1.1 as the webserver only accepts new incoming request after finishing the previous one, if NonBlocking is selected the webserver will start handling new requests without waiting for the previous requests to finish, this can lead to issue as the order that responses are written will not be ordered, use at your own caution preferably when response is not important.&lt;/p>
+&lt;h2>Declaration&lt;span class="hx-absolute -hx-mt-20" id="declaration-1">&lt;/span>
+&lt;a href="#declaration-1" class="subheading-anchor" aria-label="Permalink for this section">&lt;/a>&lt;/h2>&lt;div class="hextra-code-block hx-relative hx-mt-6 first:hx-mt-0 hx-group/code">
+&lt;div>&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-csharp" data-lang="csharp">&lt;span class="line">&lt;span class="cl">&lt;span class="kd">public&lt;/span> &lt;span class="kd">enum&lt;/span> &lt;span class="n">Http11HandlerType&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">Blocking&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">NonBlocking&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;/div>&lt;div class="hextra-code-copy-btn-container hx-opacity-0 hx-transition group-hover/code:hx-opacity-100 hx-flex hx-gap-1 hx-absolute hx-m-[11px] hx-right-0 hx-top-0">
+&lt;button
+class="hextra-code-copy-btn hx-group/copybtn hx-transition-all active:hx-opacity-50 hx-bg-primary-700/5 hx-border hx-border-black/5 hx-text-gray-600 hover:hx-text-gray-900 hx-rounded-md hx-p-1.5 dark:hx-bg-primary-300/10 dark:hx-border-white/10 dark:hx-text-gray-400 dark:hover:hx-text-gray-50"
+title="Copy code"
+>
+&lt;div class="copy-icon group-[.copied]/copybtn:hx-hidden hx-pointer-events-none hx-h-4 hx-w-4">&lt;/div>
+&lt;div class="success-icon hx-hidden group-[.copied]/copybtn:hx-block hx-pointer-events-none hx-h-4 hx-w-4">&lt;/div>
+&lt;/button>
+&lt;/div>
+&lt;/div>
+&lt;h2>Values&lt;span class="hx-absolute -hx-mt-20" id="values">&lt;/span>
+&lt;a href="#values" class="subheading-anchor" aria-label="Permalink for this section">&lt;/a>&lt;/h2>&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>Name&lt;/th>
+&lt;th>Description&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>&lt;code>Blocking&lt;/code>&lt;/td>
+&lt;td>Handles requests one at a time, waiting for each response to complete before reading the next request. Ensures strict ordering and simplicity.&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>&lt;code>NonBlocking&lt;/code>&lt;/td>
+&lt;td>Reads and processes pipelined requests concurrently. Improves throughput but requires careful management to preserve response order (if needed).&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;h2>Use Case Comparison&lt;span class="hx-absolute -hx-mt-20" id="use-case-comparison">&lt;/span>
+&lt;a href="#use-case-comparison" class="subheading-anchor" aria-label="Permalink for this section">&lt;/a>&lt;/h2>&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>Feature&lt;/th>
+&lt;th>Blocking&lt;/th>
+&lt;th>NonBlocking&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>Request concurrency&lt;/td>
+&lt;td>❌ (sequential)&lt;/td>
+&lt;td>✅ (concurrent)&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>Simplicity&lt;/td>
+&lt;td>✅&lt;/td>
+&lt;td>❌ (requires async pipeline control)&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>Response order guarantee&lt;/td>
+&lt;td>✅&lt;/td>
+&lt;td>❌ (unless explicitly managed)&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>Best for&lt;/td>
+&lt;td>Simpler systems&lt;/td>
+&lt;td>High-throughput, pipelined clients&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table></description></item></channel></rss>

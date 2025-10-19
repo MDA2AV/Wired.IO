@@ -41,13 +41,17 @@ public sealed partial class WiredApp<TContext>
     /// <param name="context">The request context to pass through the middleware chain.</param>
     /// <returns>A task that completes when all middleware and the final endpoint have finished executing.</returns>
     /// <exception cref="InvalidOperationException">Thrown if the pipeline has not yet been built.</exception>
-    public Task RunCachedPipeline(TContext context)
+    private Task RunCachedPipeline(TContext context)
     {
         if (_cachedPipeline is null)
             throw new InvalidOperationException("Pipeline not built");
 
         return _cachedPipeline(context);
     }
+
+    // TODO: Cache all the endpoints Dictionary<route, Func<TContext, Task>>
+
+    private readonly Dictionary<string, Func<TContext, Task>> _cachedEndpoints = new();
 
     /// <summary>
     /// Resolves and invokes the endpoint matching the request method and route.
@@ -57,9 +61,100 @@ public sealed partial class WiredApp<TContext>
     /// <exception cref="InvalidOperationException">Thrown if no matching endpoint is found.</exception>
     public Task EndpointInvoker(TContext context)
     {
-        var httpMethod = context.Request.HttpMethod.ToUpperInvariant();
+        if(_cachedEndpoints.TryGetValue(context.Request.Route, out var cachedEndpoint))
+            return cachedEndpoint.Invoke(context);
+        //Console.WriteLine("Not cached");
+        
+        //var httpMethod = context.Request.HttpMethod.ToUpperInvariant();
+        var httpMethod = context.Request.HttpMethod;
+
+        if (CanServeStaticFiles && 
+            Path.HasExtension(context.Request.Route) && 
+            httpMethod.Equals("GET", StringComparison.OrdinalIgnoreCase))
+        {
+            // Quick cache check
+            if (StaticCachedResourceFiles.ContainsKey(context.Request.Route))
+            {
+                // Resource is already cached, short circuit to static file endpoint
+                
+                if (CanServeSpaFiles) 
+                {
+                    _cachedEndpoints[context.Request.Route] = Endpoints["GET_/serve-spa-resource"]; 
+                    return Endpoints["GET_/serve-spa-resource"].Invoke(context);
+                    
+                }
+                if (CanServeMpaFiles)
+                {
+                    _cachedEndpoints[context.Request.Route] = Endpoints["GET_/serve-mpa-resource"]; 
+                    return Endpoints["GET_/serve-mpa-resource"].Invoke(context);
+                }
+                
+                _cachedEndpoints[context.Request.Route] = Endpoints["GET_/serve-static-resource"]; 
+                return Endpoints["GET_/serve-static-resource"].Invoke(context);
+            }
+
+            // Resource is not cached, check if it exists
+            if (TryReadResource(context.Request.Route, out var resource))
+            {
+                // Cache the resource for future requests and short circuit to static file endpoint
+                StaticCachedResourceFiles[context.Request.Route] = resource;
+
+                if (CanServeSpaFiles) 
+                {
+                    _cachedEndpoints[context.Request.Route] = Endpoints["GET_/serve-spa-resource"]; 
+                    return Endpoints["GET_/serve-spa-resource"].Invoke(context);
+                    
+                }
+                if (CanServeMpaFiles)
+                {
+                    _cachedEndpoints[context.Request.Route] = Endpoints["GET_/serve-mpa-resource"]; 
+                    return Endpoints["GET_/serve-mpa-resource"].Invoke(context);
+                }
+                
+                _cachedEndpoints[context.Request.Route] = Endpoints["GET_/serve-static-resource"]; 
+                return Endpoints["GET_/serve-static-resource"].Invoke(context);
+            }
+
+            // Else if resource does not exist, continue to normal endpoint resolution
+        }
+
         var decodedRoute = MatchEndpoint(EncodedRoutes[httpMethod], context.Request.Route);
+
+        // If no matching route is found and SPA enabled, serve index.html in case the route starts with any of the SPA base routes
+        if (decodedRoute is null)
+        {
+            if (CanServeMpaFiles)
+            {
+                // Serve the index.html for the given base route
+                if (TryReadFallbackMpaResource(context.Request.Route, out var resource))
+                {
+                    // Cache the resource for future requests and short circuit to static file endpoint
+                    StaticCachedResourceFiles[context.Request.Route] = resource;
+                    _cachedEndpoints[context.Request.Route] = Endpoints["GET_/serve-mpa-resource"];
+                    return Endpoints["GET_/serve-mpa-resource"].Invoke(context);
+                }
+            }
+
+            if (CanServeSpaFiles)
+            {
+                // Serve the index.html for the given base route
+                if (TryReadFallbackSpaResource(context.Request.Route, out var resource))
+                {
+                    // Cache the resource for future requests and short circuit to static file endpoint
+                    StaticCachedResourceFiles[context.Request.Route] = resource;
+                    _cachedEndpoints[context.Request.Route] = Endpoints["GET_/serve-spa-resource"];
+                    return Endpoints["GET_/serve-spa-resource"].Invoke(context);
+                }
+            }
+        }
+
+        if (decodedRoute is null)
+        {
+            return Endpoints["FlowControl_NotFound"].Invoke(context);
+        }
+
         var endpoint = Endpoints[httpMethod + "_" + decodedRoute!];
+        _cachedEndpoints[context.Request.Route] = endpoint;
 
         return endpoint is null
             ? throw new InvalidOperationException("Unable to find the Invoke method on the resolved service.")
@@ -72,7 +167,7 @@ public sealed partial class WiredApp<TContext>
     /// </summary>
     /// <param name="context">The request context to process.</param>
     /// <returns>A task that completes when request processing is finished.</returns>
-    public async Task Pipeline(TContext context)
+    private async Task Pipeline(TContext context)
     {
         await using var scope = Services.CreateAsyncScope();
         context.Scope = scope;

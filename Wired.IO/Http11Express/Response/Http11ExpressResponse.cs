@@ -38,7 +38,7 @@ public class Http11ExpressResponse : IExpressResponse
 
     public string? ContentEncoding { get; set; }
 
-    public ulong ContentLength { get; set; }
+    public ulong? ContentLength { get; set; }
 
     public Action Handler { get; set; } = null!;
 
@@ -49,7 +49,7 @@ public class Http11ExpressResponse : IExpressResponse
         ContentType = default;
         Utf8Content = default;
 
-        ContentLength = 0;
+        ContentLength = null;
         ContentLengthStrategy = ContentLengthStrategy.None;
 
         Utf8Headers?.Clear();

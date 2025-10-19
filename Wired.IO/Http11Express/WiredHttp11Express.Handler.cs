@@ -190,7 +190,7 @@ public partial class WiredHttp11Express<TContext> : IHttpHandler<TContext>
                     
                     if(!bodyEmpty)
                         context.Reader.AdvanceTo(buffer.GetPosition(currentPosition));
-                    
+
                     // Handle the request pipeline
                     await pipeline(context);
 

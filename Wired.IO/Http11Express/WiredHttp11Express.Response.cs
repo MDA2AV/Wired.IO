@@ -70,12 +70,12 @@ public partial class WiredHttp11Express<TContext>
         // TODO: Add Content Encoding header
 
         // If ContentLength is not zero, its length is known and is valid to use Content-Length header
-        if (context.Response.ContentLength != 0)
+        if (context.Response.ContentLength is not null)
         {
             writer.Write(ContentLengthHeader);
 
             var buffer = writer.GetSpan(16); // 16 is enough for any int in UTF-8
-            if (!Utf8Formatter.TryFormat(context.Response.ContentLength, buffer, out var written))
+            if (!Utf8Formatter.TryFormat((ulong)context.Response.ContentLength, buffer, out var written))
                 throw new InvalidOperationException("Failed to format int");
 
             writer.Advance(written);

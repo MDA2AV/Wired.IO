@@ -4,6 +4,7 @@ using Wired.IO.Http11;
 using Wired.IO.Http11.Context;
 using Wired.IO.Http11.Middleware;
 using Wired.IO.Http11Express;
+using Wired.IO.Http11Express.BuilderExtensions;
 using Wired.IO.Http11Express.Context;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Handlers;
@@ -22,6 +23,8 @@ public sealed class WiredApp
     {
         var builder = new Builder<WiredHttp11Express<Http11ExpressContext>, Http11ExpressContext>(() =>
             new WiredHttp11Express<Http11ExpressContext>(), [SslApplicationProtocol.Http11]);
+
+        builder.AddNotFoundEndpoint();
 
         return builder;
     }
