@@ -115,10 +115,15 @@ internal class Program
         await expressBuilder
             .Port(8080)
             .ServeSpaFilesExpress("/", new Location
-            //.ServeStaticFilesExpress("/", new Location
             {
                 LocationType = LocationType.FileSystem,
                 Path = "E:/VS/angular"
+            })
+            .ServeSpaFilesExpress("/res", new Location
+            {
+                LocationType = LocationType.EmbeddedResource,
+                Assembly = Assembly.GetExecutingAssembly(),
+                Path = "Angular"
             })
             .MapGet("/jsonRaw", scope => async ctx =>
             {

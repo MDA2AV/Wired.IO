@@ -2,7 +2,6 @@
 using System.IO.Pipelines;
 using System.Runtime.CompilerServices;
 using Wired.IO.App;
-using Wired.IO.Http11.Context;
 using Wired.IO.Http11Express.Context;
 using Wired.IO.Utilities;
 
@@ -17,9 +16,6 @@ public static class StaticResources
 
         return static _ =>
         {
-            // resolve per-scope dependencies here if you have any
-            // var dep = sp.GetRequiredService<...>();
-
             // return the actual request handler
             return static ctx =>
             {
@@ -47,9 +43,6 @@ public static class StaticResources
 
         return static _ =>
         {
-            // resolve per-scope dependencies here if you have any
-            // var dep = sp.GetRequiredService<...>();
-
             // return the actual request handler
             return static ctx =>
             {
@@ -62,7 +55,7 @@ public static class StaticResources
                 var handler = CreateBoundHandler(context.Writer, resource);
 
                 context.Respond()
-                    .Type(MimeTypes.GetMimeType(context.Request.Route))
+                    .Type(MimeTypes.GetSpaMimeType(context.Request.Route))
                     .Content(handler, (ulong)resource.Length);
 
                 return Task.CompletedTask; // if your write is synchronous
@@ -70,10 +63,9 @@ public static class StaticResources
         };
     }
 
-    public static Action CreateBoundHandler(PipeWriter writer, ReadOnlyMemory<byte> resource) => () => StaticHandler.Invoke(writer, resource);
     private static readonly Action<PipeWriter, ReadOnlyMemory<byte>> StaticHandler = HandleFast;
-    private static void HandleFast(PipeWriter writer, ReadOnlyMemory<byte> resource)
-    {
-        writer.Write(resource.Span);
-    }
+
+    public static Action CreateBoundHandler(PipeWriter writer, ReadOnlyMemory<byte> resource) => () => StaticHandler.Invoke(writer, resource);
+
+    private static void HandleFast(PipeWriter writer, ReadOnlyMemory<byte> resource) => writer.Write(resource.Span);
 }

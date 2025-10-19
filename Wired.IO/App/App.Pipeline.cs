@@ -91,7 +91,43 @@ public sealed partial class WiredApp<TContext>
 
     private bool TryReadFallbackSpaResource(string route, out ReadOnlyMemory<byte> resource)
     {
+        var baseRoute = GetStaticResourceBaseRoute(route);
+        var location = StaticResourceRouteToLocation[baseRoute];
+        var filePath = $"{baseRoute}index.html";
 
+        // Check if file exists in the file system
+        if (location.LocationType == LocationType.FileSystem)
+        {
+            //var fullFilePath = $"{location.Path.TrimEnd('/', '\\')}/{baseRoute.TrimStart('/', '\\')}";
+            var fullFilePath = PathUtils.Combine(location.Path, filePath);
+
+            if (File.Exists(fullFilePath))
+            {
+                // Read file and return it
+                resource = File.ReadAllBytes(fullFilePath);
+                return true;
+            }
+        }
+
+        // If location is EmbeddedResource, check if the resource exists in the assembly
+        if (location is { LocationType: LocationType.EmbeddedResource, Assembly: not null })
+        {
+            var resourceName = location.Assembly.GetManifestResourceNames()
+                .FirstOrDefault(rn => rn.EndsWith(filePath.Replace('/', '.'), StringComparison.Ordinal));
+
+            if (resourceName is null)
+            {
+                resource = null!;
+                return false;
+            }
+
+            // Read Embedded resource and return it
+            resource = EmbeddedResourceUtils.ReadBytes(location.Assembly, resourceName);
+            return true;
+        }
+
+        resource = null!;
+        return false;
     }
 
     private bool TryReadResource(string route, out ReadOnlyMemory<byte> resource)
@@ -186,11 +222,11 @@ public sealed partial class WiredApp<TContext>
             if (CanServeSpaFiles)
             {
                 // Serve the index.html for the given base route
-                if (TryReadResource($"{context.Request.Route}index.html", out var resource))
+                if (TryReadFallbackSpaResource(context.Request.Route, out var resource))
                 {
                     // Cache the resource for future requests and short circuit to static file endpoint
                     StaticCachedResourceFiles[context.Request.Route] = resource;
-                    return Endpoints["GET_/serve-static-resource"].Invoke(context);
+                    return Endpoints["GET_/serve-spa-resource"].Invoke(context);
                 }
             }
         }
