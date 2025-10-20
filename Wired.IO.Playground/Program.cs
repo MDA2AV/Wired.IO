@@ -28,6 +28,10 @@ using Wired.IO.Utilities;
 using Wired.IO.WiredEvents;
 
 
+// This is my playground for testing Wired.IO features, it is not intended as a reference implementation
+// This is likely messy
+
+
 [JsonSourceGenerationOptions(GenerationMode = JsonSourceGenerationMode.Serialization | JsonSourceGenerationMode.Metadata)]
 [JsonSerializable(typeof(Program.JsonMessage))]
 internal partial class JsonContext : JsonSerializerContext
