@@ -47,7 +47,8 @@ public interface IBaseContext<out TRequest, out TResponse> : IDisposable
     /// <value>
     /// An instance of <see cref="AsyncServiceScope"/> for managing scoped service lifetimes.
     /// </value>
-    AsyncServiceScope Scope { get; set; }
+    //AsyncServiceScope Scope { get; set; }
+    IServiceProvider Services { get; set; }
 
     /// <summary>
     /// Gets or sets the <see cref="CancellationToken"/> for the current context.

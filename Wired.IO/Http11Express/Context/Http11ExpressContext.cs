@@ -34,7 +34,10 @@ public class Http11ExpressContext : IBaseContext<IExpressRequest, IExpressRespon
         
         return ResponseBuilder;
     }
-    public AsyncServiceScope Scope { get; set; }
+
+    //public AsyncServiceScope Scope { get; set; }
+    public IServiceProvider Services { get; set; } = null!;
+    
     public CancellationToken CancellationToken { get; set; }
 
     public void Clear()

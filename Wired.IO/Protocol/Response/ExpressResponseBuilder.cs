@@ -20,7 +20,7 @@ public class ExpressResponseBuilder(IExpressResponse response)
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void SetContentLength(IExpressResponseContent content)
     {
-        response.ContentLength = content.Length ?? 0;
+        response.ContentLength = content.Length;
         response.ContentLengthStrategy = content.Length is not null
             ? ContentLengthStrategy.Known
             : ContentLengthStrategy.Chunked;
@@ -29,7 +29,7 @@ public class ExpressResponseBuilder(IExpressResponse response)
     public ExpressResponseBuilder Content(IExpressResponseContent content)
     {
         response.Content = content;
-        response.ContentLength = content.Length ?? 0;
+        response.ContentLength = content.Length;
 
         response.ContentLengthStrategy = content.Length is not null
             ? ContentLengthStrategy.Known
@@ -50,7 +50,7 @@ public class ExpressResponseBuilder(IExpressResponse response)
 
     public ExpressResponseBuilder Content(Action handler, ulong? length = null)
     {
-        response.ContentLength = length ?? 0;
+        response.ContentLength = length;
         response.ContentLengthStrategy = ContentLengthStrategy.Action;
         
         response.Handler = handler;

@@ -95,6 +95,11 @@ public sealed partial class WiredApp<TContext>
     internal ILogger? Logger { get; set; }
 
     /// <summary>
+    /// Endpoints can resolve dependencies from scoped provider
+    /// </summary>
+    internal bool ScopedEndpoints { get; set; } = true;
+
+    /// <summary>
     /// Gets or sets the HTTP handler responsible for dispatching requests and handling routing.
     /// </summary>
     public IHttpHandler<TContext> HttpHandler { get; set; } = null!;

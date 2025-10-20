@@ -171,6 +171,16 @@ public sealed class Builder<THandler, TContext>
 
         return this;
     }
+    
+    /// <summary>
+    /// Do not need a scoped provider, boosts performance
+    /// </summary>
+    public Builder<THandler, TContext> NoScopedEndpoints()
+    {
+        App.ScopedEndpoints = false;
+
+        return this;
+    }
 
     /// <summary>
     /// Replaces the default <see cref="IServiceCollection"/> with a custom one,
