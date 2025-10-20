@@ -111,9 +111,14 @@ internal class Program
     public static async Task Main(string[] args)
     {
         var expressBuilder = WiredApp.CreateExpressBuilder();
-
+        
+        expressBuilder.Services.AddScoped<DependencyService>();
+        
         await expressBuilder
             .Port(8080)
+            .NoScopedEndpoints()
+            
+            
             /*.ServeMpaFilesExpress("/", new Location
             {
                 LocationType = LocationType.FileSystem,
@@ -257,6 +262,18 @@ internal class Program
     }
 }
 
+public class DependencyService(ILogger<DependencyService> logger) : IDisposable
+{
+    public void Handle()
+    {
+        logger.LogInformation($"{nameof(DependencyService)} was handled.");
+    }
+
+    public void Dispose()
+    {
+        logger.LogInformation($"{nameof(DependencyService)} was disposed.");
+    }
+}
 
 /*
 var serviceCollection = new ServiceCollection();

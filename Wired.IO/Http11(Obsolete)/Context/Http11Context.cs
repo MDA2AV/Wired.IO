@@ -37,6 +37,8 @@ public class Http11Context : IBaseContext<IRequest, IResponse>, IHasWiredEvents
     public AsyncServiceScope Scope { get; set; }
 
     public IResponse? Response { get; set; }
+    
+    public IServiceProvider Services { get; set; }
 
     /// <summary>
     /// Creates and initializes a new HTTP/1.1 response using the default OK status.

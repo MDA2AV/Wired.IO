@@ -169,14 +169,21 @@ public sealed partial class WiredApp<TContext>
     /// <returns>A task that completes when request processing is finished.</returns>
     private async Task Pipeline(TContext context)
     {
-        await using var scope = Services.CreateAsyncScope();
-        context.Scope = scope;
+        if (ScopedEndpoints)
+        {
+            await using var scope = Services.CreateAsyncScope();
+            context.Services = scope.ServiceProvider;
+            await RunCachedPipeline(context);
+
+            return;
+        }
+
+        context.Services = Services;
+        await RunCachedPipeline(context);
 
         // No caching
         // await PipelineRecursive(context, 0, Middleware);
         // await PipelineIterative(context, Middleware);
-
-        await RunCachedPipeline(context);
     }
 
     /// <summary>
