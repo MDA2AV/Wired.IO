@@ -1,7 +1,6 @@
 ﻿using System.Buffers;
 using System.IO.Pipelines;
 using System.Runtime.CompilerServices;
-using System.Text;
 using Wired.IO.App;
 using Wired.IO.Http11Express.Context;
 using Wired.IO.Protocol.Response;
@@ -36,11 +35,12 @@ internal static class StaticResources
     /// <returns>
     /// A factory that, given an <see cref="IServiceProvider"/>, produces a request handler delegate.
     /// </returns>
-    public static Func<IServiceProvider, Func<TContext, Task>> CreateStaticResourceHandler<TContext>()
+    //public static Func<IServiceProvider, Func<TContext, Task>> CreateStaticResourceHandler<TContext>()
+    public static Func<TContext, Task> CreateStaticResourceHandler<TContext>()
         where TContext : class
     {
-        return static _ =>
-        {
+        //return static _ =>
+        //{
             // Return the actual static resource request handler.
             return static ctx =>
             {
@@ -63,7 +63,7 @@ internal static class StaticResources
                 // All writes are synchronous; no async IO required.
                 return Task.CompletedTask;
             };
-        };
+        //};
     }
 
     /// <summary>

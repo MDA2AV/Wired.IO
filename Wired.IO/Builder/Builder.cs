@@ -5,7 +5,6 @@ using System.Net.Security;
 using System.Reflection;
 using Wired.IO.App;
 using Wired.IO.Http11.Middleware;
-using Wired.IO.Http11.Response;
 using Wired.IO.Mediator;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Handlers;

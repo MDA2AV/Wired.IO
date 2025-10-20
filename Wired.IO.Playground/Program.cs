@@ -191,7 +191,7 @@ internal class Program
                     //.Content(new ExpressStringContent("\"message\": \"Hello, World!\""));
                     .Content(new ExpressStringContent(JsonSerializer.Serialize(new JsonMessage { Message = JsonBody }, SerializerContext.JsonMessage)));
             })
-            .MapGet("/jsonu8", scope => async ctx =>
+            .MapGet("/jsonu8", static ctx =>
             {
                 ctx
                     .Respond()
@@ -239,6 +239,10 @@ internal class Program
                         new JsonMessage { Message = JsonBody }, 
                         SerializerContext.JsonMessage,
                         (payload, typeInfo) => new ExpressJsonContent<JsonMessage>(payload, typeInfo));
+            })
+            .UseMiddleware(async (ctx, next) =>
+            {
+                await next(ctx);
             })
             .Build()
             .RunAsync();
