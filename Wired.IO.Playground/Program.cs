@@ -137,7 +137,16 @@ internal class Program
                 Path = "Resources.Docs"
             })
 
+            .MapGet("/example", ctx =>
+            {
+                var payload = new JsonMessage { Message = JsonBody };
+                var myHandler = CreateBoundHandler(ctx.Writer, payload);
 
+                ctx
+                    .Respond()
+                    .Type("application/json"u8)
+                    .Content(myHandler, 27);
+            })
             .MapGet("/jsonRaw", scope => async ctx =>
             {
                 //ctx.Writer.Write("HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=UTF-8\r\nContent-Length: 27\r\n\r\n{\"message\":\"Hello, World!\"}\r\n"u8);

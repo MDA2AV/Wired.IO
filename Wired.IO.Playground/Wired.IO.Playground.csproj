@@ -15,14 +15,13 @@
       <SelfContained>true</SelfContained>
   </PropertyGroup>
 
-    <!--<PropertyGroup>
+    <PropertyGroup>
         <PublishAot>true</PublishAot>
         <OptimizationPreference>Speed</OptimizationPreference>
-    </PropertyGroup>-->
+    </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Wired.IO\Wired.IO.csproj" />
-      <!--<PackageReference Include="Wired.IO" Version="9.2.0" />-->
   </ItemGroup>
 
     <ItemGroup Condition="$(PublishAot) == 'true'">

@@ -338,6 +338,19 @@ public sealed class Builder<THandler, TContext>
 
         return this;
     }
+    public Builder<THandler, TContext> MapGet(string route,  Func<TContext, Task> func)
+    {
+        AddKeyedScoped(func, HttpConstants.Get , route);
+
+        return this;
+    }
+    
+    public Builder<THandler, TContext> MapGet(string route, Action<TContext> func)
+    {
+        AddKeyedScoped(func, HttpConstants.Get , route);
+
+        return this;
+    }
     /// <summary>
     /// Maps a <see cref="Func{TContext, Task}"/> delegate to an HTTP GET endpoint for the specified route.
     /// </summary>
@@ -651,5 +664,28 @@ public sealed class Builder<THandler, TContext>
         App.EncodedRoutes[httpMethod].Add(route);
 
         App.ServiceCollection.AddKeyedScoped<Func<TContext, Task>>(fullRoute,  (sp, key) => func(sp));
+    }
+    
+    private void AddKeyedScoped(Func<TContext, Task> func, string httpMethod, string route)
+    {
+        var fullRoute = $"{httpMethod}_{route}";
+        App.EncodedRoutes[httpMethod].Add(route);
+
+        App.ServiceCollection.AddKeyedScoped<Func<TContext, Task>>(fullRoute,  (_, _) => func);
+    }
+    
+    private void AddKeyedScoped(Action<TContext> func, string httpMethod, string route)
+    {
+        var fullRoute = $"{httpMethod}_{route}";
+        App.EncodedRoutes[httpMethod].Add(route);
+
+        App.ServiceCollection.AddKeyedScoped<Func<TContext, Task>>(fullRoute,  (_, _) =>
+        {
+            return (ctx) =>
+            {
+                func(ctx);
+                return Task.CompletedTask;
+            };
+        });
     }
 }
