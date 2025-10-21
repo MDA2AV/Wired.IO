@@ -101,6 +101,35 @@ public sealed partial class Builder<THandler, TContext>
         return App;
     }
 
+    public WiredApp<TContext> Build2(IServiceProvider? serviceProvider = null!)
+    {
+        var isLoggerFactoryRegistered = App.ServiceCollection.Any(
+            d => d.ServiceType == typeof(ILoggerFactory));
+
+        if (!isLoggerFactoryRegistered)
+            App.ServiceCollection.AddLogging(DefaultLoggingBuilder);
+
+        App.LoggerFactory = App.Services.GetRequiredService<ILoggerFactory>();
+        App.Logger = App.LoggerFactory.CreateLogger<WiredApp<TContext>>();
+
+        App.Middleware = App.Services.GetServices<Func<TContext, Func<TContext, Task>, Task>>().ToList();
+        App.BuildPipeline(App.Middleware, App.EndpointInvoker);
+
+        App.Endpoints = [];
+
+        foreach (var fullRoute in App.EncodedRoutes.SelectMany(kvp => kvp.Value.Select(route => kvp.Key + '_' + route)))
+        {
+            App.Endpoints.Add(
+                fullRoute,
+                App.Services.GetRequiredKeyedService<Func<TContext, Task>>(fullRoute));
+        }
+
+        App.Services = serviceProvider ??
+                       App.ServiceCollection.BuildServiceProvider();
+
+        return App;
+    }
+
     private static void DefaultLoggingBuilder(ILoggingBuilder loggingBuilder)
     {
         loggingBuilder

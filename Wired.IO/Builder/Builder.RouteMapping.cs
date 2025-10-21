@@ -1,4 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using System;
+using System.Net.Http;
+using System.Security.Cryptography;
 using Wired.IO.App;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Handlers;
@@ -7,12 +10,77 @@ using Wired.IO.Protocol.Response;
 
 namespace Wired.IO.Builder;
 
+public class EndpointKey
+{
+    public string HttpMethod { get; set; } = null!;
+    public string GroupRoute { get; set; } = null!;
+    public string Route { get; set; } = null!;
+}
+
 public sealed partial class Builder<THandler, TContext>
     where TContext : IBaseContext<IBaseRequest, IBaseResponse>
     where THandler : IHttpHandler<TContext>
 {
+    public sealed class GroupBuilder
+    {
+        public string GroupRoute { get; set; } = null!;
+        public IServiceCollection Services { get; set; } = null!;
+        public List<EndpointKey> EndpointKeys { get; set; } = new();
+
+        // Possible nested groups
+        public Dictionary<string, GroupBuilder> Groups { get; } = new();
+
+        public GroupBuilder MapGroup(string groupRoute)
+        {
+            Groups[groupRoute] = new GroupBuilder
+            {
+                Services = this.Services,
+                GroupRoute = $"{GroupRoute}{groupRoute}"
+            };
+
+            return Groups[groupRoute];
+        }
+
+        //public List<Func<TContext, Func<TContext, Task>, Task>> Middleware { get; set; } = null!;
+        //public Dictionary<string, Func<TContext, Task>> Endpoints { get; set; } = null!;
+
+        public GroupBuilder MapGet(string route, Func<TContext, Task> endpoint)
+        {
+            var key = new EndpointKey
+            {
+                HttpMethod = HttpConstants.Get,
+                GroupRoute = GroupRoute,
+                Route = route
+            };
+            EndpointKeys.Add(key);
+            Services.AddKeyedScoped<Func<TContext, Task>>(key, (_, _) => endpoint);
+            return this;
+        }
+
+        public GroupBuilder UseMiddleware(Func<TContext, Func<TContext, Task>, Task> middleware)
+        {
+            Services.AddKeyedScoped<Func<TContext, Func<TContext, Task>, Task>>($"{GroupRoute}", (_, _) => middleware);
+            return this;
+        }
+    }
+
+    public Dictionary<string, GroupBuilder> Groups { get; } = new();
+
+
+    public GroupBuilder MapGroup(string groupRoute)
+    {
+        Groups[groupRoute] = new GroupBuilder
+        {
+            Services = App.ServiceCollection,
+            GroupRoute = groupRoute
+        };
+
+        return Groups[groupRoute];
+    }
+
+
     // ======== FlowControl ==========
-    
+
     /// <summary>
     /// Maps a synchronous <see cref="Action{TContext}"/> to handle HTTP FlowControl requests for the specified route.
     /// </summary>
@@ -110,20 +178,6 @@ public sealed partial class Builder<THandler, TContext>
     /// <returns>The current <see cref="Builder{THandler, TContext}"/> instance for chaining.</returns>
     public Builder<THandler, TContext> MapGet(string route, Func<IServiceProvider, Action<TContext>> func)
     {
-        /*AddKeyedScoped(func, HttpConstants.Get, route);
-        Func<TContext, Task> AsyncFunc(IServiceProvider sp)
-        {
-            Action<TContext> action = func(sp);
-            return context =>
-            {
-                action(context);
-
-                return Task.CompletedTask;
-            };
-        }
-
-        AddKeyedScoped(AsyncFunc, HttpConstants.Get, route);*/
-
         AddKeyedScoped(func, HttpConstants.Get, route);
 
         return this;
@@ -632,202 +686,6 @@ public sealed partial class Builder<THandler, TContext>
 
         return this;
     }
-
-    // Deprecated methods
-    /*
-    /// <summary>
-    /// Maps a <see cref="Func{TContext, Task}"/> delegate to an HTTP POST endpoint for the specified route.
-    /// </summary>
-    /// <param name="route">The route pattern (e.g. <c>/users/:id</c>).</param>
-    /// <param name="func">A factory that produces a scoped request handler delegate.</param>
-    /// <returns>The current builder instance.</returns>
-    public Builder<THandler, TContext> MapPost(string route, Func<IServiceProvider, Func<TContext, Task>> func)
-    {
-        AddKeyedScoped(func, HttpConstants.Post, route);
-
-        return this;
-    }
-    /// <summary>
-    /// Maps a <see cref="Func{TContext, Task}"/> delegate to an HTTP POST endpoint for the specified route.
-    /// </summary>
-    /// <param name="route">The route pattern (e.g. <c>/users/:id</c>).</param>
-    /// <param name="func">A factory that produces a scoped request handler delegate.</param>
-    /// <returns>The current builder instance.</returns>
-    public Builder<THandler, TContext> MapPost(string route, Func<IServiceProvider, Action<TContext>> func)
-    {
-        AddKeyedScoped(func, HttpConstants.Post, route);
-
-        return this;
-    }
-    /// <summary>
-    /// Maps a <see cref="Func{TContext, Task}"/> delegate to an HTTP PUT endpoint for the specified route.
-    /// </summary>
-    /// <param name="route">The route pattern (e.g. <c>/users/:id</c>).</param>
-    /// <param name="func">A factory that produces a scoped request handler delegate.</param>
-    /// <returns>The current builder instance.</returns>
-    public Builder<THandler, TContext> MapPut(string route, Func<IServiceProvider, Func<TContext, Task>> func)
-    {
-        AddKeyedScoped(func, HttpConstants.Put, route);
-
-        return this;
-    }
-    /// <summary>
-    /// Maps a <see cref="Func{TContext, Task}"/> delegate to an HTTP PUT endpoint for the specified route.
-    /// </summary>
-    /// <param name="route">The route pattern (e.g. <c>/users/:id</c>).</param>
-    /// <param name="func">A factory that produces a scoped request handler delegate.</param>
-    /// <returns>The current builder instance.</returns>
-    public Builder<THandler, TContext> MapPut(string route, Func<IServiceProvider, Action<TContext>> func)
-    {
-        AddKeyedScoped(func, HttpConstants.Put, route);
-
-        return this;
-    }
-    /// <summary>
-    /// Maps a <see cref="Func{TContext, Task}"/> delegate to an HTTP DELETE endpoint for the specified route.
-    /// </summary>
-    /// <param name="route">The route pattern (e.g. <c>/users/:id</c>).</param>
-    /// <param name="func">A factory that produces a scoped request handler delegate.</param>
-    /// <returns>The current builder instance.</returns>
-    public Builder<THandler, TContext> MapDelete(string route, Func<IServiceProvider, Func<TContext, Task>> func)
-    {
-        AddKeyedScoped(func, HttpConstants.Delete, route);
-
-        return this;
-    }
-    /// <summary>
-    /// Maps a <see cref="Func{TContext, Task}"/> delegate to an HTTP DELETE endpoint for the specified route.
-    /// </summary>
-    /// <param name="route">The route pattern (e.g. <c>/users/:id</c>).</param>
-    /// <param name="func">A factory that produces a scoped request handler delegate.</param>
-    /// <returns>The current builder instance.</returns>
-    public Builder<THandler, TContext> MapDelete(string route, Func<IServiceProvider, Action<TContext>> func)
-    {
-        AddKeyedScoped(func, HttpConstants.Delete, route);
-
-        return this;
-    }
-    /// <summary>
-    /// Maps a <see cref="Func{TContext, Task}"/> delegate to an HTTP PATCH endpoint for the specified route.
-    /// </summary>
-    /// <param name="route">The route pattern (e.g. <c>/users/:id</c>).</param>
-    /// <param name="func">A factory that produces a scoped request handler delegate.</param>
-    /// <returns>The current builder instance.</returns>
-    public Builder<THandler, TContext> MapPatch(string route, Func<IServiceProvider, Func<TContext, Task>> func)
-    {
-        AddKeyedScoped(func, HttpConstants.Patch, route);
-
-        return this;
-    }
-    /// <summary>
-    /// Maps a <see cref="Func{TContext, Task}"/> delegate to an HTTP PATCH endpoint for the specified route.
-    /// </summary>
-    /// <param name="route">The route pattern (e.g. <c>/users/:id</c>).</param>
-    /// <param name="func">A factory that produces a scoped request handler delegate.</param>
-    /// <returns>The current builder instance.</returns>
-    public Builder<THandler, TContext> MapPatch(string route, Func<IServiceProvider, Action<TContext>> func)
-    {
-        AddKeyedScoped(func, HttpConstants.Patch, route);
-
-        return this;
-    }
-    /// <summary>
-    /// Maps a <see cref="Func{TContext, Task}"/> delegate to an HTTP HEAD endpoint for the specified route.
-    /// </summary>
-    /// <param name="route">The route pattern (e.g. <c>/users/:id</c>).</param>
-    /// <param name="func">A factory that produces a scoped request handler delegate.</param>
-    /// <returns>The current builder instance.</returns>
-    public Builder<THandler, TContext> MapHead(string route, Func<IServiceProvider, Func<TContext, Task>> func)
-    {
-        AddKeyedScoped(func, HttpConstants.Head, route);
-
-        return this;
-    }
-    /// <summary>
-    /// Maps a <see cref="Func{TContext, Task}"/> delegate to an HTTP HEAD endpoint for the specified route.
-    /// </summary>
-    /// <param name="route">The route pattern (e.g. <c>/users/:id</c>).</param>
-    /// <param name="func">A factory that produces a scoped request handler delegate.</param>
-    /// <returns>The current builder instance.</returns>
-    public Builder<THandler, TContext> MapHead(string route, Func<IServiceProvider, Action<TContext>> func)
-    {
-        AddKeyedScoped(func, HttpConstants.Head, route);
-
-        return this;
-    }
-    /// <summary>
-    /// Maps a <see cref="Func{TContext, Task}"/> delegate to an HTTP OPTIONS endpoint for the specified route.
-    /// </summary>
-    /// <param name="route">The route pattern (e.g. <c>/users/:id</c>).</param>
-    /// <param name="func">A factory that produces a scoped request handler delegate.</param>
-    /// <returns>The current builder instance.</returns>
-    public Builder<THandler, TContext> MapOptions(string route, Func<IServiceProvider, Func<TContext, Task>> func)
-    {
-        AddKeyedScoped(func, HttpConstants.Options, route);
-
-        return this;
-    }
-    /// <summary>
-    /// Maps a <see cref="Func{TContext, Task}"/> delegate to an HTTP OPTIONS endpoint for the specified route.
-    /// </summary>
-    /// <param name="route">The route pattern (e.g. <c>/users/:id</c>).</param>
-    /// <param name="func">A factory that produces a scoped request handler delegate.</param>
-    /// <returns>The current builder instance.</returns>
-    public Builder<THandler, TContext> MapOptions(string route, Func<IServiceProvider, Action<TContext>> func)
-    {
-        AddKeyedScoped(func, HttpConstants.Options, route);
-
-        return this;
-    }
-    /// <summary>
-    /// Maps a <see cref="Func{TContext, Task}"/> delegate to an HTTP TRACE endpoint for the specified route.
-    /// </summary>
-    /// <param name="route">The route pattern (e.g. <c>/users/:id</c>).</param>
-    /// <param name="func">A factory that produces a scoped request handler delegate.</param>
-    /// <returns>The current builder instance.</returns>
-    public Builder<THandler, TContext> MapTrace(string route, Func<IServiceProvider, Func<TContext, Task>> func)
-    {
-        AddKeyedScoped(func, HttpConstants.Trace, route);
-
-        return this;
-    }
-    /// <summary>
-    /// Maps a <see cref="Func{TContext, Task}"/> delegate to an HTTP TRACE endpoint for the specified route.
-    /// </summary>
-    /// <param name="route">The route pattern (e.g. <c>/users/:id</c>).</param>
-    /// <param name="func">A factory that produces a scoped request handler delegate.</param>
-    /// <returns>The current builder instance.</returns>
-    public Builder<THandler, TContext> MapTrace(string route, Func<IServiceProvider, Action<TContext>> func)
-    {
-        AddKeyedScoped(func, HttpConstants.Trace, route);
-
-        return this;
-    }
-    /// <summary>
-    /// Maps a <see cref="Func{TContext, Task}"/> delegate to an HTTP CONNECT endpoint for the specified route.
-    /// </summary>
-    /// <param name="route">The route pattern (e.g. <c>/users/:id</c>).</param>
-    /// <param name="func">A factory that produces a scoped request handler delegate.</param>
-    /// <returns>The current builder instance.</returns>
-    public Builder<THandler, TContext> MapConnect(string route, Func<IServiceProvider, Func<TContext, Task>> func)
-    {
-        AddKeyedScoped(func, HttpConstants.Connect, route);
-
-        return this;
-    }
-    /// <summary>
-    /// Maps a <see cref="Func{TContext, Task}"/> delegate to an HTTP CONNECT endpoint for the specified route.
-    /// </summary>
-    /// <param name="route">The route pattern (e.g. <c>/users/:id</c>).</param>
-    /// <param name="func">A factory that produces a scoped request handler delegate.</param>
-    /// <returns>The current builder instance.</returns>
-    public Builder<THandler, TContext> MapConnect(string route, Func<IServiceProvider, Action<TContext>> func)
-    {
-        AddKeyedScoped(func, HttpConstants.Connect, route);
-
-        return this;
-    }
-    */
 
     /// <summary>
     /// Registers a keyed scoped service for a route that resolves to a handler factory function.
