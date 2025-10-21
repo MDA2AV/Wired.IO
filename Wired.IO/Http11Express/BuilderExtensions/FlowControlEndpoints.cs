@@ -9,7 +9,7 @@ public static class FlowControlEndpoints
     public static Builder<WiredHttp11Express<Http11ExpressContext>, Http11ExpressContext> AddNotFoundEndpoint(
         this Builder<WiredHttp11Express<Http11ExpressContext>, Http11ExpressContext> builder)
     {
-        builder.MapFlowControl("NotFound", FlowControl.CreateEndpointNotFoundHandler<Http11ExpressContext>());
+        builder.MapFlowControl("NotFound", FlowControl.CreateEndpointNotFoundHandler());
 
         return builder;
     }

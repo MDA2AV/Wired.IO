@@ -22,9 +22,8 @@ public sealed class WiredApp
     public static Builder<WiredHttp11Express<Http11ExpressContext>, Http11ExpressContext> CreateExpressBuilder()
     {
         var builder = new Builder<WiredHttp11Express<Http11ExpressContext>, Http11ExpressContext>(() =>
-            new WiredHttp11Express<Http11ExpressContext>(), [SslApplicationProtocol.Http11]);
-
-        builder.AddNotFoundEndpoint();
+            new WiredHttp11Express<Http11ExpressContext>(), [SslApplicationProtocol.Http11])
+            .AddNotFoundEndpoint();
 
         return builder;
     }

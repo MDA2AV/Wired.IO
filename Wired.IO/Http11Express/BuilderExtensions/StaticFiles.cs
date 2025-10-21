@@ -44,7 +44,7 @@ public static class StaticFiles
 
         // Internal/test endpoint that uses the static resource handler path.
         // Useful for verifying correctness without wiring full routing tables.
-        builder.MapGet("/serve-static-resource", StaticResources.CreateStaticResourceHandler<Http11ExpressContext>());
+        builder.MapGet("/serve-static-resource", StaticResources.CreateStaticResourceHandler());
 
         return builder;
     }
@@ -77,7 +77,7 @@ public static class StaticFiles
         builder.ServeSpaFiles(baseRoute, location);
 
         // Internal/test endpoint that uses the SPA handler path (HTML-first semantics).
-        builder.MapGet("/serve-spa-resource", StaticResources.CreateSpaResourceHandler<Http11ExpressContext>());
+        builder.MapGet("/serve-spa-resource", StaticResources.CreateSpaResourceHandler());
 
         return builder;
     }
@@ -91,7 +91,7 @@ public static class StaticFiles
         builder.ServeMpaFiles(baseRoute, location);
 
         // Internal/test endpoint that uses the SPA handler path (HTML-first semantics).
-        builder.MapGet("/serve-mpa-resource", StaticResources.CreateMpaResourceHandler<Http11ExpressContext>());
+        builder.MapGet("/serve-mpa-resource", StaticResources.CreateMpaResourceHandler());
 
         return builder;
     }

@@ -197,7 +197,6 @@ internal class Program
             })
             .MapGet("/jsonu8", static ctx =>
             {
-                // Diogo was here, take care of the static delegates for resource serving, remove the service provider param
                 ctx
                     .Respond()
                     .Type("application/json"u8)
