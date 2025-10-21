@@ -9,6 +9,7 @@ using Wired.IO.Utilities;
 
 namespace Wired.IO.Http11Express.Context;
 
+// This class cannot be sealed, might have super types
 public class Http11ExpressContext : IBaseContext<IExpressRequest, IExpressResponse>
 {
     public PipeReader Reader { get; set; } = null!;

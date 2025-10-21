@@ -34,8 +34,8 @@ public static class StaticFiles
     /// <c>Location</c> abstraction should encapsulate how files are discovered and cached.
     /// </param>
     /// <returns>The same <paramref name="builder"/> for fluent chaining.</returns>
-    public static Builder<WiredHttp11Express<Http11ExpressContext>, Http11ExpressContext> ServeStaticFilesExpress(
-        this Builder<WiredHttp11Express<Http11ExpressContext>, Http11ExpressContext> builder,
+    public static Builder<WiredHttp11Express, Http11ExpressContext> ServeStaticFilesExpress(
+        this Builder<WiredHttp11Express, Http11ExpressContext> builder,
         string baseRoute,
         Location location)
     {
@@ -44,7 +44,23 @@ public static class StaticFiles
 
         // Internal/test endpoint that uses the static resource handler path.
         // Useful for verifying correctness without wiring full routing tables.
-        builder.MapGet("/serve-static-resource", StaticResources.CreateStaticResourceHandler<Http11ExpressContext>());
+        builder.MapGet("/serve-static-resource", StaticResources.CreateStaticResourceHandler());
+
+        return builder;
+    }
+    // Overload for WiredHttp11Express<TContext>
+    public static Builder<WiredHttp11Express<TContext>, TContext> ServeStaticFilesExpress<TContext>(
+        this Builder<WiredHttp11Express<TContext>, TContext> builder,
+        string baseRoute,
+        Location location)
+    where TContext : Http11ExpressContext, new()
+    {
+        // Register low-level static file plumbing (resource discovery, caching, route binding).
+        builder.ServeStaticFiles(baseRoute, location);
+
+        // Internal/test endpoint that uses the static resource handler path.
+        // Useful for verifying correctness without wiring full routing tables.
+        builder.MapGet("/serve-static-resource", StaticResources.CreateStaticResourceHandler());
 
         return builder;
     }
@@ -68,8 +84,8 @@ public static class StaticFiles
     /// The SPA content source (embedded or filesystem). Should include <c>index.html</c> and asset files.
     /// </param>
     /// <returns>The same <paramref name="builder"/> for fluent chaining.</returns>
-    public static Builder<WiredHttp11Express<Http11ExpressContext>, Http11ExpressContext> ServeSpaFilesExpress(
-        this Builder<WiredHttp11Express<Http11ExpressContext>, Http11ExpressContext> builder,
+    public static Builder<WiredHttp11Express, Http11ExpressContext> ServeSpaFilesExpress(
+        this Builder<WiredHttp11Express, Http11ExpressContext> builder,
         string baseRoute,
         Location location)
     {
@@ -77,13 +93,48 @@ public static class StaticFiles
         builder.ServeSpaFiles(baseRoute, location);
 
         // Internal/test endpoint that uses the SPA handler path (HTML-first semantics).
-        builder.MapGet("/serve-spa-resource", StaticResources.CreateSpaResourceHandler<Http11ExpressContext>());
+        builder.MapGet("/serve-spa-resource", StaticResources.CreateSpaResourceHandler());
+
+        return builder;
+    }
+    // Overload for WiredHttp11Express<TContext>
+    public static Builder<WiredHttp11Express<TContext>, TContext> ServeSpaFilesExpress<TContext>(
+        this Builder<WiredHttp11Express<TContext>, TContext> builder,
+        string baseRoute,
+        Location location)
+    where TContext : Http11ExpressContext, new()
+    {
+        // Register low-level SPA resource plumbing (index.html fallback, asset resolution).
+        builder.ServeSpaFiles(baseRoute, location);
+
+        // Internal/test endpoint that uses the SPA handler path (HTML-first semantics).
+        builder.MapGet("/serve-spa-resource", StaticResources.CreateSpaResourceHandler());
 
         return builder;
     }
 
-    public static Builder<WiredHttp11Express<Http11ExpressContext>, Http11ExpressContext> ServeMpaFilesExpress(
-        this Builder<WiredHttp11Express<Http11ExpressContext>, Http11ExpressContext> builder,
+    
+    /// <summary>
+    /// Registers **MPA file** serving (including history-API fallback) for the given
+    /// <paramref name="baseRoute"/> and <paramref name="location"/>, and maps an internal
+    /// GET endpoint (<c>/serve-mpa-resource</c>) that executes the MPA resource handler.
+    ///
+    /// Typical use:
+    /// <code>
+    /// builder.ServeSpaFilesExpress("/", Location.Embedded("MyApp.Resources.wwwroot"));
+    /// // With SPA fallback behavior (no extension → text/html).
+    /// </code>
+    /// </summary>
+    /// <param name="builder">The HTTP/1.1 Express builder.</param>
+    /// <param name="baseRoute">
+    /// The route prefix hosting the MPA bundle (often <c>"/"</c>).
+    /// </param>
+    /// <param name="location">
+    /// The MPA content source (embedded or filesystem). Should include <c>index.html</c> and asset files.
+    /// </param>
+    /// <returns>The same <paramref name="builder"/> for fluent chaining.</returns>
+    public static Builder<WiredHttp11Express, Http11ExpressContext> ServeMpaFilesExpress(
+        this Builder<WiredHttp11Express, Http11ExpressContext> builder,
         string baseRoute,
         Location location)
     {
@@ -91,7 +142,22 @@ public static class StaticFiles
         builder.ServeMpaFiles(baseRoute, location);
 
         // Internal/test endpoint that uses the SPA handler path (HTML-first semantics).
-        builder.MapGet("/serve-mpa-resource", StaticResources.CreateMpaResourceHandler<Http11ExpressContext>());
+        builder.MapGet("/serve-mpa-resource", StaticResources.CreateMpaResourceHandler());
+
+        return builder;
+    }
+    // Overload for WiredHttp11Express<TContext>
+    public static Builder<WiredHttp11Express<TContext>, TContext> ServeMpaFilesExpress<TContext>(
+        this Builder<WiredHttp11Express<TContext>, TContext> builder,
+        string baseRoute,
+        Location location)
+    where TContext : Http11ExpressContext, new()
+    {
+        // Register low-level SPA resource plumbing (index.html fallback, asset resolution).
+        builder.ServeMpaFiles(baseRoute, location);
+
+        // Internal/test endpoint that uses the SPA handler path (HTML-first semantics).
+        builder.MapGet("/serve-mpa-resource", StaticResources.CreateMpaResourceHandler());
 
         return builder;
     }

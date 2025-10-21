@@ -28,6 +28,10 @@ using Wired.IO.Utilities;
 using Wired.IO.WiredEvents;
 
 
+// This is my playground for testing Wired.IO features, it is not intended as a reference implementation
+// This is likely messy
+
+
 [JsonSourceGenerationOptions(GenerationMode = JsonSourceGenerationMode.Serialization | JsonSourceGenerationMode.Metadata)]
 [JsonSerializable(typeof(Program.JsonMessage))]
 internal partial class JsonContext : JsonSerializerContext
@@ -137,7 +141,16 @@ internal class Program
                 Path = "Resources.Docs"
             })
 
+            .MapGet("/example", ctx =>
+            {
+                var payload = new JsonMessage { Message = JsonBody };
+                var myHandler = CreateBoundHandler(ctx.Writer, payload);
 
+                ctx
+                    .Respond()
+                    .Type("application/json"u8)
+                    .Content(myHandler, 27);
+            })
             .MapGet("/jsonRaw", scope => async ctx =>
             {
                 //ctx.Writer.Write("HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=UTF-8\r\nContent-Length: 27\r\n\r\n{\"message\":\"Hello, World!\"}\r\n"u8);
@@ -182,7 +195,7 @@ internal class Program
                     //.Content(new ExpressStringContent("\"message\": \"Hello, World!\""));
                     .Content(new ExpressStringContent(JsonSerializer.Serialize(new JsonMessage { Message = JsonBody }, SerializerContext.JsonMessage)));
             })
-            .MapGet("/jsonu8", scope => async ctx =>
+            .MapGet("/jsonu8", static ctx =>
             {
                 ctx
                     .Respond()
@@ -230,6 +243,10 @@ internal class Program
                         new JsonMessage { Message = JsonBody }, 
                         SerializerContext.JsonMessage,
                         (payload, typeInfo) => new ExpressJsonContent<JsonMessage>(payload, typeInfo));
+            })
+            .UseMiddleware(async (ctx, next) =>
+            {
+                await next(ctx);
             })
             .Build()
             .RunAsync();
