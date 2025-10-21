@@ -121,7 +121,12 @@ internal class Program
         await expressBuilder
             .Port(8080)
             .NoScopedEndpoints()
-            
+            .MapGet("/websocket", ctx =>
+            {
+                Console.WriteLine("Websocket");
+                Console.WriteLine(ctx.Request.Headers["Sec-WebSocket-Key"]);
+                
+            })
             
             /*.ServeMpaFilesExpress("/", new Location
             {

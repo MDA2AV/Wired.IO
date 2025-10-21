@@ -38,4 +38,8 @@
 		<PackageReference Include="System.IO.Pipelines" Version="9.0.8" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="Http11Express\Websockets\" />
+	</ItemGroup>
+
 </Project>
