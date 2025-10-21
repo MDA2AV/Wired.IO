@@ -19,13 +19,24 @@ namespace Wired.IO.App;
 /// </summary>
 public sealed class WiredApp
 {
-    public static Builder<WiredHttp11Express<Http11ExpressContext>, Http11ExpressContext> CreateExpressBuilder()
+    public static Builder<WiredHttp11Express, Http11ExpressContext> CreateExpressBuilder()
     {
-        var builder = new Builder<WiredHttp11Express<Http11ExpressContext>, Http11ExpressContext>(() =>
-            new WiredHttp11Express<Http11ExpressContext>(), [SslApplicationProtocol.Http11])
+        var builder = new Builder<WiredHttp11Express, Http11ExpressContext>(() =>
+            new WiredHttp11Express(), [SslApplicationProtocol.Http11]);
+        
+        return builder
             .AddNotFoundEndpoint();
+    }
+    
+    // Overload for the case when user wants to use a context which is a super type of Http11ExpressContext
+    public static Builder<WiredHttp11Express<TContext>, TContext> CreateExpressBuilder<TContext>()
+        where TContext : Http11ExpressContext, new()
+    {
+        var builder = new Builder<WiredHttp11Express<TContext>, TContext>(() =>
+            new WiredHttp11Express<TContext>(), [SslApplicationProtocol.Http11]);
 
-        return builder;
+        return builder
+            .AddNotFoundEndpoint();
     }
 
     /// <summary>

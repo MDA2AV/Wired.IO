@@ -16,6 +16,9 @@ namespace Wired.IO.Http11Express;
 
 #pragma warning disable CS1591 // (We document via XML comments below; suppress warnings if any members stay undocumented.)
 
+// Public non-generic facade
+public sealed class WiredHttp11Express : WiredHttp11Express<Http11ExpressContext> { }
+
 /// <summary>
 /// Minimal, high-performance HTTP/1.1 request handler that parses request lines and headers
 /// directly from a pooled <see cref="PipeReader"/> buffer and dispatches to a user-supplied pipeline.
@@ -35,6 +38,7 @@ namespace Wired.IO.Http11Express;
 /// </para>
 /// </remarks>
 public partial class WiredHttp11Express<TContext> : IHttpHandler<TContext>
+    // TContext can be a super type of Http11ExpressContext
     where TContext : Http11ExpressContext, new()
 {
     /// <summary>
