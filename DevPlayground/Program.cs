@@ -10,15 +10,29 @@ internal class Program
         builder.Services.AddScoped<Dependency>();
 
         var apiGroup = builder
+            .Port(8080)
             .MapGroup("/api")
+            .UseMiddleware(async (ctx, next) =>
+            {
+                Console.WriteLine("Executing Middleware 1");
+                await next(ctx);
+            })
             .MapGet("/json", ctx =>
             {
-                ctx.Services.GetRequiredService<Dependency>().Handle();
+                //ctx.Services.GetRequiredService<Dependency>().Handle();
+
+                ctx.Respond().Type("text/plain"u8).Content("Hello, World!"u8);
+
                 return Task.CompletedTask;
             });
 
         var apiSubGroup = apiGroup
             .MapGroup("/v1")
+            .UseMiddleware(async (ctx, next) =>
+            {
+                Console.WriteLine("Executing Middleware 2");
+                await next(ctx);
+            })
             .MapGet("/json", ctx =>
             {
                 Console.WriteLine("Running api v1 endpoint!");

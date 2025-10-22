@@ -10,17 +10,19 @@ using Wired.IO.Protocol.Response;
 
 namespace Wired.IO.Builder;
 
+/*
 public class EndpointKey
 {
     public string HttpMethod { get; set; } = null!;
     public string GroupRoute { get; set; } = null!;
     public string Route { get; set; } = null!;
-}
+}*/
 
 public sealed partial class Builder<THandler, TContext>
     where TContext : IBaseContext<IBaseRequest, IBaseResponse>
     where THandler : IHttpHandler<TContext>
 {
+    /*
     public sealed class GroupBuilder
     {
         public string GroupRoute { get; set; } = null!;
@@ -63,10 +65,7 @@ public sealed partial class Builder<THandler, TContext>
             return this;
         }
     }
-
     public Dictionary<string, GroupBuilder> Groups { get; } = new();
-
-
     public GroupBuilder MapGroup(string groupRoute)
     {
         Groups[groupRoute] = new GroupBuilder
@@ -77,6 +76,7 @@ public sealed partial class Builder<THandler, TContext>
 
         return Groups[groupRoute];
     }
+    */
 
 
     // ======== FlowControl ==========

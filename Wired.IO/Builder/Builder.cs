@@ -60,6 +60,9 @@ public sealed partial class Builder<THandler, TContext>
     /// <param name="sslApplicationProtocols">List of supported ALPN protocols.</param>
     public void Initialize(Func<THandler> handlerFactory, List<SslApplicationProtocol> sslApplicationProtocols)
     {
+        _registrar = new EndpointRegistrar(App.ServiceCollection);
+        _root = new Group(prefix: "/", parent: null, registrar: _registrar);
+
         App.HttpHandler = handlerFactory();
         App.SslServerAuthenticationOptions.ApplicationProtocols = sslApplicationProtocols;
     }
@@ -109,23 +112,28 @@ public sealed partial class Builder<THandler, TContext>
         if (!isLoggerFactoryRegistered)
             App.ServiceCollection.AddLogging(DefaultLoggingBuilder);
 
-        App.LoggerFactory = App.Services.GetRequiredService<ILoggerFactory>();
-        App.Logger = App.LoggerFactory.CreateLogger<WiredApp<TContext>>();
+        var compiledRoutes = Compile();
 
-        App.Middleware = App.Services.GetServices<Func<TContext, Func<TContext, Task>, Task>>().ToList();
-        App.BuildPipeline(App.Middleware, App.EndpointInvoker);
+        compiledRoutes.PopulateEncodedRoutes(App.EncodedRoutes);
+        App.SetCompiledRoutes(compiledRoutes);
 
-        App.Endpoints = [];
+        //App.Middleware = App.Services.GetServices<Func<TContext, Func<TContext, Task>, Task>>().ToList();
+        //App.BuildPipeline(App.Middleware, App.EndpointInvoker);
 
-        foreach (var fullRoute in App.EncodedRoutes.SelectMany(kvp => kvp.Value.Select(route => kvp.Key + '_' + route)))
-        {
-            App.Endpoints.Add(
-                fullRoute,
-                App.Services.GetRequiredKeyedService<Func<TContext, Task>>(fullRoute));
-        }
+        //App.Endpoints = [];
+
+        //foreach (var fullRoute in App.EncodedRoutes.SelectMany(kvp => kvp.Value.Select(route => kvp.Key + '_' + route)))
+        //{
+        //    App.Endpoints.Add(
+        //        fullRoute,
+        //        App.Services.GetRequiredKeyedService<Func<TContext, Task>>(fullRoute));
+        //}
 
         App.Services = serviceProvider ??
                        App.ServiceCollection.BuildServiceProvider();
+
+        App.LoggerFactory = App.Services.GetRequiredService<ILoggerFactory>();
+        App.Logger = App.LoggerFactory.CreateLogger<WiredApp<TContext>>();
 
         return App;
     }
