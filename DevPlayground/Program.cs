@@ -19,7 +19,7 @@ internal class Program
             })
             .MapGet("/json", ctx =>
             {
-                //ctx.Services.GetRequiredService<Dependency>().Handle();
+                ctx.Services.GetRequiredService<Dependency>().Handle();
 
                 ctx.Respond().Type("text/plain"u8).Content("Hello, World!"u8);
 
