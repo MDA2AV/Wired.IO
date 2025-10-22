@@ -191,8 +191,10 @@ public partial class WiredHttp11Express<TContext> : IHttpHandler<TContext>
                     var bodyReceived = TryExtractBodyFromSingleSegment(context, ref buffer, ref currentPosition, out var bodyEmpty);
                     if (!bodyReceived)
                         break;
-                    
-                    if(!bodyEmpty)
+
+                    // Diogo here, fix the reader position for chunked case
+
+                    if (!bodyEmpty)
                         context.Reader.AdvanceTo(buffer.GetPosition(currentPosition));
 
                     // Handle the request pipeline
