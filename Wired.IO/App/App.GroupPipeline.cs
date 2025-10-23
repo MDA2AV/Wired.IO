@@ -116,7 +116,7 @@ public sealed partial class WiredApp<TContext>
         await pipeline(context);
     }
 
-    private Task Pipeline2(TContext context)
+    private Task GroupPipeline(TContext context)
     {
         var key = new EndpointKey(
             context.Request.HttpMethod,

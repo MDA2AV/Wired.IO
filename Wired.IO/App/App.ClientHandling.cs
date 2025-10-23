@@ -23,7 +23,7 @@ public sealed partial class WiredApp<TContext>
     private async Task HandlePlainClientAsync(Socket client, CancellationToken stoppingToken)
     {
         await using var stream = new PoolBufferedStream(new NetworkStream(client, ownsSocket: true), 65 * 1024);
-        await HttpHandler.HandleClientAsync(stream, Pipeline2, stoppingToken);
+        await HttpHandler.HandleClientAsync(stream, GroupPipeline, stoppingToken);
     }
 
     /// <summary>
