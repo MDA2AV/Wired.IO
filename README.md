@@ -171,7 +171,8 @@ using Wired.IO.App;
 // GET http://localhost:5000/api/hello?a=World
 
 var api = Inline.Create()
-                .Get("hello", (string a) => $"Hello {a}!");
+                .Get("hello", (string a) => $"Hello {a}!")
+                .Defaults(); // adds compression, eTag handling, ...
 
 var builder = WiredApp.CreateExpressBuilder()
                       .Port(5000)
