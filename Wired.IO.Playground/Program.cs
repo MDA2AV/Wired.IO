@@ -259,7 +259,7 @@ internal class Program
                         SerializerContext.JsonMessage,
                         (payload, typeInfo) => new ExpressJsonContent<JsonMessage>(payload, typeInfo));
             })
-            .UseMiddleware(async (ctx, next) =>
+            .UseRootMiddleware(async (ctx, next) =>
             {
                 await next(ctx);
             })

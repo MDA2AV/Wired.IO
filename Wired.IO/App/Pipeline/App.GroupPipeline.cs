@@ -8,8 +8,6 @@ using Wired.IO.Protocol.Response;
 
 namespace Wired.IO.App;
 
-// Diogo here, with group endpoints all static resource serving can be in a middleware!
-
 public sealed partial class WiredApp<TContext>
     where TContext : IBaseContext<IBaseRequest, IBaseResponse>
 {
@@ -48,6 +46,11 @@ public sealed partial class WiredApp<TContext>
         IServiceProvider sp)
     {
         var middlewares = new List<Func<TContext, Func<TContext, Task>, Task>>(16); // More than 16 middlewares is insanity
+
+        // Adding root middlewares
+        middlewares.AddRange(sp.GetServices<Func<TContext, Func<TContext, Task>, Task>>());
+
+        // Adding non root middlewares
         middlewares.AddRange(middlewarePrefixes.SelectMany(prefix => 
             sp.GetKeyedServices<Func<TContext, Func<TContext, Task>, Task>>(prefix)));
         

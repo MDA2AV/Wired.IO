@@ -123,6 +123,8 @@ public sealed partial class Builder<THandler, TContext>
         App.RootEndpoints = [];
         App.GroupEndpoints = [];
 
+        App.RootMiddleware = App.Services.GetServices<Func<TContext, Func<TContext, Task>, Task>>().ToList();
+
         foreach (var kvp in App.EncodedRoutes)
         {
             if (kvp.Key.Equals("FlowControl", StringComparison.OrdinalIgnoreCase))
@@ -274,7 +276,7 @@ public sealed partial class Builder<THandler, TContext>
         if (!dispatchContextWiredEvents)
             return this;
 
-        UseMiddleware(scope => async (context, next) =>
+        UseRootMiddleware(scope => async (context, next) =>
         {
             await next(context);
 

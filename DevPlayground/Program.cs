@@ -7,7 +7,7 @@ using Wired.IO.Http11Express.Context;
 internal class Program
 {
 
-    private static Func<Http11ExpressContext, Func<Http11ExpressContext, Task>, Task> _middlewareExample = async (ctx, next) =>
+    private static readonly Func<Http11ExpressContext, Func<Http11ExpressContext, Task>, Task> MiddlewareExample = async (ctx, next) =>
     {
         Console.WriteLine("Executing Example Middleware");
         await next(ctx);
@@ -34,7 +34,12 @@ internal class Program
         _ = builder
             .Port(8080)
             .NoScopedEndpoints()
-            .AddManualPipeline("/key", "/", [_middlewareExample], partialMatch: true)
+            .AddManualPipeline("/key", "/", [MiddlewareExample], partialMatch: true)
+            .UseRootMiddleware(async (ctx, nxt) =>
+            {
+                Console.WriteLine("Executing root middleware!");
+                await nxt(ctx);
+            })
             .MapGroup("/")
             .UseMiddleware(async (ctx, next) =>
             {
