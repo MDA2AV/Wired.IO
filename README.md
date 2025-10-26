@@ -56,7 +56,7 @@ Wired.IO was created to **run inside your app**, not alongside it. This means yo
 ### Include the Wired.IO package in your project.
 
 ```bash
-dotnet add package Wired.IO --version 9.1.0
+dotnet add package Wired.IO --version 9.5.3
 ```
 
 ### Wire up a basic endpoint
@@ -157,6 +157,30 @@ class DependencyService(ILogger<DependencyService> logger) : IDisposable
     public void Dispose() =>
         logger.LogInformation($"{nameof(DependencyService)} was disposed.");
 }
+```
+
+### Extending apps with functionality provided by GenHTTP
+
+The [GenHTTP adapter](https://github.com/Kaliumhexacyanoferrat/wired-genhttp-adapter) allows you to add modules provided by the [GenHTTP framework]([https://genhttp.org](https://genhttp.org/documentation/content/)) to your Wired.IO app. After adding the corresponding nuget package, you can reference and map those handlers on your app:
+
+```csharp
+using GenHTTP.Adapters.WiredIO;
+using GenHTTP.Modules.Functional;
+using Wired.IO.App;
+
+// GET http://localhost:5000/api/hello?a=World
+
+var api = Inline.Create()
+                .Get("hello", (string a) => $"Hello {a}!")
+                .Defaults(); // adds compression, eTag handling, ...
+
+var builder = WiredApp.CreateExpressBuilder()
+                      .Port(5000)
+                      .Map("/api", api);
+
+var app = builder.Build();
+
+await app.RunAsync();
 ```
 
 ## Thanks
