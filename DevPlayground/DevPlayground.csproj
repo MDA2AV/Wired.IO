@@ -5,9 +5,27 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+      <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+      <IsTestAssetProject>true</IsTestAssetProject>
+      <ServerGarbageCollection>true</ServerGarbageCollection>
+      <TieredPGO>true</TieredPGO>
+
+      <!-- Required for self-contained publish -->
+      <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
+      <SelfContained>true</SelfContained>
   </PropertyGroup>
 
-  <ItemGroup>
+    <PropertyGroup>
+        <PublishAot>true</PublishAot>
+        <OptimizationPreference>Speed</OptimizationPreference>
+    </PropertyGroup>
+
+    <ItemGroup Condition="$(PublishAot) == 'true'">
+        <RuntimeHostConfigurationOption Include="System.Threading.ThreadPool.HillClimbing.Disable" Value="true" />
+    </ItemGroup>
+
+
+    <ItemGroup>
     <ProjectReference Include="..\Wired.IO\Wired.IO.csproj" />
   </ItemGroup>
 

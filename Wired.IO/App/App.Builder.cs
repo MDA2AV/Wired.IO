@@ -2,6 +2,7 @@
 using System.Net;
 using System.Security.Authentication;
 using Microsoft.Extensions.Logging;
+using Wired.IO.Builder;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Handlers;
 using Wired.IO.Protocol.Request;
@@ -47,16 +48,25 @@ public sealed partial class WiredApp<TContext>
     };
 
     /// <summary>
+    /// Partial routes, cannot have variables like /:id, the partial route must match exactly.
+    /// </summary>
+    public Dictionary<string, HashSet<string>> PartialExactMatchRoutes { get; set; } = new();
+    /// <summary>
     /// Gets or sets the middleware pipeline.
     /// Each middleware is a delegate that processes the request context and calls the next middleware.
     /// </summary>
-    public List<Func<TContext, Func<TContext, Task>, Task>> Middleware { get; set; } = null!;
+    public List<Func<TContext, Func<TContext, Task>, Task>> RootMiddleware { get; set; } = null!;
 
     /// <summary>
-    /// Gets or sets the registered HTTP endpoints.
+    /// Gets or sets the registered HTTP root endpoints.
     /// Each entry maps a composite route key to a handler function for the request context.
     /// </summary>
-    public Dictionary<string, Func<TContext, Task>> Endpoints { get; set; } = null!;
+    public Dictionary<string, Func<TContext, Task>> RootEndpoints { get; set; } = null!;
+    /// <summary>
+    /// Gets or sets the registered HTTP grouped route endpoints.
+    /// Each entry maps a composite route key to a handler function for the request context.
+    /// </summary>
+    public Dictionary<EndpointKey, Func<TContext, Task>> GroupEndpoints { get; set; } = null!;
 
     #endregion
 
@@ -98,6 +108,12 @@ public sealed partial class WiredApp<TContext>
     /// Endpoints can resolve dependencies from scoped provider
     /// </summary>
     internal bool ScopedEndpoints { get; set; } = true;
+
+    /// <summary>
+    /// If true: Use RootMiddleware and RootEndpoints, cannot create group routes.<br/>
+    /// If false: Use GroupEndpoints, all user endpoints and middleware must be inside a group route.
+    /// </summary>
+    internal bool UseRootOnlyEndpoints { get; set; } = false;
 
     /// <summary>
     /// Gets or sets the HTTP handler responsible for dispatching requests and handling routing.

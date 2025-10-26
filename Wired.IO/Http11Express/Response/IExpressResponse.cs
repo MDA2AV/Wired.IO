@@ -85,4 +85,6 @@ public interface IExpressResponse : IBaseResponse
     void Clear();
 
     Action Handler { get; set; }
+    
+    Func<Task> AsyncHandler { get; set; }
 }

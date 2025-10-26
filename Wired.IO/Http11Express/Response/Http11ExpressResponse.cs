@@ -41,6 +41,8 @@ public class Http11ExpressResponse : IExpressResponse
     public ulong? ContentLength { get; set; }
 
     public Action Handler { get; set; } = null!;
+    
+    public Func<Task> AsyncHandler { get; set; } = null!;
 
     public void Clear()
     {

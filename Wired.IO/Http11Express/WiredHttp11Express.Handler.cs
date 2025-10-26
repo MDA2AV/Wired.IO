@@ -192,8 +192,6 @@ public partial class WiredHttp11Express<TContext> : IHttpHandler<TContext>
                     if (!bodyReceived)
                         break;
 
-                    // Diogo here, fix the reader position for chunked case
-
                     if (!bodyEmpty)
                         context.Reader.AdvanceTo(buffer.GetPosition(currentPosition));
 
@@ -202,7 +200,7 @@ public partial class WiredHttp11Express<TContext> : IHttpHandler<TContext>
 
                     // Respond
                     if(context.Response is not null && context.Response.IsActive())
-                        WriteResponse(context);
+                        await WriteResponse(context);
 
                     // Clear context for next request
                     context.Clear();
@@ -341,6 +339,8 @@ public partial class WiredHttp11Express<TContext> : IHttpHandler<TContext>
                         throw new InvalidOperationException("Invalid chunked body termination");
 
                     position += 5; // Move past "0\r\n\r\n"
+                    
+                    bodyEmpty = false;
                     return true;
                 }
 

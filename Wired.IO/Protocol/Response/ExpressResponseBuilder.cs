@@ -12,6 +12,7 @@ public enum ContentLengthStrategy
     Known,
     Utf8View,
     Action,
+    AsyncTask,
     Chunked,
 }
 
@@ -54,6 +55,16 @@ public class ExpressResponseBuilder(IExpressResponse response)
         response.ContentLengthStrategy = ContentLengthStrategy.Action;
         
         response.Handler = handler;
+        
+        return this;
+    }
+    
+    public ExpressResponseBuilder Content(Func<Task> handler, ulong? length = null)
+    {
+        response.ContentLength = length;
+        response.ContentLengthStrategy = ContentLengthStrategy.AsyncTask;
+        
+        response.AsyncHandler = handler;
         
         return this;
     }

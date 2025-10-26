@@ -24,14 +24,14 @@ public sealed partial class Builder<THandler, TContext>
     /// Flattens the tree to (EndpointKey, MiddlewarePrefixes[]) descriptors only.
     /// Does NOT resolve from DI or compose pipelines.
     /// </summary>
-    public CompiledRoutes Compile() => RouteCompiler.Compile(_root);
+    private CompiledRoutes Compile() => RouteCompiler.Compile(_root);
 
     // ---------------------------------------------------------------------------------
 
     public sealed class Group
     {
         private readonly Dictionary<string, Group> _children = new(StringComparer.Ordinal);
-        private readonly List<EndpointDef<TContext>> _endpoints = new();
+        private readonly List<EndpointDef> _endpoints = new();
 
         // Track if this group actually registered any middleware in DI.
         private int _middlewareRegistrations;
@@ -70,7 +70,7 @@ public sealed partial class Builder<THandler, TContext>
             // Register endpoint in DI keyed by EndpointKey
             Registrar.AddEndpoint(key, endpoint);
 
-            _endpoints.Add(new EndpointDef<TContext>(key));
+            _endpoints.Add(new EndpointDef(key));
             return this;
         }
 
@@ -88,7 +88,7 @@ public sealed partial class Builder<THandler, TContext>
         internal bool HasMiddlewares => _middlewareRegistrations > 0;
 
         internal IEnumerable<Group> Children => _children.Values;
-        internal IReadOnlyList<EndpointDef<TContext>> Endpoints => _endpoints;
+        internal IReadOnlyList<EndpointDef> Endpoints => _endpoints;
     }
 
     // ---------------------------------------------------------------------------------
@@ -139,7 +139,7 @@ public sealed partial class Builder<THandler, TContext>
             => _services.AddKeyedScoped<Func<TContext, Func<TContext, Task>, Task>>(groupPrefix, (_, _) => middleware);
     }
 
-    internal readonly record struct EndpointDef<TCtx>(EndpointKey Key);
+    internal readonly record struct EndpointDef(EndpointKey Key);
 
     // ---------------------------------------------------------------------------------
 
@@ -147,7 +147,7 @@ public sealed partial class Builder<THandler, TContext>
     {
         public static CompiledRoutes Compile(Group root)
         {
-            var endpoints = new List<CompiledEndpoint>(256);
+            var compiledEndpoints = new List<CompiledEndpoint>(256);
             var inheritedPrefixes = new List<string>(16);
 
             void Dfs(Group g)
@@ -162,7 +162,7 @@ public sealed partial class Builder<THandler, TContext>
 
                 foreach (var ep in g.Endpoints)
                 {
-                    endpoints.Add(new CompiledEndpoint(
+                    compiledEndpoints.Add(new CompiledEndpoint(
                         ep.Key,
                         ImmutableArray.CreateRange(inheritedPrefixes)));
                 }
@@ -178,7 +178,7 @@ public sealed partial class Builder<THandler, TContext>
 
             return new CompiledRoutes
             {
-                Endpoints = endpoints.ToImmutableArray()
+                CompiledEndpoints = compiledEndpoints.ToImmutableArray()
             };
         }
     }
@@ -195,26 +195,26 @@ public readonly record struct CompiledEndpoint(
 
 public sealed class CompiledRoutes
 {
-    public required ImmutableArray<CompiledEndpoint> Endpoints { get; init; }
+    public required ImmutableArray<CompiledEndpoint> CompiledEndpoints { get; init; }
 
     /// <summary>
     /// Populates (or augments) the target EncodedRoutes map with all compiled endpoints,
     /// grouped by HTTP method. Ensures key existence and avoids duplicates.
     /// </summary>
-    public void PopulateEncodedRoutes(IDictionary<string, HashSet<string>> dest)
+    public void PopulateEncodedRoutes(IDictionary<string, HashSet<string>> encodedRoutes)
     {
-        foreach (var ep in Endpoints)
+        foreach (var compiledEndpoint in CompiledEndpoints)
         {
-            var method = NormalizeMethod(ep.Key.Method);
-            var path = ep.Key.Path;
+            var method = NormalizeMethod(compiledEndpoint.Key.Method);
+            var path = compiledEndpoint.Key.Path;
 
-            if (!dest.TryGetValue(method, out var set))
+            if (!encodedRoutes.TryGetValue(method, out var set))
             {
                 set = new HashSet<string>(StringComparer.Ordinal);
-                dest[method] = set;
+                encodedRoutes[method] = set;
             }
 
-            set.Add(path); // HashSet => idempotent
+            set.Add(path!); // HashSet => idempotent
         }
     }
 
@@ -223,4 +223,6 @@ public sealed class CompiledRoutes
         => string.IsNullOrEmpty(method) ? method : method.ToUpperInvariant();
 }
 
-public readonly record struct EndpointKey(string Method, string Path);
+// Method: GET, POST, etc.
+// Path: /user/:id 
+public readonly record struct EndpointKey(string Method, string? Path);

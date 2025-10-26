@@ -8,34 +8,36 @@ using Wired.IO.Protocol.Response;
 
 namespace Wired.IO.App;
 
+// Diogo here, with group endpoints all static resource serving can be in a middleware!
+
 public sealed partial class WiredApp<TContext>
     where TContext : IBaseContext<IBaseRequest, IBaseResponse>
 {
     private Dictionary<EndpointKey, ImmutableArray<string>> _endpointMiddlewareMap =
         new Dictionary<EndpointKey, ImmutableArray<string>>();
-
-    public void SetCompiledRoutes(CompiledRoutes compiled)
-    {
-        // Build a dictionary for O(1) lookup at request time
-        var dict = new Dictionary<EndpointKey, ImmutableArray<string>>(compiled.Endpoints.Length);
-        foreach (var ep in compiled.Endpoints)
-            dict[ep.Key] = ep.MiddlewarePrefixes;
-
-        _endpointMiddlewareMap = dict;
-    }
-
+    
+    // Rearranged data from CompiledRoutes.CompiledEndpoints
     private readonly ConcurrentDictionary<EndpointKey, Func<TContext, Task>> _pipelineCache = new();
 
-    private static Func<TContext, Task> ComposePipeline(
-        IReadOnlyList<Func<TContext, Func<TContext, Task>, Task>> middlewares,
-        Func<TContext, Task> terminal)
+    internal void SetCompiledRoutes(CompiledRoutes compiledRoutes)
     {
-        var next = terminal;
-        for (int i = middlewares.Count - 1; i >= 0; i--)
+        _endpointMiddlewareMap = new Dictionary<EndpointKey, ImmutableArray<string>>(compiledRoutes.CompiledEndpoints.Length);
+        foreach (var compiledEndpoint in compiledRoutes.CompiledEndpoints)
+            _endpointMiddlewareMap[compiledEndpoint.Key] = compiledEndpoint.MiddlewarePrefixes;
+    }
+
+    private static Func<TContext, Task> ComposePipeline(
+        List<Func<TContext, Func<TContext, Task>, Task>> middlewares,
+        Func<TContext, Task> endpoint)
+    {
+        var next = endpoint;
+        for (var i = middlewares.Count - 1; i >= 0; i--)
         {
-            var mw = middlewares[i];
+            var middleware = middlewares[i];
             var captured = next;
-            next = ctx => mw(ctx, captured);
+            
+            // TODO: Try with async and without, any perf changes?
+            next = async ctx => await middleware(ctx, captured);
         }
         return next;
     }
@@ -45,22 +47,22 @@ public sealed partial class WiredApp<TContext>
         ImmutableArray<string> middlewarePrefixes,
         IServiceProvider sp)
     {
-        // 1) resolve the terminal endpoint by EndpointKey
-        var endpoint = sp.GetRequiredKeyedService<Func<TContext, Task>>(key);
+        var middlewares = new List<Func<TContext, Func<TContext, Task>, Task>>(16); // More than 16 middlewares is insanity
+        middlewares.AddRange(middlewarePrefixes.SelectMany(prefix => 
+            sp.GetKeyedServices<Func<TContext, Func<TContext, Task>, Task>>(prefix)));
+        
+        return ComposePipeline(middlewares, sp.GetRequiredKeyedService<Func<TContext, Task>>(key));
+    }
 
-        // 2) resolve all middlewares for each prefix (in order), append to a flat list
-        var list = new List<Func<TContext, Func<TContext, Task>, Task>>(8);
-        foreach (var prefix in middlewarePrefixes)
-        {
-            var groupMws = sp.GetKeyedServices<Func<TContext, Func<TContext, Task>, Task>>(prefix);
-            if (groupMws is null) continue;
-            // registration order is preserved by DI
-            foreach (var mw in groupMws)
-                list.Add(mw);
-        }
-
-        // 3) compose and return
-        return ComposePipeline(list, endpoint);
+    internal Func<TContext, Task> BuildManualPipelineFor(
+        EndpointKey key,
+        List<Func<TContext, Func<TContext, Task>, Task>>? middlewares,
+        IServiceProvider sp)
+    {
+        if (middlewares is null) 
+            return sp.GetRequiredKeyedService<Func<TContext, Task>>(key);
+        
+        return ComposePipeline(middlewares, sp.GetRequiredKeyedService<Func<TContext, Task>>(key));
     }
 
     private Func<TContext, Task> ResolveOrBuildCachedPipeline(
@@ -69,65 +71,72 @@ public sealed partial class WiredApp<TContext>
     {
         if (_pipelineCache.TryGetValue(key, out var cached))
             return cached;
-
-        if (!_endpointMiddlewareMap.TryGetValue(key, out var prefixes))
-            throw new InvalidOperationException($"No compiled metadata for endpoint {key.Method} {key.Path}");
-
-        var built = BuildPipelineFor(key, prefixes, sp);
-        _pipelineCache[key] = built;
-        return built;
+        
+        return _pipelineCache[_notFoundEndpointKey];
     }
 
-    public Task EndpointInvoker2(TContext context)
+    private readonly EndpointKey _notFoundEndpointKey =  new EndpointKey("FlowControl", "NotFound");
+
+    internal List<Func<TContext, Task>> ManuallyBuiltPipelines { get; set; } = new();
+
+    internal void CachePipelines(IServiceProvider sp)
     {
-        // ... your existing static-file short-circuits remain unchanged ...
-
-        var httpMethod = context.Request.HttpMethod;
-        var decodedRoute = MatchEndpoint(EncodedRoutes[httpMethod], context.Request.Route);
-
-        if (decodedRoute is null)
+        // Build a manual pipeline here
+        _pipelineCache[_notFoundEndpointKey] = RootEndpoints["FlowControl_NotFound"];
+        _pipelineCache[_notFoundEndpointKey] = BuildManualPipelineFor();
+        
+        foreach (var kvp in _endpointMiddlewareMap)
         {
-            // your SPA/MPA fallbacks remain unchanged; otherwise:
-            return Endpoints["FlowControl_NotFound"].Invoke(context);
-        }
-
-        // Build the same "full path" used in mapping (you already have it as decodedRoute)
-        var key = new EndpointKey(httpMethod, decodedRoute);
-
-        // If you run ScopedEndpoints, you already create a scope in Pipeline(); do it here to fetch from DI:
-        if (ScopedEndpoints)
-        {
-            return InvokeScoped(context, key);
-        }
-        else
-        {
-            // No scope: use root provider
-            var pipeline = ResolveOrBuildCachedPipeline(key, Services);
-            return pipeline(context);
+            _pipelineCache[kvp.Key] = BuildPipelineFor(kvp.Key, kvp.Value, sp);
         }
     }
 
+    private Func<TContext, Task> EndpointResolver(IServiceProvider sp, EndpointKey key)
+    {
+        if (key.Path is null)
+        {
+            // Short circuit to FlowControl_NotFound endpoint
+            return _pipelineCache[_notFoundEndpointKey];
+        }
+        
+        // Resolve the endpoint from the IServiceProvider and return it
+        return sp.GetRequiredKeyedService<Func<TContext, Task>>(key);
+    }
+
+    internal async Task GroupPipeline(TContext context)
+    {
+        var matchedRoute = MatchEndpoint(EncodedRoutes[context.Request.HttpMethod], context.Request.Route);
+
+        if (matchedRoute is null)
+        {
+            // This means that we couldn't find a matching route, still, look for partial matching routes
+            // for cases when user wants to match /partialRoute/*
+            
+            // Diogo here, how to connect here, the key must match the key set by the AddManualPipeline
+        }
+        
+        var key = new EndpointKey(context.Request.HttpMethod, matchedRoute);
+        
+        if (ScopedEndpoints)
+            await InvokeScoped(context, key);
+        
+        await InvokeNonScoped(context, key);
+    }
+    
     private async Task InvokeScoped(TContext context, EndpointKey key)
     {
         await using var scope = Services.CreateAsyncScope();
         context.Services = scope.ServiceProvider;
-
         var pipeline = ResolveOrBuildCachedPipeline(key, scope.ServiceProvider);
+        
         await pipeline(context);
     }
 
-    private Task GroupPipeline(TContext context)
+    private async Task InvokeNonScoped(TContext context, EndpointKey key)
     {
-        var key = new EndpointKey(
-            context.Request.HttpMethod,
-            MatchEndpoint(EncodedRoutes[context.Request.HttpMethod], context.Request.Route) ?? string.Empty);
-
-        if (ScopedEndpoints)
-            return InvokeScoped(context, key);
-
-        // root scope
         context.Services = Services;
         var pipeline = ResolveOrBuildCachedPipeline(key, Services);
-        return pipeline(context);
+        
+        await pipeline(context);
     }
 }

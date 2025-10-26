@@ -9,9 +9,10 @@ internal class Program
 
         builder.Services.AddScoped<Dependency>();
 
-        var apiGroup = builder
+        _ = builder
             .Port(8080)
-            .MapGroup("/api")
+            .NoScopedEndpoints()
+            .MapGroup("/")
             .UseMiddleware(async (ctx, next) =>
             {
                 Console.WriteLine("Executing Middleware 1");
@@ -19,14 +20,10 @@ internal class Program
             })
             .MapGet("/json", ctx =>
             {
-                ctx.Services.GetRequiredService<Dependency>().Handle();
-
+                //ctx.Services.GetRequiredService<Dependency>().Handle();
                 ctx.Respond().Type("text/plain"u8).Content("Hello, World!"u8);
-
                 return Task.CompletedTask;
-            });
-
-        var apiSubGroup = apiGroup
+            })
             .MapGroup("/v1")
             .UseMiddleware(async (ctx, next) =>
             {
@@ -35,20 +32,22 @@ internal class Program
             })
             .MapGet("/json", ctx =>
             {
-                Console.WriteLine("Running api v1 endpoint!");
+                ctx.Services.GetRequiredService<Dependency>().Handle();
+                ctx.Respond().Type("text/plain"u8).Content("Hello, World!"u8);
                 return Task.CompletedTask;
             });
 
-        var userGroup = builder
+        _ = builder
             .MapGroup("/user")
             .MapGet("/json", ctx =>
             {
                 Console.WriteLine("Running user endpoint!");
+                ctx.Respond().Type("text/plain"u8).Content("Hello, World! /user/json"u8);
                 return Task.CompletedTask;
             });
 
         await builder
-            .Build2()
+            .Build()
             .RunAsync();
     }
 

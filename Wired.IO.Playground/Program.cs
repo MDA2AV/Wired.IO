@@ -130,6 +130,7 @@ internal class Program
         await expressBuilder
             .Port(8080)
             .NoScopedEndpoints()
+            .UseRootEndpoints()
             .MapGet("/websocket", ctx =>
             {
                 Console.WriteLine("Websocket");
@@ -163,7 +164,7 @@ internal class Program
                 ctx
                     .Respond()
                     .Type("application/json"u8)
-                    .Content(myHandler);
+                    .Content(myHandler, 27);
             })
             .MapGet("/jsonRaw", scope => async ctx =>
             {

@@ -21,21 +21,26 @@ public partial class WiredHttp11Express<TContext>
     private static ReadOnlySpan<byte> ConnectionHeader => "Connection: "u8;
     private static ReadOnlySpan<byte> DateHeader => "Date: "u8;
     
-    private static void WriteResponse(TContext context)
+    private static async Task WriteResponse(TContext context)
     {
         WriteStatusLine(context.Writer, context.Response!.Status);
 
         WriteHeaders(context);
 
-        WriteBody(context);
+        await WriteBody(context);
     }
 
     [SkipLocalsInit]
-    private static void WriteBody(TContext context)
+    private static async Task WriteBody(TContext context)
     {
         if (context.Response!.ContentLengthStrategy is ContentLengthStrategy.Action)
         {
             context.Response.Handler();
+            return;
+        }
+        else if (context.Response!.ContentLengthStrategy is ContentLengthStrategy.AsyncTask)
+        {
+            await context.Response.AsyncHandler();
             return;
         }
         
@@ -87,6 +92,7 @@ public partial class WiredHttp11Express<TContext>
             writer.Write(TransferEncodingChunkedHeader);
         }
 
+        //TODO: Implement adding headers
         /*foreach (var header in context.Response!.Utf8Headers)
         {
 
