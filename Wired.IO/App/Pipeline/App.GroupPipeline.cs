@@ -67,9 +67,7 @@ public sealed partial class WiredApp<TContext>
         return ComposePipeline(middlewares, endpoint);
     }
 
-    private Func<TContext, Task> ResolveOrBuildCachedPipeline(
-        EndpointKey key,
-        IServiceProvider sp)
+    private Func<TContext, Task> ResolveOrBuildCachedPipeline(EndpointKey key)
     {
         if (_pipelineCache.TryGetValue(key, out var cached))
             return cached;
@@ -129,7 +127,7 @@ public sealed partial class WiredApp<TContext>
     {
         await using var scope = Services.CreateAsyncScope();
         context.Services = scope.ServiceProvider;
-        var pipeline = ResolveOrBuildCachedPipeline(key, scope.ServiceProvider);
+        var pipeline = ResolveOrBuildCachedPipeline(key);
         
         await pipeline(context);
     }
@@ -137,7 +135,7 @@ public sealed partial class WiredApp<TContext>
     private async Task InvokeNonScoped(TContext context, EndpointKey key)
     {
         context.Services = Services;
-        var pipeline = ResolveOrBuildCachedPipeline(key, Services);
+        var pipeline = ResolveOrBuildCachedPipeline(key);
         
         await pipeline(context);
     }

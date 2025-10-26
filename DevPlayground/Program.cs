@@ -18,7 +18,7 @@ internal class Program
         var builder = WiredApp.CreateExpressBuilder();
 
         builder.Services.AddScoped<Dependency>();
-        builder.Services.AddKeyedScoped<Func<Http11ExpressContext, Task>>(new EndpointKey("/key", "/prefix"), (_, _) =>
+        builder.Services.AddKeyedScoped<Func<Http11ExpressContext, Task>>(new EndpointKey("/key", "/"), (_, _) =>
         ctx =>
         {
             Console.WriteLine("Running manual pipeline endpoint!");
@@ -34,7 +34,7 @@ internal class Program
         _ = builder
             .Port(8080)
             .NoScopedEndpoints()
-            .AddManualPipeline("/key", "/prefix", [_middlewareExample], partialMatch: true)
+            .AddManualPipeline("/key", "/", [_middlewareExample], partialMatch: true)
             .MapGroup("/")
             .UseMiddleware(async (ctx, next) =>
             {

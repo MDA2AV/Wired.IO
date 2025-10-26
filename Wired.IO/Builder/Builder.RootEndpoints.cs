@@ -1,7 +1,4 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Net.Http;
-using System.Security.Cryptography;
 using Wired.IO.App;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Handlers;
@@ -10,75 +7,10 @@ using Wired.IO.Protocol.Response;
 
 namespace Wired.IO.Builder;
 
-/*
-public class EndpointKey
-{
-    public string HttpMethod { get; set; } = null!;
-    public string GroupRoute { get; set; } = null!;
-    public string Route { get; set; } = null!;
-}*/
-
 public sealed partial class Builder<THandler, TContext>
     where TContext : IBaseContext<IBaseRequest, IBaseResponse>
     where THandler : IHttpHandler<TContext>
 {
-    /*
-    public sealed class GroupBuilder
-    {
-        public string GroupRoute { get; set; } = null!;
-        public IServiceCollection Services { get; set; } = null!;
-        public List<EndpointKey> EndpointKeys { get; set; } = new();
-
-        // Possible nested groups
-        public Dictionary<string, GroupBuilder> Groups { get; } = new();
-
-        public GroupBuilder MapGroup(string groupRoute)
-        {
-            Groups[groupRoute] = new GroupBuilder
-            {
-                Services = this.Services,
-                GroupRoute = $"{GroupRoute}{groupRoute}"
-            };
-
-            return Groups[groupRoute];
-        }
-
-        //public List<Func<TContext, Func<TContext, Task>, Task>> Middleware { get; set; } = null!;
-        //public Dictionary<string, Func<TContext, Task>> Endpoints { get; set; } = null!;
-
-        public GroupBuilder MapGet(string route, Func<TContext, Task> endpoint)
-        {
-            var key = new EndpointKey
-            {
-                HttpMethod = HttpConstants.Get,
-                GroupRoute = GroupRoute,
-                Route = route
-            };
-            EndpointKeys.Add(key);
-            Services.AddKeyedScoped<Func<TContext, Task>>(key, (_, _) => endpoint);
-            return this;
-        }
-
-        public GroupBuilder UseMiddleware(Func<TContext, Func<TContext, Task>, Task> middleware)
-        {
-            Services.AddKeyedScoped<Func<TContext, Func<TContext, Task>, Task>>($"{GroupRoute}", (_, _) => middleware);
-            return this;
-        }
-    }
-    public Dictionary<string, GroupBuilder> Groups { get; } = new();
-    public GroupBuilder MapGroup(string groupRoute)
-    {
-        Groups[groupRoute] = new GroupBuilder
-        {
-            Services = App.ServiceCollection,
-            GroupRoute = groupRoute
-        };
-
-        return Groups[groupRoute];
-    }
-    */
-
-
     // ======== FlowControl ==========
 
     /// <summary>
