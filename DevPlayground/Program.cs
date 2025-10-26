@@ -1,17 +1,40 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using System.Net;
 using Wired.IO.App;
+using Wired.IO.Builder;
+using Wired.IO.Http11Express.Context;
 
 internal class Program
 {
+
+    private static Func<Http11ExpressContext, Func<Http11ExpressContext, Task>, Task> _middlewareExample = async (ctx, next) =>
+    {
+        Console.WriteLine("Executing Example Middleware");
+        await next(ctx);
+    };
+
     public static async Task Main(string[] args)
     {
         var builder = WiredApp.CreateExpressBuilder();
 
         builder.Services.AddScoped<Dependency>();
+        builder.Services.AddKeyedScoped<Func<Http11ExpressContext, Task>>(new EndpointKey("/key", "/prefix"), (_, _) =>
+        ctx =>
+        {
+            Console.WriteLine("Running manual pipeline endpoint!");
+
+            ctx
+                .Respond()
+                .Type("text/plain"u8)
+                .Content("Hello from manual pipeline!"u8);
+            
+            return Task.CompletedTask;
+        });
 
         _ = builder
             .Port(8080)
             .NoScopedEndpoints()
+            .AddManualPipeline("/key", "/prefix", [_middlewareExample], partialMatch: true)
             .MapGroup("/")
             .UseMiddleware(async (ctx, next) =>
             {

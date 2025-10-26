@@ -1,6 +1,6 @@
-﻿using System.Collections.Concurrent;
+﻿using Microsoft.Extensions.DependencyInjection;
+using System.Collections.Concurrent;
 using System.Collections.Immutable;
-using Microsoft.Extensions.DependencyInjection;
 using Wired.IO.Builder;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Request;
@@ -17,7 +17,7 @@ public sealed partial class WiredApp<TContext>
         new Dictionary<EndpointKey, ImmutableArray<string>>();
     
     // Rearranged data from CompiledRoutes.CompiledEndpoints
-    private readonly ConcurrentDictionary<EndpointKey, Func<TContext, Task>> _pipelineCache = new();
+    internal readonly ConcurrentDictionary<EndpointKey, Func<TContext, Task>> _pipelineCache = new();
 
     internal void SetCompiledRoutes(CompiledRoutes compiledRoutes)
     {
@@ -42,7 +42,7 @@ public sealed partial class WiredApp<TContext>
         return next;
     }
 
-    private Func<TContext, Task> BuildPipelineFor(
+    private static Func<TContext, Task> BuildPipelineFor(
         EndpointKey key,
         ImmutableArray<string> middlewarePrefixes,
         IServiceProvider sp)
@@ -61,8 +61,10 @@ public sealed partial class WiredApp<TContext>
     {
         if (middlewares is null) 
             return sp.GetRequiredKeyedService<Func<TContext, Task>>(key);
-        
-        return ComposePipeline(middlewares, sp.GetRequiredKeyedService<Func<TContext, Task>>(key));
+
+        var endpoint = sp.GetRequiredKeyedService<Func<TContext, Task>>(key);
+
+        return ComposePipeline(middlewares, endpoint);
     }
 
     private Func<TContext, Task> ResolveOrBuildCachedPipeline(
@@ -71,19 +73,19 @@ public sealed partial class WiredApp<TContext>
     {
         if (_pipelineCache.TryGetValue(key, out var cached))
             return cached;
-        
-        return _pipelineCache[_notFoundEndpointKey];
+
+        return RootEndpoints["FlowControl_NotFound"];
     }
 
-    private readonly EndpointKey _notFoundEndpointKey =  new EndpointKey("FlowControl", "NotFound");
-
-    internal List<Func<TContext, Task>> ManuallyBuiltPipelines { get; set; } = new();
+    internal List<ManualPipelineEntry> ManualPipelineEntries { get; } = new();
 
     internal void CachePipelines(IServiceProvider sp)
     {
-        // Build a manual pipeline here
-        _pipelineCache[_notFoundEndpointKey] = RootEndpoints["FlowControl_NotFound"];
-        _pipelineCache[_notFoundEndpointKey] = BuildManualPipelineFor();
+        foreach (var manualPipelineEntry in ManualPipelineEntries)
+        {
+            _pipelineCache[manualPipelineEntry.EndpointKey] = 
+                BuildManualPipelineFor(manualPipelineEntry.EndpointKey, manualPipelineEntry.Middlewares, sp);
+        }
         
         foreach (var kvp in _endpointMiddlewareMap)
         {
@@ -91,36 +93,36 @@ public sealed partial class WiredApp<TContext>
         }
     }
 
-    private Func<TContext, Task> EndpointResolver(IServiceProvider sp, EndpointKey key)
-    {
-        if (key.Path is null)
-        {
-            // Short circuit to FlowControl_NotFound endpoint
-            return _pipelineCache[_notFoundEndpointKey];
-        }
-        
-        // Resolve the endpoint from the IServiceProvider and return it
-        return sp.GetRequiredKeyedService<Func<TContext, Task>>(key);
-    }
-
     internal async Task GroupPipeline(TContext context)
     {
         var matchedRoute = MatchEndpoint(EncodedRoutes[context.Request.HttpMethod], context.Request.Route);
 
-        if (matchedRoute is null)
+        var endpointKey = new EndpointKey();
+
+        if (matchedRoute is not null)
         {
-            // This means that we couldn't find a matching route, still, look for partial matching routes
-            // for cases when user wants to match /partialRoute/*
-            
-            // Diogo here, how to connect here, the key must match the key set by the AddManualPipeline
+            endpointKey = new EndpointKey(context.Request.HttpMethod, matchedRoute);
+        }
+        else
+        {
+            var match = PartialExactMatchRoutes
+                .SelectMany(
+                    kvp => kvp.Value
+                        .Where(prefix => context.Request.Route.AsSpan().StartsWith(prefix.AsSpan(), StringComparison.Ordinal))
+                        .Select(prefix => (Key: kvp.Key, Prefix: prefix))
+                )
+                .FirstOrDefault();
+
+            if (match.Key is not null && match.Prefix is not null)
+            {
+                endpointKey = new EndpointKey(match.Key, match.Prefix);
+            }
         }
         
-        var key = new EndpointKey(context.Request.HttpMethod, matchedRoute);
-        
         if (ScopedEndpoints)
-            await InvokeScoped(context, key);
+            await InvokeScoped(context, endpointKey);
         
-        await InvokeNonScoped(context, key);
+        await InvokeNonScoped(context, endpointKey);
     }
     
     private async Task InvokeScoped(TContext context, EndpointKey key)
@@ -138,5 +140,10 @@ public sealed partial class WiredApp<TContext>
         var pipeline = ResolveOrBuildCachedPipeline(key, Services);
         
         await pipeline(context);
+    }
+    internal class ManualPipelineEntry
+    {
+        internal EndpointKey EndpointKey { get; set; }
+        internal List<Func<TContext, Func<TContext, Task>, Task>>? Middlewares { get; set; }
     }
 }
