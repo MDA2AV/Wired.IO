@@ -21,7 +21,7 @@ public sealed partial class WiredApp<TContext>
 
     /// <summary>
     /// Matches a request route against a set of encoded patterns using cached regular expressions.
-    /// If a match is found, the matching pattern is returned and cached.
+    /// Supports wildcard suffix patterns (e.g., <c>/route*</c>) that match any prefix.
     /// </summary>
     /// <param name="patterns">A set of registered route patterns for the current HTTP method.</param>
     /// <param name="input">The actual route string from the request.</param>
@@ -29,6 +29,52 @@ public sealed partial class WiredApp<TContext>
     /// The matching pattern if found; otherwise, <c>null</c>.
     /// </returns>
     private static string? MatchEndpoint(HashSet<string> patterns, string input)
+    {
+        if (RouteMatchCache.TryGetValue(input, out var cachedPattern))
+            return cachedPattern;
+
+        foreach (var pattern in patterns)
+        {
+            // Fast path: wildcard suffix like "/route*"
+            if (pattern.EndsWith('*'))
+            {
+                var prefix = pattern.AsSpan(0, pattern.Length - 1);
+
+                // Accept exact or prefixed match
+                if (input.AsSpan().StartsWith(prefix, StringComparison.Ordinal))
+                {
+                    RouteMatchCache[input] = pattern;
+                    return pattern;
+                }
+
+                continue;
+            }
+
+            // Use cached regex for placeholder patterns (e.g., "/users/:id")
+            var regex = RouteRegexCache.GetOrAdd(pattern, static p =>
+                new Regex(ConvertToRegex(p), RegexOptions.Compiled | RegexOptions.CultureInvariant));
+
+            if (regex.IsMatch(input))
+            {
+                RouteMatchCache[input] = pattern;
+                return pattern;
+            }
+        }
+
+        //RouteMatchCache[input] = null;
+        return null;
+    }
+
+    /// <summary>
+    /// Matches a request route against a set of encoded patterns using cached regular expressions.
+    /// If a match is found, the matching pattern is returned and cached.
+    /// </summary>
+    /// <param name="patterns">A set of registered route patterns for the current HTTP method.</param>
+    /// <param name="input">The actual route string from the request.</param>
+    /// <returns>
+    /// The matching pattern if found; otherwise, <c>null</c>.
+    /// </returns>
+    private static string? MatchEndpoint2(HashSet<string> patterns, string input)
     {
         if (RouteMatchCache.TryGetValue(input, out var cachedPattern))
             return cachedPattern;

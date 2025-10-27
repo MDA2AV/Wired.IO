@@ -7,6 +7,8 @@ using Wired.IO.Http11Express.Context;
 internal class Program
 {
 
+    //**** DIOGO NOTE: TRY WITH TRANSIENT ENDPOINTS *****
+
     private static readonly Func<Http11ExpressContext, Func<Http11ExpressContext, Task>, Task> MiddlewareExample = async (ctx, next) =>
     {
         Console.WriteLine("Executing Example Middleware");
@@ -18,40 +20,50 @@ internal class Program
         var builder = WiredApp.CreateExpressBuilder();
 
         builder.Services.AddScoped<Dependency>();
-        builder.Services.AddKeyedScoped<Func<Http11ExpressContext, Task>>(new EndpointKey("/key", "/"), (_, _) =>
-        ctx =>
-        {
-            Console.WriteLine("Running manual pipeline endpoint!");
-
-            ctx
-                .Respond()
-                .Type("text/plain"u8)
-                .Content("Hello from manual pipeline!"u8);
-            
-            return Task.CompletedTask;
-        });
 
         _ = builder
             .Port(8080)
             .NoScopedEndpoints()
-            .AddManualPipeline("/key", "/", [MiddlewareExample], partialMatch: true)
+            .AddManualPipeline(
+                "/banana*", 
+                [HttpConstants.Get, HttpConstants.Post, HttpConstants.Delete, HttpConstants.Put], 
+                ctx =>
+                {
+                    Console.WriteLine("Running manual pipeline endpoint!");
+
+                    ctx
+                        .Respond()
+                        .Type("text/plain"u8)
+                        .Content("Hello from manual pipeline!"u8);
+
+                    return Task.CompletedTask;
+                }, [MiddlewareExample])
             .UseRootMiddleware(async (ctx, nxt) =>
             {
                 Console.WriteLine("Executing root middleware!");
                 await nxt(ctx);
-            })
-            .MapGroup("/")
+            });
+
+            _ = builder.MapGroup("/")
+            .UseMiddleware(async (ctx, next) =>
+            {
+                Console.WriteLine("Executing Global middleware for group /");
+                await next(ctx);
+            });
+
+            _ = builder.MapGroup("/api")
             .UseMiddleware(async (ctx, next) =>
             {
                 Console.WriteLine("Executing Middleware 1");
                 await next(ctx);
             })
-            .MapGet("/json", ctx =>
+            .MapPost("/json", ctx =>
             {
                 //ctx.Services.GetRequiredService<Dependency>().Handle();
                 ctx.Respond().Type("text/plain"u8).Content("Hello, World!"u8);
                 return Task.CompletedTask;
             })
+
             .MapGroup("/v1")
             .UseMiddleware(async (ctx, next) =>
             {
@@ -67,7 +79,7 @@ internal class Program
 
         _ = builder
             .MapGroup("/user")
-            .MapGet("/json", ctx =>
+            .MapGet("/json/:id", ctx =>
             {
                 Console.WriteLine("Running user endpoint!");
                 ctx.Respond().Type("text/plain"u8).Content("Hello, World! /user/json"u8);

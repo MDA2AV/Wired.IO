@@ -94,38 +94,62 @@ public sealed partial class WiredApp<TContext>
         }
     }
 
+    //private ConcurrentDictionary<string, EndpointKey> _keylessCachedRoutes = new();
+
     internal async Task GroupPipeline(TContext context)
     {
         var matchedRoute = MatchEndpoint(EncodedRoutes[context.Request.HttpMethod], context.Request.Route);
 
-        var endpointKey = new EndpointKey();
-
+        // Try hot path first, exact match on an encoded route
         if (matchedRoute is not null)
         {
-            endpointKey = new EndpointKey(context.Request.HttpMethod, matchedRoute);
-        }
-        else
-        {
-            var match = PartialExactMatchRoutes
-                .SelectMany(
-                    kvp => kvp.Value
-                        .Where(prefix => context.Request.Route.AsSpan().StartsWith(prefix.AsSpan(), StringComparison.Ordinal))
-                        .Select(prefix => (Key: kvp.Key, Prefix: prefix))
-                )
-                .FirstOrDefault();
+            var endpointKey = new EndpointKey(context.Request.HttpMethod, matchedRoute);
+            await InvokePipeline(context, endpointKey);
 
-            if (match.Key is not null && match.Prefix is not null)
-            {
-                endpointKey = new EndpointKey(match.Key, match.Prefix);
-            }
+            return;
         }
-        
-        if (ScopedEndpoints)
-            await InvokeScoped(context, endpointKey);
-        
-        await InvokeNonScoped(context, endpointKey);
+        /*
+        // Try Keyless route matching
+        if (_keylessCachedRoutes.TryGetValue(context.Request.Route, out var cachedKeylessRoute))
+        {
+            await InvokePipeline(context, cachedKeylessRoute);
+            return;
+        }
+
+        // Find first matching route using MatchEndpoint across all methods
+        (string? Key, string? Prefix) match = (null, null);
+
+        // kvp.Value is the HashSet<string> of encoded patterns for this HTTP method
+        var candidate = MatchEndpoint(EncodedRoutes[KeyConstants.Keyless], context.Request.Route);
+        if (candidate is not null)
+        {
+            match = (KeyConstants.Keyless, candidate);
+            //break;
+        }
+
+        if (match.Key is not null && match.Prefix is not null)
+        {
+            var endpointKey = new EndpointKey(match.Key, match.Prefix);
+
+            // Cache by route (consistent with TryGetValue above)
+            _keylessCachedRoutes[context.Request.Route] = endpointKey;
+
+            await InvokePipeline(context, endpointKey);
+            return;
+        }*/
+
+        // No matching route found, invoke not found pipeline
+        await InvokePipeline(context, new EndpointKey());
     }
-    
+
+    private async Task InvokePipeline(TContext context, EndpointKey key)
+    {
+        if (ScopedEndpoints)
+            await InvokeScoped(context, key);
+        else
+            await InvokeNonScoped(context, key);
+    }
+
     private async Task InvokeScoped(TContext context, EndpointKey key)
     {
         await using var scope = Services.CreateAsyncScope();

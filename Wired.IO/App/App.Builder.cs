@@ -47,6 +47,20 @@ public sealed partial class WiredApp<TContext>
         { "FlowControl", [] },
     };
 
+    public Dictionary<string, HashSet<string>> RootEncodedRoutes { get; set; } = new()
+    {
+        { HttpConstants.Get, [] },
+        { HttpConstants.Post, [] },
+        { HttpConstants.Put, [] },
+        { HttpConstants.Delete, [] },
+        { HttpConstants.Patch, [] },
+        { HttpConstants.Head, [] },
+        { HttpConstants.Options, [] },
+        { HttpConstants.Trace, [] },
+        { HttpConstants.Connect, [] },
+        { "FlowControl", [] },
+    };
+
     /// <summary>
     /// Partial routes, cannot have variables like /:id, the partial route must match exactly.
     /// </summary>

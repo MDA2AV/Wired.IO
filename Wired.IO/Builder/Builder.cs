@@ -60,8 +60,8 @@ public sealed partial class Builder<THandler, TContext>
     /// <param name="sslApplicationProtocols">List of supported ALPN protocols.</param>
     private void Initialize(Func<THandler> handlerFactory, List<SslApplicationProtocol> sslApplicationProtocols)
     {
-        _registrar = new EndpointRegistrar(App.ServiceCollection);
-        _root = new Group(prefix: "/", parent: null, registrar: _registrar);
+        _endpointDIRegister = new EndpointDIRegister(App.ServiceCollection);
+        _root = new Group(prefix: "/", parent: null, diRegister: _endpointDIRegister);
 
         App.HttpHandler = handlerFactory();
         App.SslServerAuthenticationOptions.ApplicationProtocols = sslApplicationProtocols;
@@ -77,7 +77,7 @@ public sealed partial class Builder<THandler, TContext>
         
         if(App.UseRootOnlyEndpoints)
         {
-            BuildRoot(serviceProvider);
+            BuildRootOnly(serviceProvider);
         }
         else
         {
@@ -89,8 +89,14 @@ public sealed partial class Builder<THandler, TContext>
 
         return App;
     }
-    
-    private void BuildRoot(IServiceProvider? serviceProvider = null!)
+
+    /// <summary>
+    /// Supports only root endpoints and middleware, no route groups.
+    /// Still supported for backwards compatibility and very simple webservers.
+    /// Will eventually be deprecated.
+    /// </summary>
+    /// <param name="serviceProvider"></param>
+    private void BuildRootOnly(IServiceProvider? serviceProvider = null!)
     {
         App.Services = serviceProvider ?? 
                        App.ServiceCollection.BuildServiceProvider();
@@ -125,8 +131,15 @@ public sealed partial class Builder<THandler, TContext>
 
         App.RootMiddleware = App.Services.GetServices<Func<TContext, Func<TContext, Task>, Task>>().ToList();
 
-        foreach (var kvp in App.EncodedRoutes)
+        foreach (var fullRoute in App.RootEncodedRoutes.SelectMany(kvp => kvp.Value.Select(route => kvp.Key + '_' + route)))
         {
+            App.RootEndpoints.Add(
+                fullRoute,
+                App.Services.GetRequiredKeyedService<Func<TContext, Task>>(fullRoute));
+        }
+
+        /*foreach (var kvp in App.EncodedRoutes)
+        { 
             if (kvp.Key.Equals("FlowControl", StringComparison.OrdinalIgnoreCase))
             {
                 foreach (var route in kvp.Value)
@@ -134,18 +147,10 @@ public sealed partial class Builder<THandler, TContext>
                     var fullRoute = $"{kvp.Key}_{route}";
                     App.RootEndpoints.Add(fullRoute, App.Services.GetRequiredKeyedService<Func<TContext, Task>>(fullRoute));
                 }
-                continue;
             }
-            /*foreach (var key in kvp.Value.Select(route => new EndpointKey(kvp.Key, route)))
-            {
-                App.GroupEndpoints.Add(
-                    key,
-                    App.Services.GetRequiredKeyedService<Func<TContext, Task>>(key));
-            }*/
-        }
+        }*/
 
         App.CachePipelines(App.Services);
-        
         App.SetPipeline(App.GroupPipeline);
     }
 

@@ -116,7 +116,7 @@ public sealed partial class WiredApp<TContext>
             // Else if resource does not exist, continue to normal endpoint resolution
         }
 
-        var decodedRoute = MatchEndpoint(EncodedRoutes[httpMethod], context.Request.Route);
+        var decodedRoute = MatchEndpoint(RootEncodedRoutes[httpMethod], context.Request.Route);
 
         // If no matching route is found and SPA enabled, serve index.html in case the route starts with any of the SPA base routes
         if (decodedRoute is null)
