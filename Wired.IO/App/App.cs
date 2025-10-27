@@ -4,8 +4,8 @@ using Wired.IO.Http11;
 using Wired.IO.Http11.Context;
 using Wired.IO.Http11.Middleware;
 using Wired.IO.Http11Express;
-using Wired.IO.Http11Express.BuilderExtensions;
 using Wired.IO.Http11Express.Context;
+using Wired.IO.Http11Express.StaticHandlers;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Handlers;
 using Wired.IO.Protocol.Request;
@@ -24,8 +24,7 @@ public sealed class WiredApp
         var builder = new Builder<WiredHttp11Express, Http11ExpressContext>(() =>
             new WiredHttp11Express(), [SslApplicationProtocol.Http11]);
         
-        return builder
-            .AddNotFoundEndpoint();
+        return builder.MapFlowControl("NotFound", FlowControl.CreateEndpointNotFoundHandler());
     }
     
     // Overload for the case when user wants to use a context which is a super type of Http11ExpressContext
@@ -35,8 +34,7 @@ public sealed class WiredApp
         var builder = new Builder<WiredHttp11Express<TContext>, TContext>(() =>
             new WiredHttp11Express<TContext>(), [SslApplicationProtocol.Http11]);
 
-        return builder
-            .AddNotFoundEndpoint();
+        return builder.MapFlowControl("NotFound", FlowControl.CreateEndpointNotFoundHandler());
     }
 
     /// <summary>

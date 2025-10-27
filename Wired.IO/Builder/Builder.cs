@@ -58,20 +58,15 @@ public sealed partial class Builder<THandler, TContext>
     /// </summary>
     /// <param name="handlerFactory">The handler creation delegate.</param>
     /// <param name="sslApplicationProtocols">List of supported ALPN protocols.</param>
-    public void Initialize(Func<THandler> handlerFactory, List<SslApplicationProtocol> sslApplicationProtocols)
+    private void Initialize(Func<THandler> handlerFactory, List<SslApplicationProtocol> sslApplicationProtocols)
     {
+        _registrar = new EndpointRegistrar(App.ServiceCollection);
+        _root = new Group(prefix: "/", parent: null, registrar: _registrar);
+
         App.HttpHandler = handlerFactory();
         App.SslServerAuthenticationOptions.ApplicationProtocols = sslApplicationProtocols;
     }
 
-    /// <summary>
-    /// Finalizes the builder and constructs a <see cref="WiredApp{TContext}"/> instance.
-    /// Also builds the service provider and resolves all route handlers and middleware.
-    /// </summary>
-    /// <param name="serviceProvider">
-    /// Optional external service provider. If not provided, a default one is built from the <see cref="ServiceCollection"/>.
-    /// </param>
-    /// <returns>The configured application instance.</returns>
     public WiredApp<TContext> Build(IServiceProvider? serviceProvider = null!)
     {
         var isLoggerFactoryRegistered = App.ServiceCollection.Any(
@@ -79,26 +74,77 @@ public sealed partial class Builder<THandler, TContext>
 
         if(!isLoggerFactoryRegistered)
             App.ServiceCollection.AddLogging(DefaultLoggingBuilder);
-
-        App.Services = serviceProvider ?? 
-                       App.ServiceCollection.BuildServiceProvider();
-
+        
+        if(App.UseRootOnlyEndpoints)
+        {
+            BuildRoot(serviceProvider);
+        }
+        else
+        {
+            BuildGroup(serviceProvider);
+        }
+        
         App.LoggerFactory = App.Services.GetRequiredService<ILoggerFactory>();
         App.Logger = App.LoggerFactory.CreateLogger<WiredApp<TContext>>();
 
-        App.Middleware = App.Services.GetServices<Func<TContext, Func<TContext, Task>, Task>>().ToList();
-        App.BuildPipeline(App.Middleware, App.EndpointInvoker);
+        return App;
+    }
+    
+    private void BuildRoot(IServiceProvider? serviceProvider = null!)
+    {
+        App.Services = serviceProvider ?? 
+                       App.ServiceCollection.BuildServiceProvider();
 
-        App.Endpoints = [];
+        App.RootMiddleware = App.Services.GetServices<Func<TContext, Func<TContext, Task>, Task>>().ToList();
+        App.BuildPipeline(App.RootMiddleware, App.EndpointInvoker);
+
+        App.SetPipeline(App.RootPipeline);
+
+        App.RootEndpoints = [];
 
         foreach (var fullRoute in App.EncodedRoutes.SelectMany(kvp => kvp.Value.Select(route => kvp.Key + '_' + route)))
         {
-            App.Endpoints.Add(
+            App.RootEndpoints.Add(
                 fullRoute,
                 App.Services.GetRequiredKeyedService<Func<TContext, Task>>(fullRoute));
         }
+    }
 
-        return App;
+    private void BuildGroup(IServiceProvider? serviceProvider = null!)
+    {
+        var compiledRoutes = Compile();
+
+        compiledRoutes.PopulateEncodedRoutes(App.EncodedRoutes);
+        App.SetCompiledRoutes(compiledRoutes);
+        
+        App.Services = serviceProvider ??
+                       App.ServiceCollection.BuildServiceProvider();
+        
+        App.RootEndpoints = [];
+        App.GroupEndpoints = [];
+
+        foreach (var kvp in App.EncodedRoutes)
+        {
+            if (kvp.Key.Equals("FlowControl", StringComparison.OrdinalIgnoreCase))
+            {
+                foreach (var route in kvp.Value)
+                {
+                    var fullRoute = $"{kvp.Key}_{route}";
+                    App.RootEndpoints.Add(fullRoute, App.Services.GetRequiredKeyedService<Func<TContext, Task>>(fullRoute));
+                }
+                continue;
+            }
+            /*foreach (var key in kvp.Value.Select(route => new EndpointKey(kvp.Key, route)))
+            {
+                App.GroupEndpoints.Add(
+                    key,
+                    App.Services.GetRequiredKeyedService<Func<TContext, Task>>(key));
+            }*/
+        }
+
+        App.CachePipelines(App.Services);
+        
+        App.SetPipeline(App.GroupPipeline);
     }
 
     private static void DefaultLoggingBuilder(ILoggingBuilder loggingBuilder)
@@ -174,6 +220,17 @@ public sealed partial class Builder<THandler, TContext>
     public Builder<THandler, TContext> NoScopedEndpoints()
     {
         App.ScopedEndpoints = false;
+
+        return this;
+    }
+    
+    /// <summary>
+    /// Use root endpoints and middleware, cannot create rout groups. Use this configuration for very simple
+    /// webserver that does not need group routes.
+    /// </summary>
+    public Builder<THandler, TContext> UseRootEndpoints()
+    {
+        App.UseRootOnlyEndpoints = true;
 
         return this;
     }

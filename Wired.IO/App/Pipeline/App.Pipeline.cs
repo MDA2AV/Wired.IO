@@ -1,6 +1,4 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using System.Collections.Concurrent;
-using System.Text.RegularExpressions;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Request;
 using Wired.IO.Protocol.Response;
@@ -79,18 +77,18 @@ public sealed partial class WiredApp<TContext>
                 
                 if (CanServeSpaFiles) 
                 {
-                    _cachedEndpoints[context.Request.Route] = Endpoints["GET_/serve-spa-resource"]; 
-                    return Endpoints["GET_/serve-spa-resource"].Invoke(context);
+                    _cachedEndpoints[context.Request.Route] = RootEndpoints["GET_/serve-spa-resource"]; 
+                    return RootEndpoints["GET_/serve-spa-resource"].Invoke(context);
                     
                 }
                 if (CanServeMpaFiles)
                 {
-                    _cachedEndpoints[context.Request.Route] = Endpoints["GET_/serve-mpa-resource"]; 
-                    return Endpoints["GET_/serve-mpa-resource"].Invoke(context);
+                    _cachedEndpoints[context.Request.Route] = RootEndpoints["GET_/serve-mpa-resource"]; 
+                    return RootEndpoints["GET_/serve-mpa-resource"].Invoke(context);
                 }
                 
-                _cachedEndpoints[context.Request.Route] = Endpoints["GET_/serve-static-resource"]; 
-                return Endpoints["GET_/serve-static-resource"].Invoke(context);
+                _cachedEndpoints[context.Request.Route] = RootEndpoints["GET_/serve-static-resource"]; 
+                return RootEndpoints["GET_/serve-static-resource"].Invoke(context);
             }
 
             // Resource is not cached, check if it exists
@@ -101,18 +99,18 @@ public sealed partial class WiredApp<TContext>
 
                 if (CanServeSpaFiles) 
                 {
-                    _cachedEndpoints[context.Request.Route] = Endpoints["GET_/serve-spa-resource"]; 
-                    return Endpoints["GET_/serve-spa-resource"].Invoke(context);
+                    _cachedEndpoints[context.Request.Route] = RootEndpoints["GET_/serve-spa-resource"]; 
+                    return RootEndpoints["GET_/serve-spa-resource"].Invoke(context);
                     
                 }
                 if (CanServeMpaFiles)
                 {
-                    _cachedEndpoints[context.Request.Route] = Endpoints["GET_/serve-mpa-resource"]; 
-                    return Endpoints["GET_/serve-mpa-resource"].Invoke(context);
+                    _cachedEndpoints[context.Request.Route] = RootEndpoints["GET_/serve-mpa-resource"]; 
+                    return RootEndpoints["GET_/serve-mpa-resource"].Invoke(context);
                 }
                 
-                _cachedEndpoints[context.Request.Route] = Endpoints["GET_/serve-static-resource"]; 
-                return Endpoints["GET_/serve-static-resource"].Invoke(context);
+                _cachedEndpoints[context.Request.Route] = RootEndpoints["GET_/serve-static-resource"]; 
+                return RootEndpoints["GET_/serve-static-resource"].Invoke(context);
             }
 
             // Else if resource does not exist, continue to normal endpoint resolution
@@ -130,8 +128,8 @@ public sealed partial class WiredApp<TContext>
                 {
                     // Cache the resource for future requests and short circuit to static file endpoint
                     StaticCachedResourceFiles[context.Request.Route] = resource;
-                    _cachedEndpoints[context.Request.Route] = Endpoints["GET_/serve-mpa-resource"];
-                    return Endpoints["GET_/serve-mpa-resource"].Invoke(context);
+                    _cachedEndpoints[context.Request.Route] = RootEndpoints["GET_/serve-mpa-resource"];
+                    return RootEndpoints["GET_/serve-mpa-resource"].Invoke(context);
                 }
             }
 
@@ -142,18 +140,18 @@ public sealed partial class WiredApp<TContext>
                 {
                     // Cache the resource for future requests and short circuit to static file endpoint
                     StaticCachedResourceFiles[context.Request.Route] = resource;
-                    _cachedEndpoints[context.Request.Route] = Endpoints["GET_/serve-spa-resource"];
-                    return Endpoints["GET_/serve-spa-resource"].Invoke(context);
+                    _cachedEndpoints[context.Request.Route] = RootEndpoints["GET_/serve-spa-resource"];
+                    return RootEndpoints["GET_/serve-spa-resource"].Invoke(context);
                 }
             }
         }
 
         if (decodedRoute is null)
         {
-            return Endpoints["FlowControl_NotFound"].Invoke(context);
+            return RootEndpoints["FlowControl_NotFound"].Invoke(context);
         }
 
-        var endpoint = Endpoints[httpMethod + "_" + decodedRoute!];
+        var endpoint = RootEndpoints[httpMethod + "_" + decodedRoute!];
         _cachedEndpoints[context.Request.Route] = endpoint;
 
         return endpoint is null
@@ -167,7 +165,7 @@ public sealed partial class WiredApp<TContext>
     /// </summary>
     /// <param name="context">The request context to process.</param>
     /// <returns>A task that completes when request processing is finished.</returns>
-    private async Task Pipeline(TContext context)
+    internal async Task RootPipeline(TContext context)
     {
         if (ScopedEndpoints)
         {
@@ -202,7 +200,7 @@ public sealed partial class WiredApp<TContext>
 
         var httpMethod = context.Request.HttpMethod.ToUpper();
         var decodedRoute = MatchEndpoint(EncodedRoutes[httpMethod], context.Request.Route);
-        var endpoint = Endpoints[httpMethod + "_" + decodedRoute!];
+        var endpoint = RootEndpoints[httpMethod + "_" + decodedRoute!];
 
         return endpoint is null
             ? throw new InvalidOperationException("Unable to find the Invoke method on the resolved service.")
@@ -221,7 +219,7 @@ public sealed partial class WiredApp<TContext>
         {
             var httpMethod = ctx.Request.HttpMethod.ToUpper();
             var decodedRoute = MatchEndpoint(EncodedRoutes[httpMethod], ctx.Request.Route);
-            var endpoint = Endpoints[httpMethod + "_" + decodedRoute!];
+            var endpoint = RootEndpoints[httpMethod + "_" + decodedRoute!];
 
             return endpoint is null
                 ? throw new InvalidOperationException("Unable to find the Invoke method on the resolved service.")
@@ -236,55 +234,5 @@ public sealed partial class WiredApp<TContext>
         }
 
         return next(context);
-    }
-
-    /// <summary>
-    /// Caches matched routes for previously seen paths to speed up route resolution.
-    /// </summary>
-    private static readonly ConcurrentDictionary<string, string?> RouteMatchCache = new();
-
-    /// <summary>
-    /// Caches compiled regular expressions for each route pattern to avoid recompilation.
-    /// </summary>
-    private static readonly ConcurrentDictionary<string, Regex> RouteRegexCache = new();
-
-    /// <summary>
-    /// Matches a request route against a set of encoded patterns using cached regular expressions.
-    /// If a match is found, the matching pattern is returned and cached.
-    /// </summary>
-    /// <param name="patterns">A set of registered route patterns for the current HTTP method.</param>
-    /// <param name="input">The actual route string from the request.</param>
-    /// <returns>
-    /// The matching pattern if found; otherwise, <c>null</c>.
-    /// </returns>
-    public static string? MatchEndpoint(HashSet<string> patterns, string input)
-    {
-        if (RouteMatchCache.TryGetValue(input, out var cachedPattern))
-            return cachedPattern;
-
-        foreach (var pattern in patterns)
-        {
-            var regex = RouteRegexCache.GetOrAdd(pattern, static p =>
-                new Regex(ConvertToRegex(p), RegexOptions.Compiled | RegexOptions.CultureInvariant));
-
-            if (!regex.IsMatch(input)) continue;
-
-            RouteMatchCache[input] = pattern;
-            return pattern;
-        }
-
-        RouteMatchCache[input] = null;
-        return null;
-    }
-
-    /// <summary>
-    /// Converts a route pattern with placeholders (e.g., <c>/users/:id</c>) into a regular expression pattern.
-    /// </summary>
-    /// <param name="pattern">The route pattern containing optional placeholders (e.g., <c>:id</c>).</param>
-    /// <returns>A regex string that matches the route with placeholders replaced by wildcards.</returns>
-    public static string ConvertToRegex(string pattern)
-    {
-        var regexPattern = Regex.Replace(pattern, @":\w+", "[^/]+");
-        return $"^{regexPattern}$";
     }
 }

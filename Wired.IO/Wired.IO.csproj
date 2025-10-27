@@ -17,7 +17,17 @@
 	  <Description>https://mda2av.github.io/Wired.IO.Docs/</Description>
 	  <PackageProjectUrl>https://github.com/MDA2AV/Wired.IO</PackageProjectUrl>
 	  <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+	  <!-- Required for self-contained publish in linux-x64 -->
+      <!--<RuntimeIdentifier>linux-x64</RuntimeIdentifier>-->
+      
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Http11Express\Websockets\**" />
+    <EmbeddedResource Remove="Http11Express\Websockets\**" />
+    <None Remove="Http11Express\Websockets\**" />
+  </ItemGroup>
 
 	<ItemGroup>
 		<None Include="..\LICENSE">

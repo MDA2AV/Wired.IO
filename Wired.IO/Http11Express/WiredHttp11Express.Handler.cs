@@ -191,8 +191,8 @@ public partial class WiredHttp11Express<TContext> : IHttpHandler<TContext>
                     var bodyReceived = TryExtractBodyFromSingleSegment(context, ref buffer, ref currentPosition, out var bodyEmpty);
                     if (!bodyReceived)
                         break;
-                    
-                    if(!bodyEmpty)
+
+                    if (!bodyEmpty)
                         context.Reader.AdvanceTo(buffer.GetPosition(currentPosition));
 
                     // Handle the request pipeline
@@ -200,7 +200,7 @@ public partial class WiredHttp11Express<TContext> : IHttpHandler<TContext>
 
                     // Respond
                     if(context.Response is not null && context.Response.IsActive())
-                        WriteResponse(context);
+                        await WriteResponse(context);
 
                     // Clear context for next request
                     context.Clear();
@@ -339,6 +339,8 @@ public partial class WiredHttp11Express<TContext> : IHttpHandler<TContext>
                         throw new InvalidOperationException("Invalid chunked body termination");
 
                     position += 5; // Move past "0\r\n\r\n"
+                    
+                    bodyEmpty = false;
                     return true;
                 }
 

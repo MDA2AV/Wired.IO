@@ -295,7 +295,7 @@ public sealed partial class WiredApp<TContext>
     /// }
     /// </code>
     /// </example>
-    private bool GetEmbeddedResource(string filePath, Location location, ref ReadOnlyMemory<byte> resource)
+    private static bool GetEmbeddedResource(string filePath, Location location, ref ReadOnlyMemory<byte> resource)
     {
         if (location is not { LocationType: LocationType.EmbeddedResource, Assembly: not null })
         {

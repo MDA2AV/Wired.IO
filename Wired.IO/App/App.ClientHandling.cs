@@ -1,5 +1,4 @@
-﻿using System.IO.Pipes;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security;
@@ -14,6 +13,10 @@ namespace Wired.IO.App;
 public sealed partial class WiredApp<TContext>
     where TContext : IBaseContext<IBaseRequest, IBaseResponse>
 {
+    private Func<TContext, Task> _pipeline = null!;
+    
+    internal void SetPipeline(Func<TContext, Task> pipeline) => _pipeline = pipeline;
+    
     /// <summary>
     /// Handles an incoming plain (non-TLS) TCP client connection.
     /// Wraps the client socket in a <see cref="PoolBufferedStream"/> and delegates request handling to <see cref="HttpHandler"/>.
@@ -22,8 +25,11 @@ public sealed partial class WiredApp<TContext>
     /// <param name="stoppingToken">The <see cref="CancellationToken"/> used to cancel the operation.</param>
     private async Task HandlePlainClientAsync(Socket client, CancellationToken stoppingToken)
     {
-        await using var stream = new PoolBufferedStream(new NetworkStream(client, ownsSocket: true), 65 * 1024);
-        await HttpHandler.HandleClientAsync(stream, Pipeline, stoppingToken);
+        await using var networkStream = new PoolBufferedStream(new NetworkStream(client, ownsSocket: true), 65 * 1024);
+        await HttpHandler.HandleClientAsync(
+            networkStream, 
+            _pipeline, 
+            stoppingToken);
     }
 
     /// <summary>
@@ -67,7 +73,7 @@ public sealed partial class WiredApp<TContext>
         //
         await HttpHandler.HandleClientAsync(
             sslStream,
-            Pipeline,
+            _pipeline,
             stoppingToken);
     }
 

@@ -84,6 +84,15 @@ internal class Program
     private static readonly Action<PipeWriter, JsonMessage> StaticHandler = HandleFast;
     private static readonly Action<PipeWriter, string> StaticHandlerString = HandleJson;
 
+    private static readonly Func<PipeWriter, JsonMessage, Task> StaticAsyncHandler = static async (writer, message) =>
+    {
+        var utf8JsonWriter = t_writer ??= new Utf8JsonWriter(writer, new JsonWriterOptions { SkipValidation = true });
+        utf8JsonWriter.Reset(writer);
+        await JsonSerializer.SerializeAsync(writer.AsStream(), message, SerializerContext.JsonMessage);
+    };
+
+    private static Action CreateAsyncBoundHandler(PipeWriter writer, JsonMessage message) => () => StaticHandler.Invoke(writer, message);
+
     private static Action CreateBoundHandler(PipeWriter writer, JsonMessage message) => () => StaticHandler.Invoke(writer, message);
     private static Action CreateBoundHandlerString(PipeWriter writer, string serialized) => () => StaticHandlerString.Invoke(writer, serialized);
 
@@ -121,7 +130,13 @@ internal class Program
         await expressBuilder
             .Port(8080)
             .NoScopedEndpoints()
-            
+            .UseRootEndpoints()
+            .MapGet("/websocket", ctx =>
+            {
+                Console.WriteLine("Websocket");
+                Console.WriteLine(ctx.Request.Headers["Sec-WebSocket-Key"]);
+                
+            })
             
             /*.ServeMpaFilesExpress("/", new Location
             {
@@ -144,7 +159,7 @@ internal class Program
             .MapGet("/example", ctx =>
             {
                 var payload = new JsonMessage { Message = JsonBody };
-                var myHandler = CreateBoundHandler(ctx.Writer, payload);
+                var myHandler = CreateAsyncBoundHandler(ctx.Writer, payload);
 
                 ctx
                     .Respond()
