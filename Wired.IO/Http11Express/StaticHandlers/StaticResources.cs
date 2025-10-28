@@ -111,6 +111,84 @@ public static class BuilderExtensions
                         {
                             // Cache the resource for future requests and short circuit to static file endpoint
                             WiredApp<Http11ExpressContext>.StaticCachedResourceFiles[ctx.Request.Route] = resource;
+
+                            ctx.Respond()
+                                .Status(ResponseStatus.Ok)
+                                .Type(MimeTypes.GetMimeType(routePath))
+                                .Content(CreateBoundHandler(ctx.Writer, indexHtml), (ulong)resource.Length);
+                        }
+
+                        return Task.CompletedTask;
+                    }
+
+                    // Load from source on miss
+                    if (!WiredApp<Http11ExpressContext>.TryReadResource(routePath, out resource))
+                    {
+                        // Not found
+                        ctx.Respond()
+                            .Status(ResponseStatus.NotFound)
+                            .Type("text/plain"u8)
+                            .Content("Resource was not found."u8);
+
+                        return Task.CompletedTask;
+                    }
+
+                    // Populate cache
+                    WiredApp<Http11ExpressContext>.StaticCachedResourceFiles[routePath] = resource;
+                }
+
+                // Serve cached (or freshly loaded) resource
+                var handler = CreateBoundHandler(ctx.Writer, resource);
+
+                ctx.Respond()
+                    .Status(ResponseStatus.Ok)
+                    .Type(MimeTypes.GetMimeType(routePath))
+                    .Content(handler, (ulong)resource.Length);
+
+                return Task.CompletedTask;
+            },
+            middlewares);
+
+        return builder;
+    }
+
+    public static Builder<WiredHttp11Express, Http11ExpressContext> AddMpaProvider(
+        this Builder<WiredHttp11Express, Http11ExpressContext> builder,
+        string route,
+        Location location,
+        List<Func<Http11ExpressContext, Func<Http11ExpressContext, Task>, Task>>? middlewares,
+        List<string>? keys = null)
+    {
+        keys ??= [HttpConstants.Get];
+
+        // Trim out the wildcard to get the base route for static files
+        builder.ServeMpaFiles(route.Replace("*", ""), location);
+
+        builder.AddManualPipeline(
+            route,
+            keys,
+
+            // Pure delegate: static + only uses parameters/local variables
+            static ctx =>
+            {
+                var routePath = ctx.Request.Route;
+
+                // Try the cache first
+                if (!WiredApp<Http11ExpressContext>.StaticCachedResourceFiles.TryGetValue(routePath, out var resource))
+                {
+                    if (!Path.HasExtension(routePath))
+                    {
+                        // Short circuit to index.html for SPA routes without extensions
+
+                        if (WiredApp<Http11ExpressContext>.TryReadFallbackMpaResource(ctx.Request.Route, out var indexHtml))
+                        {
+                            // Cache the resource for future requests and short circuit to static file endpoint
+                            WiredApp<Http11ExpressContext>.StaticCachedResourceFiles[ctx.Request.Route] = resource;
+
+                            ctx.Respond()
+                                .Status(ResponseStatus.Ok)
+                                .Type(MimeTypes.GetMimeType(routePath))
+                                .Content(CreateBoundHandler(ctx.Writer, indexHtml), (ulong)resource.Length);
                         }
 
                         return Task.CompletedTask;
