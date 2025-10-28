@@ -28,11 +28,12 @@ public sealed partial class WiredApp<TContext>
     /// <returns>
     /// The matching pattern if found; otherwise, <c>null</c>.
     /// </returns>
-    private static string? MatchEndpoint(HashSet<string> patterns, string input)
+    private static string? MatchEndpointToKey(HashSet<string> patterns, string input)
     {
         if (RouteMatchCache.TryGetValue(input, out var cachedPattern))
             return cachedPattern;
 
+        // DIOGO HERE, THE ORDER IN THE PATTERNS MUST BE WILDCARD LAST TO AVOID FALSE POSITIVES
         foreach (var pattern in patterns)
         {
             // Fast path: wildcard suffix like "/route*"
@@ -74,7 +75,7 @@ public sealed partial class WiredApp<TContext>
     /// <returns>
     /// The matching pattern if found; otherwise, <c>null</c>.
     /// </returns>
-    private static string? MatchEndpoint2(HashSet<string> patterns, string input)
+    private static string? MatchEndpoint(HashSet<string> patterns, string input)
     {
         if (RouteMatchCache.TryGetValue(input, out var cachedPattern))
             return cachedPattern;

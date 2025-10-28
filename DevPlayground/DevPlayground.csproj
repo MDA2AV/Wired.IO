@@ -24,6 +24,9 @@
         <RuntimeHostConfigurationOption Include="System.Threading.ThreadPool.HillClimbing.Disable" Value="true" />
     </ItemGroup>
 
+	<ItemGroup>
+		<EmbeddedResource Include="Resources\**\*.*"/>
+	</ItemGroup>
 
     <ItemGroup>
     <ProjectReference Include="..\Wired.IO\Wired.IO.csproj" />

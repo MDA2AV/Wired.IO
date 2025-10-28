@@ -11,7 +11,7 @@ internal class Program
 
     private static readonly Func<Http11ExpressContext, Func<Http11ExpressContext, Task>, Task> MiddlewareExample = async (ctx, next) =>
     {
-        Console.WriteLine("Executing Example Middleware");
+        Console.WriteLine("Executing Manual Pipeline Middleware");
         await next(ctx);
     };
 
@@ -24,8 +24,9 @@ internal class Program
         _ = builder
             .Port(8080)
             .NoScopedEndpoints()
+
             .AddManualPipeline(
-                "/banana*", 
+                "/*", 
                 [HttpConstants.Get, HttpConstants.Post, HttpConstants.Delete, HttpConstants.Put], 
                 ctx =>
                 {
@@ -38,6 +39,7 @@ internal class Program
 
                     return Task.CompletedTask;
                 }, [MiddlewareExample])
+
             .UseRootMiddleware(async (ctx, nxt) =>
             {
                 Console.WriteLine("Executing root middleware!");

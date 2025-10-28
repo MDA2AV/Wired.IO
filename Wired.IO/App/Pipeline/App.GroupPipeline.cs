@@ -98,7 +98,7 @@ public sealed partial class WiredApp<TContext>
 
     internal async Task GroupPipeline(TContext context)
     {
-        var matchedRoute = MatchEndpoint(EncodedRoutes[context.Request.HttpMethod], context.Request.Route);
+        var matchedRoute = MatchEndpointToKey(EncodedRoutes[context.Request.HttpMethod], context.Request.Route);
 
         // Try hot path first, exact match on an encoded route
         if (matchedRoute is not null)
