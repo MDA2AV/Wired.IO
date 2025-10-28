@@ -33,7 +33,7 @@ public sealed partial class WiredApp<TContext>
     /// Gets or sets the route map, grouped by HTTP method (e.g., GET, POST).
     /// Each entry maps an HTTP method to a set of encoded route patterns.
     /// </summary>
-    public Dictionary<string, HashSet<string>> EncodedRoutes { get; set; } = new()
+    public Dictionary<string, List<string>> EncodedRoutes { get; set; } = new()
     {
         { HttpConstants.Get, [] },
         { HttpConstants.Post, [] },
@@ -47,7 +47,7 @@ public sealed partial class WiredApp<TContext>
         { "FlowControl", [] },
     };
 
-    public Dictionary<string, HashSet<string>> RootEncodedRoutes { get; set; } = new()
+    public Dictionary<string, List<string>> RootEncodedRoutes { get; set; } = new()
     {
         { HttpConstants.Get, [] },
         { HttpConstants.Post, [] },

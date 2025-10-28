@@ -4,7 +4,6 @@ using System.Net;
 using System.Net.Security;
 using System.Reflection;
 using Wired.IO.App;
-using Wired.IO.Http11.Middleware;
 using Wired.IO.Mediator;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Handlers;
@@ -87,6 +86,11 @@ public sealed partial class Builder<THandler, TContext>
         App.LoggerFactory = App.Services.GetRequiredService<ILoggerFactory>();
         App.Logger = App.LoggerFactory.CreateLogger<WiredApp<TContext>>();
 
+        // Set up static resource routes in order of descending route length to avoid false matches
+        WiredApp<TContext>.StaticResourceRouteToLocation = WiredApp<TContext>.StaticResourceRouteToLocation
+            .OrderByDescending(kvp => kvp.Key.Length)
+            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+
         return App;
     }
 
@@ -108,12 +112,14 @@ public sealed partial class Builder<THandler, TContext>
 
         App.RootEndpoints = [];
 
-        foreach (var fullRoute in App.EncodedRoutes.SelectMany(kvp => kvp.Value.Select(route => kvp.Key + '_' + route)))
+        foreach (var fullRoute in App.RootEncodedRoutes.SelectMany(kvp => kvp.Value.Select(route => kvp.Key + '_' + route)))
         {
             App.RootEndpoints.Add(
                 fullRoute,
                 App.Services.GetRequiredKeyedService<Func<TContext, Task>>(fullRoute));
         }
+
+        RearrangeEncodedRoutes(App.RootEncodedRoutes);
     }
 
     private void BuildGroup(IServiceProvider? serviceProvider = null!)
@@ -142,8 +148,38 @@ public sealed partial class Builder<THandler, TContext>
         App.SetPipeline(App.GroupPipeline);
 
         // Rearrange EmbeddedRoutes
+        RearrangeEncodedRoutes(App.EncodedRoutes);
+        RearrangeEncodedRoutes(App.RootEncodedRoutes);
+    }
 
+    private static void RearrangeEncodedRoutes(Dictionary<string, List<string>> encodedRoutes)
+    {
+        foreach (var kvp in encodedRoutes)
+        {
+            var list = kvp.Value;
 
+            // Sort in-place according to the custom rules
+            list.Sort(static (a, b) =>
+            {
+                bool aIsWildcard = a.Contains('*');
+                bool bIsWildcard = b.Contains('*');
+
+                // Non-wildcards before wildcards
+                if (aIsWildcard != bIsWildcard)
+                    return aIsWildcard ? 1 : -1;
+
+                // If both are wildcards, longer first (desc)
+                if (aIsWildcard && bIsWildcard)
+                {
+                    int lenDiff = b.Length - a.Length;
+                    if (lenDiff != 0)
+                        return lenDiff;
+                }
+
+                // Fallback: alphabetical for deterministic order
+                return string.CompareOrdinal(a, b);
+            });
+        }
     }
 
     private static void DefaultLoggingBuilder(ILoggingBuilder loggingBuilder)
@@ -294,7 +330,7 @@ public sealed partial class Builder<THandler, TContext>
     /// <param name="location">Source location (file system or embedded).</param>
     internal Builder<THandler, TContext> ServeStaticFiles(string baseRoute, Location location)
     {
-        App.StaticResourceRouteToLocation.Add(baseRoute, location);
+        WiredApp<TContext>.StaticResourceRouteToLocation.Add(baseRoute, location);
         App.CanServeStaticFiles = true;
         return this;
     }

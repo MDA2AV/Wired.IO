@@ -29,7 +29,7 @@ public sealed partial class WiredApp<TContext>
     /// Routes should be ordered by descending key length so that longer routes
     /// take precedence during lookup.
     /// </summary>
-    public readonly Dictionary<string, Location> StaticResourceRouteToLocation = new();
+    public static Dictionary<string, Location> StaticResourceRouteToLocation = new();
 
     /// <summary>
     /// Caches embedded or preloaded static resources, keyed by their full route

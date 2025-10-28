@@ -1,8 +1,10 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System.Net;
+using System.Reflection;
 using Wired.IO.App;
 using Wired.IO.Builder;
 using Wired.IO.Http11Express.Context;
+using Wired.IO.Http11Express.StaticHandlers;
 
 internal class Program
 {
@@ -25,8 +27,16 @@ internal class Program
             .Port(8080)
             .NoScopedEndpoints()
 
+            .AddStaticResourceProvider("/*",
+                new Location
+                {
+                    Assembly = Assembly.GetExecutingAssembly(),
+                    LocationType = LocationType.EmbeddedResource,
+                    Path = "Resources.Docs"
+                }, [])
+
             .AddManualPipeline(
-                "/*", 
+                "/api*", 
                 [HttpConstants.Get, HttpConstants.Post, HttpConstants.Delete, HttpConstants.Put], 
                 ctx =>
                 {
@@ -83,7 +93,7 @@ internal class Program
             .MapGroup("/user")
             .MapGet("/json/:id", ctx =>
             {
-                Console.WriteLine("Running user endpoint!");
+                //Console.WriteLine("Running user endpoint!");
                 ctx.Respond().Type("text/plain"u8).Content("Hello, World! /user/json"u8);
                 return Task.CompletedTask;
             });

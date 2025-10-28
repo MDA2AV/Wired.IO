@@ -1,7 +1,5 @@
-using System;
 using Microsoft.Extensions.DependencyInjection;
 using Wired.IO.App;
-using Wired.IO.Http11Express.Context;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Handlers;
 using Wired.IO.Protocol.Request;
@@ -22,20 +20,20 @@ public sealed partial class Builder<THandler, TContext>
 
         foreach (var key in keys)
         {
-            if (App.EncodedRoutes.TryGetValue(key, out var value))
+            if (!App.EncodedRoutes.TryGetValue(key, out var value)) 
+                continue;
+
+            value.Add(route);
+
+            var endpointKey = new EndpointKey(key, route);
+
+            App.ManualPipelineEntries.Add(new WiredApp<TContext>.ManualPipelineEntry
             {
-                value.Add(route);
+                EndpointKey = endpointKey,
+                Middlewares = middlewares
+            });
 
-                var endpointKey = new EndpointKey(key, route);
-
-                App.ManualPipelineEntries.Add(new WiredApp<TContext>.ManualPipelineEntry
-                {
-                    EndpointKey = endpointKey,
-                    Middlewares = middlewares
-                });
-
-                App.ServiceCollection.AddKeyedScoped<Func<TContext, Task>>(new EndpointKey(key, route), (_, _) => endpoint);
-            }
+            App.ServiceCollection.AddKeyedScoped<Func<TContext, Task>>(new EndpointKey(key, route), (_, _) => endpoint);
         }
 
         return this;

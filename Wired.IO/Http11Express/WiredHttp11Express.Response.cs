@@ -31,7 +31,7 @@ public partial class WiredHttp11Express<TContext>
     }
 
     [SkipLocalsInit]
-    private static async Task WriteBody(TContext context)
+    private static async ValueTask WriteBody(TContext context)
     {
         if (context.Response!.ContentLengthStrategy is ContentLengthStrategy.Action)
         {

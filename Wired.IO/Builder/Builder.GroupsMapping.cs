@@ -183,11 +183,11 @@ public sealed class CompiledRoutes
 
             if (!encodedRoutes.TryGetValue(method, out var set))
             {
-                set = new HashSet<string>(StringComparer.Ordinal);
+                set = [];
                 encodedRoutes[method] = set;
             }
 
-            set.Add(path!); // HashSet => idempotent
+            set.Add(path!);
         }
     }
 

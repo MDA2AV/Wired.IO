@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
+using System.Runtime.CompilerServices;
 using Wired.IO.Builder;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Request;
@@ -96,7 +97,10 @@ public sealed partial class WiredApp<TContext>
 
     internal async Task GroupPipeline(TContext context)
     {
-        var matchedRoute = MatchEndpointToKey(EncodedRoutes[context.Request.HttpMethod], context.Request.Route);
+        var matchedRoute = MatchEndpointToKey(
+            EncodedRoutes[context.Request.HttpMethod], 
+            context.Request.HttpMethod, 
+            context.Request.Route);
 
         // Try hot path first, exact match on an encoded route
         if (matchedRoute is not null)
@@ -112,6 +116,7 @@ public sealed partial class WiredApp<TContext>
         await InvokePipeline(context, new EndpointKey());
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private async Task InvokePipeline(TContext context, EndpointKey key)
     {
         if (ScopedEndpoints)
@@ -120,6 +125,7 @@ public sealed partial class WiredApp<TContext>
             await InvokeNonScoped(context, key);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private async Task InvokeScoped(TContext context, EndpointKey key)
     {
         await using var scope = Services.CreateAsyncScope();
@@ -129,6 +135,7 @@ public sealed partial class WiredApp<TContext>
         await pipeline(context);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private async Task InvokeNonScoped(TContext context, EndpointKey key)
     {
         context.Services = Services;
