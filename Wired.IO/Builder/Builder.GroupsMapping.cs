@@ -174,7 +174,7 @@ public sealed class CompiledRoutes
     /// Populates (or augments) the target EncodedRoutes map with all compiled endpoints,
     /// grouped by HTTP method. Ensures key existence and avoids duplicates.
     /// </summary>
-    public void PopulateEncodedRoutes(IDictionary<string, HashSet<string>> encodedRoutes)
+    public void PopulateEncodedRoutes(IDictionary<string, List<string>> encodedRoutes)
     {
         foreach (var compiledEndpoint in CompiledEndpoints)
         {

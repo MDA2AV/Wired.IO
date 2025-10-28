@@ -33,7 +33,6 @@ public sealed partial class WiredApp<TContext>
         if (RouteMatchCache.TryGetValue(input, out var cachedPattern))
             return cachedPattern;
 
-        // DIOGO HERE, THE ORDER IN THE PATTERNS MUST BE WILDCARD LAST TO AVOID FALSE POSITIVES
         foreach (var pattern in patterns)
         {
             // Fast path: wildcard suffix like "/route*"

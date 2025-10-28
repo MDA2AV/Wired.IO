@@ -138,20 +138,12 @@ public sealed partial class Builder<THandler, TContext>
                 App.Services.GetRequiredKeyedService<Func<TContext, Task>>(fullRoute));
         }
 
-        /*foreach (var kvp in App.EncodedRoutes)
-        { 
-            if (kvp.Key.Equals("FlowControl", StringComparison.OrdinalIgnoreCase))
-            {
-                foreach (var route in kvp.Value)
-                {
-                    var fullRoute = $"{kvp.Key}_{route}";
-                    App.RootEndpoints.Add(fullRoute, App.Services.GetRequiredKeyedService<Func<TContext, Task>>(fullRoute));
-                }
-            }
-        }*/
-
         App.CachePipelines(App.Services);
         App.SetPipeline(App.GroupPipeline);
+
+        // Rearrange EmbeddedRoutes
+
+
     }
 
     private static void DefaultLoggingBuilder(ILoggingBuilder loggingBuilder)
@@ -243,13 +235,11 @@ public sealed partial class Builder<THandler, TContext>
     }
 
     /// <summary>
-    /// Replaces the default <see cref="IServiceCollection"/> with a custom one,
-    /// and injects default middleware for the current context type.
+    /// Replaces the default <see cref="IServiceCollection"/> with a custom one.
     /// </summary>
     public Builder<THandler, TContext> EmbedServices(IServiceCollection services)
     {
         App.ServiceCollection = services;
-        App.ServiceCollection.AddDefaultMiddleware<TContext>();
 
         return this;
     }

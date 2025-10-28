@@ -62,10 +62,6 @@ public sealed partial class WiredApp<TContext>
     };
 
     /// <summary>
-    /// Partial routes, cannot have variables like /:id, the partial route must match exactly.
-    /// </summary>
-    public Dictionary<string, HashSet<string>> PartialExactMatchRoutes { get; set; } = new();
-    /// <summary>
     /// Gets or sets the middleware pipeline.
     /// Each middleware is a delegate that processes the request context and calls the next middleware.
     /// </summary>
