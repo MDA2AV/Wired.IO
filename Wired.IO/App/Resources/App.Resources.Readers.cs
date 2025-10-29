@@ -33,7 +33,7 @@ public sealed partial class WiredApp<TContext>
     /// or using a prefix-trie to ensure longest-prefix wins and fewer comparisons.
     /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private bool TryGetStaticResourceBaseRoute(string route, out string baseRoute)
+    private static bool TryGetStaticResourceBaseRoute(string route, out string baseRoute)
     {
         ReadOnlySpan<char> input = route;
 
@@ -61,7 +61,7 @@ public sealed partial class WiredApp<TContext>
     /// File system: reads <c>{location.Path}/{baseRoute}/index.html</c> (lexically combined).<br/>
     /// Embedded: searches the assembly manifest for a name ending with <c>{baseRoute}.index.html</c> (dots).
     /// </remarks>
-    private bool TryReadFallbackSpaResource(string route, out ReadOnlyMemory<byte> resource)
+    internal static bool TryReadFallbackSpaResource(string route, out ReadOnlyMemory<byte> resource)
     {
         var baseRouteFound = TryGetStaticResourceBaseRoute(route, out var baseRoute);
         if (!baseRouteFound)
@@ -91,21 +91,6 @@ public sealed partial class WiredApp<TContext>
         // Embedded resource location: resolve manifest resource name and read.
         if (location is { LocationType: LocationType.EmbeddedResource, Assembly: not null })
         {
-            /*
-            // NOTE: This scans the manifest each call. For high QPS, precompute a map at startup.
-            var resourceName = location.Assembly
-                .GetManifestResourceNames()
-                .FirstOrDefault(rn => rn.EndsWith(filePath.Replace('/', '.'), StringComparison.Ordinal));
-
-            if (resourceName is null)
-            {
-                resource = default; // keep API shape; avoids null-forgiving
-                return false;
-            }
-
-            resource = EmbeddedResourceUtils.ReadBytes(location.Assembly, resourceName);
-            return true;
-            */
             resource = default;
             var gotResource = GetEmbeddedResource(filePath, location, ref resource);
 
@@ -127,7 +112,7 @@ public sealed partial class WiredApp<TContext>
     /// File system: reads <c>{location.Path}/{baseRoute}/index.html</c> (lexically combined).<br/>
     /// Embedded: searches the assembly manifest for a name ending with <c>{baseRoute}.index.html</c> (dots).
     /// </remarks>
-    private bool TryReadFallbackMpaResource(string route, out ReadOnlyMemory<byte> resource)
+    internal static bool TryReadFallbackMpaResource(string route, out ReadOnlyMemory<byte> resource)
     {
         var baseRouteFound = TryGetStaticResourceBaseRoute(route, out var baseRoute);
         if (!baseRouteFound)
@@ -156,21 +141,6 @@ public sealed partial class WiredApp<TContext>
         // Embedded resource location: resolve manifest resource name and read.
         if (location is { LocationType: LocationType.EmbeddedResource, Assembly: not null })
         {
-            /*
-            // NOTE: This scans the manifest each call. For high QPS, precompute a map at startup.
-            var resourceName = location.Assembly
-                .GetManifestResourceNames()
-                .FirstOrDefault(rn => rn.EndsWith(filePath.Replace('/', '.'), StringComparison.Ordinal));
-
-            if (resourceName is null)
-            {
-                resource = default; // keep API shape; avoids null-forgiving
-                return false;
-            }
-
-            resource = EmbeddedResourceUtils.ReadBytes(location.Assembly, resourceName);
-            return true;
-            */
             resource = default;
             var gotResource = GetEmbeddedResource(filePath, location, ref resource);
 
@@ -193,7 +163,7 @@ public sealed partial class WiredApp<TContext>
     ///  2) Slices the remainder (relative path under base).<br/>
     ///  3) Loads from either filesystem or embedded resources.
     /// </remarks>
-    private bool TryReadResource(string route, out ReadOnlyMemory<byte> resource)
+    internal static bool TryReadResource(string route, out ReadOnlyMemory<byte> resource)
     {
         var baseRouteFound = TryGetStaticResourceBaseRoute(route, out var baseRoute);
         if (!baseRouteFound)
@@ -223,23 +193,6 @@ public sealed partial class WiredApp<TContext>
         // Embedded resource: resolve and read from the assembly manifest.
         if (location is { LocationType: LocationType.EmbeddedResource, Assembly: not null })
         {
-            /*
-            // NOTE: O(n) scan per call. Prefer a startup-built dictionary:
-            //   route ("/assets/app.js") → manifest name ("My.Assets.app.js")
-            var resourceName = location.Assembly
-                .GetManifestResourceNames()
-                .FirstOrDefault(rn => rn.EndsWith(filePath.Replace('/', '.'), StringComparison.Ordinal));
-
-            if (resourceName is null)
-            {
-                resource = default;
-                return false;
-            }
-
-            resource = EmbeddedResourceUtils.ReadBytes(location.Assembly, resourceName);
-            return true;
-            */
-
             resource = default;
             var gotResource = GetEmbeddedResource(filePath, location, ref resource);
             return gotResource;
@@ -306,7 +259,7 @@ public sealed partial class WiredApp<TContext>
         var asm = location.Assembly;
 
         // Build the exact manifest name once
-        string expected = BuildExactManifestName(asm, location.Path, filePath);
+        var expected = BuildExactManifestName(asm, location.Path, filePath);
 
         // Direct lookup – no enumeration over all resources
         using var s = asm.GetManifestResourceStream(expected);
@@ -317,7 +270,7 @@ public sealed partial class WiredApp<TContext>
         }
 
         // Read to ROM<byte> (allocation unavoidable unless you add your own pooling)
-        int len = checked((int)s.Length);
+        var len = checked((int)s.Length);
         var buffer = GC.AllocateUninitializedArray<byte>(len);
         s.ReadExactly(buffer); // .NET 7+ (ReadExactly). For older: use s.Read in a loop.
 
@@ -331,8 +284,8 @@ public sealed partial class WiredApp<TContext>
             // basePath is already a relative *folder* inside the assembly (can be dotted or slashed).
             // We must create:  "<AsmName>.<basePathNormalized>.<relativeTailNormalized>"
 
-            string basePrefix = NormalizeBasePrefix(assembly, basePath); // ends with '.'
-            string tail = NormalizeRelativeManifestTail(relativeFile);
+            var basePrefix = NormalizeBasePrefix(assembly, basePath); // ends with '.'
+            var tail = NormalizeRelativeManifestTail(relativeFile);
 
             return basePrefix + tail;
         }
@@ -356,19 +309,19 @@ public sealed partial class WiredApp<TContext>
 
             path = path.Replace('\\', '/').TrimStart('/');
 
-            int lastSlash = path.LastIndexOf('/');
+            var lastSlash = path.LastIndexOf('/');
             if (lastSlash < 0)
             {
                 // File only; keep hyphens in *file* names
                 return path;
             }
 
-            string dir = path[..lastSlash];
-            string file = path[(lastSlash + 1)..]; // keep hyphens in file name
+            var dir = path[..lastSlash];
+            var file = path[(lastSlash + 1)..]; // keep hyphens in file name
 
             // Folder segments: '-' -> '_' to match manifest naming
             var dirs = dir.Split('/', StringSplitOptions.RemoveEmptyEntries);
-            for (int i = 0; i < dirs.Length; i++)
+            for (var i = 0; i < dirs.Length; i++)
                 dirs[i] = dirs[i].Replace('-', '_');
 
             return $"{string.Join('.', dirs)}.{file}";

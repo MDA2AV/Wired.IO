@@ -8,9 +8,9 @@
 	  <Authors>Diogo Martins</Authors>
 	  <RepositoryUrl>https://github.com/MDA2AV/Wired.IO</RepositoryUrl>
 	  <RepositoryType>git</RepositoryType>
-	  <AssemblyVersion>9.5.3</AssemblyVersion>
-	  <FileVersion>9.5.3</FileVersion>
-	  <Version>9.5.3</Version>
+	  <AssemblyVersion>9.5.9</AssemblyVersion>
+	  <FileVersion>9.5.9</FileVersion>
+	  <Version>9.5.9</Version>
 	  <PackageReadmeFile>README.md</PackageReadmeFile>
 	  <PackageTags>socket;webserver;lightweight;embeddable</PackageTags>
 	  <PackageLicenseFile>LICENSE</PackageLicenseFile>

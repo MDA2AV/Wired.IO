@@ -13,11 +13,65 @@ public sealed partial class WiredApp<TContext>
     /// Caches matched routes for previously seen paths to speed up route resolution.
     /// </summary>
     private static readonly ConcurrentDictionary<string, string?> RouteMatchCache = new();
+    private static readonly ConcurrentDictionary<string, ConcurrentDictionary<string, string>> HttpMethodToRouteMatchCache = new();
 
     /// <summary>
     /// Caches compiled regular expressions for each route pattern to avoid recompilation.
     /// </summary>
     private static readonly ConcurrentDictionary<string, Regex> RouteRegexCache = new();
+
+    /// <summary>
+    /// Matches a request route against a set of encoded patterns using cached regular expressions.
+    /// Supports wildcard suffix patterns (e.g., <c>/route*</c>) that match any prefix.
+    /// </summary>
+    /// <param name="patterns">A set of registered route patterns for the current HTTP method.</param>
+    /// <param name="httpMethod"></param>
+    /// <param name="input">The actual route string from the request.</param>
+    /// <returns>
+    /// The matching pattern if found; otherwise, <c>null</c>.
+    /// </returns>
+    private static string? MatchEndpointToKey(List<string> patterns, string httpMethod, string input)
+    {
+        if (!HttpMethodToRouteMatchCache.TryGetValue(httpMethod, out var routeMatchCache))
+        {
+            HttpMethodToRouteMatchCache[httpMethod] = new ConcurrentDictionary<string, string>();
+            routeMatchCache = HttpMethodToRouteMatchCache[httpMethod]; ;
+        }
+
+        if (routeMatchCache.TryGetValue(input, out var cachedPattern))
+            return cachedPattern;
+
+        foreach (var pattern in patterns)
+        {
+            // Fast path: wildcard suffix like "/route*"
+            if (pattern.EndsWith('*'))
+            {
+                var prefix = pattern.AsSpan(0, pattern.Length - 1);
+
+                // Accept exact or prefixed match
+                if (input.AsSpan().StartsWith(prefix, StringComparison.Ordinal))
+                {
+                    routeMatchCache[input] = pattern;
+                    return pattern;
+                }
+
+                continue;
+            }
+
+            // Use cached regex for placeholder patterns (e.g., "/users/:id")
+            var regex = RouteRegexCache.GetOrAdd(pattern, static p =>
+                new Regex(ConvertToRegex(p), RegexOptions.Compiled | RegexOptions.CultureInvariant));
+
+            if (regex.IsMatch(input))
+            {
+                routeMatchCache[input] = pattern;
+                return pattern;
+            }
+        }
+
+        //RouteMatchCache[input] = null;
+        return null;
+    }
 
     /// <summary>
     /// Matches a request route against a set of encoded patterns using cached regular expressions.
@@ -28,7 +82,7 @@ public sealed partial class WiredApp<TContext>
     /// <returns>
     /// The matching pattern if found; otherwise, <c>null</c>.
     /// </returns>
-    private static string? MatchEndpoint(HashSet<string> patterns, string input)
+    private static string? MatchEndpoint(List<string> patterns, string input)
     {
         if (RouteMatchCache.TryGetValue(input, out var cachedPattern))
             return cachedPattern;

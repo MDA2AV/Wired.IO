@@ -33,7 +33,7 @@ public sealed partial class WiredApp<TContext>
     /// Gets or sets the route map, grouped by HTTP method (e.g., GET, POST).
     /// Each entry maps an HTTP method to a set of encoded route patterns.
     /// </summary>
-    public Dictionary<string, HashSet<string>> EncodedRoutes { get; set; } = new()
+    public Dictionary<string, List<string>> EncodedRoutes { get; set; } = new()
     {
         { HttpConstants.Get, [] },
         { HttpConstants.Post, [] },
@@ -47,10 +47,20 @@ public sealed partial class WiredApp<TContext>
         { "FlowControl", [] },
     };
 
-    /// <summary>
-    /// Partial routes, cannot have variables like /:id, the partial route must match exactly.
-    /// </summary>
-    public Dictionary<string, HashSet<string>> PartialExactMatchRoutes { get; set; } = new();
+    public Dictionary<string, List<string>> RootEncodedRoutes { get; set; } = new()
+    {
+        { HttpConstants.Get, [] },
+        { HttpConstants.Post, [] },
+        { HttpConstants.Put, [] },
+        { HttpConstants.Delete, [] },
+        { HttpConstants.Patch, [] },
+        { HttpConstants.Head, [] },
+        { HttpConstants.Options, [] },
+        { HttpConstants.Trace, [] },
+        { HttpConstants.Connect, [] },
+        { "FlowControl", [] },
+    };
+
     /// <summary>
     /// Gets or sets the middleware pipeline.
     /// Each middleware is a delegate that processes the request context and calls the next middleware.

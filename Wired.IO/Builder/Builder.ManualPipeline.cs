@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Wired.IO.App;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Handlers;
@@ -11,33 +12,29 @@ public sealed partial class Builder<THandler, TContext>
     where THandler : IHttpHandler<TContext>
 {
     public Builder<THandler, TContext> AddManualPipeline(
-        string key, 
-        string route, 
-        List<Func<TContext, Func<TContext, Task>, Task>>? middlewares, 
-        bool partialMatch = false)
+            string route,
+            List<string> keys,
+            Func<TContext, Task> endpoint,
+            List<Func<TContext, Func<TContext, Task>, Task>>? middlewares)
     {
-        if (partialMatch)
-        {
-            if (App.PartialExactMatchRoutes.TryGetValue(key, out var value))
-                value.Add(route);
-            else
-                App.PartialExactMatchRoutes.Add(key, [route]);
-        }
-        else
-        {
-            if (App.EncodedRoutes.TryGetValue(key, out var value))
-                value.Add(route);
-            else
-                App.EncodedRoutes.Add(key, [route]);
-        }
-            
-        var endpointKey = new EndpointKey(key, route);
 
-        App.ManualPipelineEntries.Add(new WiredApp<TContext>.ManualPipelineEntry
+        foreach (var key in keys)
         {
-            EndpointKey = endpointKey,
-            Middlewares = middlewares
-        });
+            if (!App.EncodedRoutes.TryGetValue(key, out var value)) 
+                continue;
+
+            value.Add(route);
+
+            var endpointKey = new EndpointKey(key, route);
+
+            App.ManualPipelineEntries.Add(new WiredApp<TContext>.ManualPipelineEntry
+            {
+                EndpointKey = endpointKey,
+                Middlewares = middlewares
+            });
+
+            App.ServiceCollection.AddKeyedScoped<Func<TContext, Task>>(new EndpointKey(key, route), (_, _) => endpoint);
+        }
 
         return this;
     }

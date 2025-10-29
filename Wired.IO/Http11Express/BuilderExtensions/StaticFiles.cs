@@ -65,6 +65,7 @@ public static class StaticFiles
         return builder;
     }
 
+
     /// <summary>
     /// Registers **SPA file** serving (including history-API fallback) for the given
     /// <paramref name="baseRoute"/> and <paramref name="location"/>, and maps an internal

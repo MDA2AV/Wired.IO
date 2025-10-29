@@ -21,7 +21,7 @@ public sealed partial class Builder<THandler, TContext>
     /// The inner delegate represents the next middleware in the pipeline.
     /// </param>
     /// <returns>The current <see cref="Builder{THandler, TContext}"/> instance for chaining.</returns>
-    public Builder<THandler, TContext> UseMiddleware(Func<IServiceProvider, Func<TContext, Func<TContext, Task>, Task>> func)
+    public Builder<THandler, TContext> UseRootMiddleware(Func<IServiceProvider, Func<TContext, Func<TContext, Task>, Task>> func)
     {
         App.ServiceCollection.AddScoped<Func<TContext, Func<TContext, Task>, Task>>(func);
 
@@ -36,7 +36,7 @@ public sealed partial class Builder<THandler, TContext>
     /// next middleware to invoke in the pipeline.
     /// </param>
     /// <returns>The current <see cref="Builder{THandler, TContext}"/> instance for chaining.</returns>
-    public Builder<THandler, TContext> UseMiddleware(Func<TContext, Func<TContext, Task>, Task> func)
+    public Builder<THandler, TContext> UseRootMiddleware(Func<TContext, Func<TContext, Task>, Task> func)
     {
         App.ServiceCollection.AddScoped<Func<TContext, Func<TContext, Task>, Task>>(_ => func);
 
@@ -52,7 +52,7 @@ public sealed partial class Builder<THandler, TContext>
     /// The inner delegate represents the next middleware in the pipeline, which also returns an <see cref="IResponse"/>.
     /// </param>
     /// <returns>The current <see cref="Builder{THandler, TContext}"/> instance for chaining.</returns>
-    public Builder<THandler, TContext> UseMiddleware(Func<IServiceProvider, Func<TContext, Func<TContext, Task<IResponse>>, Task<IResponse>>> func)
+    public Builder<THandler, TContext> UseRootMiddleware(Func<IServiceProvider, Func<TContext, Func<TContext, Task<IResponse>>, Task<IResponse>>> func)
     {
         App.ServiceCollection.AddScoped<Func<TContext, Func<TContext, Task<IResponse>>, Task<IResponse>>>(func);
 

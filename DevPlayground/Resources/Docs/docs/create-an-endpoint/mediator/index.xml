@@ -1,0 +1,146 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Wired.IO – Mediator</title><link>/docs/create-an-endpoint/mediator/</link><description>Recent content in Mediator on Wired.IO</description><generator>Hugo -- gohugo.io</generator><language>en</language><atom:link href="/docs/create-an-endpoint/mediator/index.xml" rel="self" type="application/rss+xml"/><item><title>2.2.1 - Hybrid Endpoints</title><link>/docs/create-an-endpoint/mediator/hybrid-endpoints/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>/docs/create-an-endpoint/mediator/hybrid-endpoints/</guid><description>
+&lt;p>&lt;em>Note: In this section we will use the default inbuilt HTTP/1.1 protocol handler.&lt;/em>&lt;/p>
+&lt;p>Hybrid endpoints are a mix between fast and mediator endpoints, ideally if you want to define your endpoint logic in a different class while still using fast endpoints.&lt;/p>
+&lt;div class="hextra-code-block hx-relative hx-mt-6 first:hx-mt-0 hx-group/code">
+&lt;div>&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-csharp" data-lang="csharp">&lt;span class="line">&lt;span class="cl">&lt;span class="p">(&lt;/span> &lt;span class="p">...&lt;/span> &lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">var&lt;/span> &lt;span class="n">app&lt;/span> &lt;span class="p">=&lt;/span> &lt;span class="n">builder&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// Call this to tell the builder to scan assembly and &lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// register your IRequestHandler types&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">.&lt;/span>&lt;span class="n">AddHandlers&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">Assembly&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">GetExecutingAssembly&lt;/span>&lt;span class="p">())&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">.&lt;/span>&lt;span class="n">Port&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="m">5000&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="c1">// Configured to http://localhost:5000&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">.&lt;/span>&lt;span class="n">MapGet&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;/hybrid-endpoint&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">scope&lt;/span> &lt;span class="p">=&amp;gt;&lt;/span> &lt;span class="kd">async&lt;/span> &lt;span class="n">context&lt;/span> &lt;span class="p">=&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// Resolve your IRequestHandler&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">var&lt;/span> &lt;span class="n">requestHandler&lt;/span> &lt;span class="p">=&lt;/span> &lt;span class="n">scope&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">.&lt;/span>&lt;span class="n">GetRequiredService&lt;/span>&lt;span class="p">&amp;lt;&lt;/span>&lt;span class="n">IRequestHandler&lt;/span>&lt;span class="p">&amp;lt;&lt;/span>&lt;span class="n">RequestQuery&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">RequestResult&lt;/span>&lt;span class="p">&amp;gt;&amp;gt;();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// Execute it&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">var&lt;/span> &lt;span class="n">result&lt;/span> &lt;span class="p">=&lt;/span> &lt;span class="k">await&lt;/span> &lt;span class="n">requestHandler&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">.&lt;/span>&lt;span class="n">Handle&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="k">new&lt;/span> &lt;span class="n">RequestQuery&lt;/span>&lt;span class="p">(),&lt;/span> &lt;span class="n">context&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">CancellationToken&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// Pass its result top be processed by the response middleware,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// optionally deal with the response yourself without calling .Respond()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">context&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">.&lt;/span>&lt;span class="n">Respond&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">.&lt;/span>&lt;span class="n">Status&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">ResponseStatus&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">Ok&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">.&lt;/span>&lt;span class="n">Type&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;application/json&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">.&lt;/span>&lt;span class="n">Content&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="k">new&lt;/span> &lt;span class="n">JsonContent&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">result&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">JsonSerializerOptions&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">Default&lt;/span>&lt;span class="p">));&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">})&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">(&lt;/span> &lt;span class="p">...&lt;/span> &lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kd">public&lt;/span> &lt;span class="k">class&lt;/span> &lt;span class="nc">RequestHandlerExample&lt;/span> &lt;span class="p">:&lt;/span> &lt;span class="n">IRequestHandler&lt;/span>&lt;span class="p">&amp;lt;&lt;/span>&lt;span class="n">RequestQuery&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">RequestResult&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kd">public&lt;/span> &lt;span class="kd">async&lt;/span> &lt;span class="n">Task&lt;/span>&lt;span class="p">&amp;lt;&lt;/span>&lt;span class="n">RequestResult&lt;/span>&lt;span class="p">&amp;gt;&lt;/span> &lt;span class="n">Handle&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">RequestQuery&lt;/span> &lt;span class="n">query&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">CancellationToken&lt;/span> &lt;span class="n">cancellationToken&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">await&lt;/span> &lt;span class="n">Task&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">Delay&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="m">0&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">cancellationToken&lt;/span>&lt;span class="p">);&lt;/span> &lt;span class="c1">// Do work&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="k">new&lt;/span> &lt;span class="n">RequestResult&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;Toni&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s">&amp;#34;Mars&amp;#34;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kd">public&lt;/span> &lt;span class="k">record&lt;/span> &lt;span class="nc">RequestQuery&lt;/span>&lt;span class="p">()&lt;/span> &lt;span class="p">:&lt;/span> &lt;span class="n">IRequest&lt;/span>&lt;span class="p">&amp;lt;&lt;/span>&lt;span class="n">RequestResult&lt;/span>&lt;span class="p">&amp;gt;;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kd">public&lt;/span> &lt;span class="k">record&lt;/span> &lt;span class="nc">RequestResult&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">string&lt;/span> &lt;span class="n">Name&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kt">string&lt;/span> &lt;span class="n">Address&lt;/span>&lt;span class="p">);&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;/div>&lt;div class="hextra-code-copy-btn-container hx-opacity-0 hx-transition group-hover/code:hx-opacity-100 hx-flex hx-gap-1 hx-absolute hx-m-[11px] hx-right-0 hx-top-0">
+&lt;button
+class="hextra-code-copy-btn hx-group/copybtn hx-transition-all active:hx-opacity-50 hx-bg-primary-700/5 hx-border hx-border-black/5 hx-text-gray-600 hover:hx-text-gray-900 hx-rounded-md hx-p-1.5 dark:hx-bg-primary-300/10 dark:hx-border-white/10 dark:hx-text-gray-400 dark:hover:hx-text-gray-50"
+title="Copy code"
+>
+&lt;div class="copy-icon group-[.copied]/copybtn:hx-hidden hx-pointer-events-none hx-h-4 hx-w-4">&lt;/div>
+&lt;div class="success-icon hx-hidden group-[.copied]/copybtn:hx-block hx-pointer-events-none hx-h-4 hx-w-4">&lt;/div>
+&lt;/button>
+&lt;/div>
+&lt;/div>
+&lt;p>The fast endpoint is created to resolve the IRequestHandler.&lt;/p>
+&lt;p>The IRequestHandler does not know about http method, route or IContext in general, it is abstracted away to deal with business logic.&lt;/p>
+&lt;p>Just like your typical mediator pattern, it takes in a Query/Command.&lt;/p>
+&lt;h4>Void return overload IRequestHandler&lt;TRequest>&lt;span class="hx-absolute -hx-mt-20" id="void-return-overload-irequesthandler">&lt;/span>
+&lt;a href="#void-return-overload-irequesthandler" class="subheading-anchor" aria-label="Permalink for this section">&lt;/a>&lt;/h4>&lt;p>Just an overload when request handlers dont need to return anything.&lt;/p>
+&lt;div class="hextra-code-block hx-relative hx-mt-6 first:hx-mt-0 hx-group/code">
+&lt;div>&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-csharp" data-lang="csharp">&lt;span class="line">&lt;span class="cl">&lt;span class="p">(&lt;/span> &lt;span class="p">...&lt;/span> &lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">var&lt;/span> &lt;span class="n">app&lt;/span> &lt;span class="p">=&lt;/span> &lt;span class="n">builder&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// Call this to tell the builder to scan assembly and &lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// register your IRequestHandler types&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">.&lt;/span>&lt;span class="n">AddHandlers&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">Assembly&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">GetExecutingAssembly&lt;/span>&lt;span class="p">())&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">.&lt;/span>&lt;span class="n">Port&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="m">5000&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="c1">// Configured to http://localhost:5000&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">.&lt;/span>&lt;span class="n">MapGet&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;/hybrid-endpoint&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">scope&lt;/span> &lt;span class="p">=&amp;gt;&lt;/span> &lt;span class="kd">async&lt;/span> &lt;span class="n">context&lt;/span> &lt;span class="p">=&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// Resolve your IRequestHandler&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">var&lt;/span> &lt;span class="n">requestHandler&lt;/span> &lt;span class="p">=&lt;/span> &lt;span class="n">scope&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">.&lt;/span>&lt;span class="n">GetRequiredService&lt;/span>&lt;span class="p">&amp;lt;&lt;/span>&lt;span class="n">IRequestHandler&lt;/span>&lt;span class="p">&amp;lt;&lt;/span>&lt;span class="n">RequestQuery&lt;/span>&lt;span class="p">&amp;gt;&amp;gt;();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// Execute it&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">await&lt;/span> &lt;span class="n">requestHandler&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">.&lt;/span>&lt;span class="n">Handle&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="k">new&lt;/span> &lt;span class="n">RequestQuery&lt;/span>&lt;span class="p">(),&lt;/span> &lt;span class="n">context&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">CancellationToken&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// NoContent response&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">context&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">.&lt;/span>&lt;span class="n">Respond&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">.&lt;/span>&lt;span class="n">Status&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">ResponseStatus&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">NoContent&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">})&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">(&lt;/span> &lt;span class="p">...&lt;/span> &lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kd">public&lt;/span> &lt;span class="k">class&lt;/span> &lt;span class="nc">RequestHandlerExample&lt;/span> &lt;span class="p">:&lt;/span> &lt;span class="n">IRequestHandler&lt;/span>&lt;span class="p">&amp;lt;&lt;/span>&lt;span class="n">RequestQuery&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kd">public&lt;/span> &lt;span class="kd">async&lt;/span> &lt;span class="n">Task&lt;/span> &lt;span class="n">Handle&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">RequestQuery&lt;/span> &lt;span class="n">query&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">CancellationToken&lt;/span> &lt;span class="n">cancellationToken&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">await&lt;/span> &lt;span class="n">Task&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">Delay&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="m">0&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">cancellationToken&lt;/span>&lt;span class="p">);&lt;/span> &lt;span class="c1">// Do work&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kd">public&lt;/span> &lt;span class="k">record&lt;/span> &lt;span class="nc">RequestQuery&lt;/span>&lt;span class="p">()&lt;/span> &lt;span class="p">:&lt;/span> &lt;span class="n">IRequest&lt;/span>&lt;span class="p">;&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;/div>&lt;div class="hextra-code-copy-btn-container hx-opacity-0 hx-transition group-hover/code:hx-opacity-100 hx-flex hx-gap-1 hx-absolute hx-m-[11px] hx-right-0 hx-top-0">
+&lt;button
+class="hextra-code-copy-btn hx-group/copybtn hx-transition-all active:hx-opacity-50 hx-bg-primary-700/5 hx-border hx-border-black/5 hx-text-gray-600 hover:hx-text-gray-900 hx-rounded-md hx-p-1.5 dark:hx-bg-primary-300/10 dark:hx-border-white/10 dark:hx-text-gray-400 dark:hover:hx-text-gray-50"
+title="Copy code"
+>
+&lt;div class="copy-icon group-[.copied]/copybtn:hx-hidden hx-pointer-events-none hx-h-4 hx-w-4">&lt;/div>
+&lt;div class="success-icon hx-hidden group-[.copied]/copybtn:hx-block hx-pointer-events-none hx-h-4 hx-w-4">&lt;/div>
+&lt;/button>
+&lt;/div>
+&lt;/div></description></item><item><title>2.2.2 - Mediator Endpoints</title><link>/docs/create-an-endpoint/mediator/mediator-endpoints/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>/docs/create-an-endpoint/mediator/mediator-endpoints/</guid><description>
+&lt;p>&lt;em>Note: In this section we will use the default inbuilt HTTP/1.1 protocol handler.&lt;/em>&lt;/p>
+&lt;p>Mediator endpoints do not require the creation of a fast endpoint.&lt;/p>
+&lt;p>Unlike hybrid endpoints that implement IRequestHandler, mediator endpoints implement IContextHandler since the context is passed directly to the Handle method.&lt;/p>
+&lt;p>In short, the logic that would be inside the fast endpoint, is now in the Handle method.&lt;/p>
+&lt;div class="hextra-code-block hx-relative hx-mt-6 first:hx-mt-0 hx-group/code">
+&lt;div>&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-csharp" data-lang="csharp">&lt;span class="line">&lt;span class="cl">&lt;span class="p">(&lt;/span> &lt;span class="p">...&lt;/span> &lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">var&lt;/span> &lt;span class="n">app&lt;/span> &lt;span class="p">=&lt;/span> &lt;span class="n">builder&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// Call this to tell the builder to scan assembly and &lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// register your IContextHandler types&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">.&lt;/span>&lt;span class="n">AddHandlers&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">Assembly&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">GetExecutingAssembly&lt;/span>&lt;span class="p">())&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">.&lt;/span>&lt;span class="n">Port&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="m">5000&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="c1">// Configured to http://localhost:5000&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">(&lt;/span> &lt;span class="p">...&lt;/span> &lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// The routing is defined with the RouteAttribute, &lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// this is mandatory or else it won&amp;#39;t be routed&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="na">[Route(&amp;#34;GET&amp;#34;, &amp;#34;/mediator-endpoint&amp;#34;)]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kd">public&lt;/span> &lt;span class="k">class&lt;/span> &lt;span class="nc">ContextHandlerExample&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// Http11Context is used as we are using the default inbuilt IHttpHandler&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// Adapt to your custom handler if the case&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">:&lt;/span> &lt;span class="n">IContextHandler&lt;/span>&lt;span class="p">&amp;lt;&lt;/span>&lt;span class="n">Http11Context&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kd">public&lt;/span> &lt;span class="kd">async&lt;/span> &lt;span class="n">Task&lt;/span> &lt;span class="n">Handle&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">Http11Context&lt;/span> &lt;span class="n">context&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">CancellationToken&lt;/span> &lt;span class="n">cancellationToken&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">await&lt;/span> &lt;span class="n">Task&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">Delay&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="m">0&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">cancellationToken&lt;/span>&lt;span class="p">);&lt;/span> &lt;span class="c1">// Do work&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// Again, using the middleware response pipeline is optional here&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">context&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">.&lt;/span>&lt;span class="n">Respond&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">.&lt;/span>&lt;span class="n">Status&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">ResponseStatus&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">Ok&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">.&lt;/span>&lt;span class="n">Type&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;application/json&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">.&lt;/span>&lt;span class="n">Content&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="k">new&lt;/span> &lt;span class="n">JsonContent&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="k">new&lt;/span> &lt;span class="p">{&lt;/span> &lt;span class="n">Name&lt;/span> &lt;span class="p">=&lt;/span> &lt;span class="s">&amp;#34;Toni&amp;#34;&lt;/span> &lt;span class="p">},&lt;/span> &lt;span class="n">JsonSerializerOptions&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="n">Default&lt;/span>&lt;span class="p">));&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;/div>&lt;div class="hextra-code-copy-btn-container hx-opacity-0 hx-transition group-hover/code:hx-opacity-100 hx-flex hx-gap-1 hx-absolute hx-m-[11px] hx-right-0 hx-top-0">
+&lt;button
+class="hextra-code-copy-btn hx-group/copybtn hx-transition-all active:hx-opacity-50 hx-bg-primary-700/5 hx-border hx-border-black/5 hx-text-gray-600 hover:hx-text-gray-900 hx-rounded-md hx-p-1.5 dark:hx-bg-primary-300/10 dark:hx-border-white/10 dark:hx-text-gray-400 dark:hover:hx-text-gray-50"
+title="Copy code"
+>
+&lt;div class="copy-icon group-[.copied]/copybtn:hx-hidden hx-pointer-events-none hx-h-4 hx-w-4">&lt;/div>
+&lt;div class="success-icon hx-hidden group-[.copied]/copybtn:hx-block hx-pointer-events-none hx-h-4 hx-w-4">&lt;/div>
+&lt;/button>
+&lt;/div>
+&lt;/div></description></item></channel></rss>

@@ -2,10 +2,13 @@
 using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using Wired.IO.App;
+using Wired.IO.Http11.Context;
+using Wired.IO.Http11Express.Context;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Handlers;
 using Wired.IO.Protocol.Request;
 using Wired.IO.Protocol.Response;
+using Wired.IO.Utilities;
 
 namespace Wired.IO.Builder;
 
@@ -18,7 +21,7 @@ public sealed partial class Builder<THandler, TContext>
         => _root.GetOrAddChild(RouteUtils.Normalize(groupRoute));
 
     private Group _root = null!;
-    private EndpointRegistrar _registrar = null!;
+    private EndpointDIRegister _endpointDIRegister = null!;
 
     /// <summary>
     /// Flattens the tree to (EndpointKey, MiddlewarePrefixes[]) descriptors only.
@@ -36,29 +39,34 @@ public sealed partial class Builder<THandler, TContext>
         // Track if this group actually registered any middleware in DI.
         private int _middlewareRegistrations;
 
-        internal Group(string prefix, Group? parent, EndpointRegistrar registrar)
+        internal Group(string prefix, Group? parent, EndpointDIRegister diRegister)
         {
             Prefix = RouteUtils.Normalize(prefix);
             Parent = parent;
-            Registrar = registrar;
+            DiRegister = diRegister;
         }
 
         internal string Prefix { get; }
         internal Group? Parent { get; }
-        internal EndpointRegistrar Registrar { get; }
+        internal EndpointDIRegister DiRegister { get; }
 
         public Group MapGroup(string groupRoute) => GetOrAddChild(groupRoute);
 
         public Group UseMiddleware(Func<TContext, Func<TContext, Task>, Task> middleware)
         {
             // Register middleware in DI keyed by this group's prefix (string)
-            Registrar.AddGroupMiddleware(Prefix, middleware);
+            DiRegister.AddGroupMiddleware(Prefix, middleware);
             _middlewareRegistrations++; // mark that this prefix has middlewares
             return this;
         }
 
         public Group MapGet(string route, Func<TContext, Task> endpoint)
             => Map(HttpConstants.Get, route, endpoint);
+        public Group MapGet(string route, Action<TContext> endpoint)
+            => Map(HttpConstants.Get, route, endpoint);
+
+        public Group MapPost(string route, Func<TContext, Task> endpoint)
+            => Map(HttpConstants.Post, route, endpoint);
 
         // Add MapPost/Put/Delete similarly…
 
@@ -68,7 +76,18 @@ public sealed partial class Builder<THandler, TContext>
             var key = new EndpointKey(method, fullPath);
 
             // Register endpoint in DI keyed by EndpointKey
-            Registrar.AddEndpoint(key, endpoint);
+            DiRegister.AddEndpoint(key, endpoint);
+
+            _endpoints.Add(new EndpointDef(key));
+            return this;
+        }
+        private Group Map(string method, string route, Action<TContext> endpoint)
+        {
+            var fullPath = RouteUtils.Combine(Prefix, route);
+            var key = new EndpointKey(method, fullPath);
+
+            // Register endpoint in DI keyed by EndpointKey
+            DiRegister.AddEndpoint(key, endpoint);
 
             _endpoints.Add(new EndpointDef(key));
             return this;
@@ -80,7 +99,7 @@ public sealed partial class Builder<THandler, TContext>
             if (_children.TryGetValue(childPrefix, out var existing))
                 return existing;
 
-            var child = new Group(childPrefix, this, Registrar);
+            var child = new Group(childPrefix, this, DiRegister);
             _children.Add(childPrefix, child);
             return child;
         }
@@ -93,46 +112,21 @@ public sealed partial class Builder<THandler, TContext>
 
     // ---------------------------------------------------------------------------------
 
-    internal static class RouteUtils
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static string Normalize(string route)
-        {
-            if (string.IsNullOrWhiteSpace(route)) return "/";
-            var r = route.Trim();
-            if (r[0] != '/') r = "/" + r;
-            while (r.Contains("//", StringComparison.Ordinal))
-                r = r.Replace("//", "/", StringComparison.Ordinal);
-            if (r.Length > 1 && r.EndsWith("/", StringComparison.Ordinal))
-                r = r.TrimEnd('/');
-            return r;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static string Combine(string left, string right)
-        {
-            if (string.IsNullOrEmpty(right)) return Normalize(left);
-            if (string.IsNullOrEmpty(left)) return Normalize(right);
-
-            var l = Normalize(left);
-            var r = Normalize(right);
-            if (l == "/") return r;
-            if (r == "/") return l;
-            return l + r;
-        }
-    }
-
-    // ---------------------------------------------------------------------------------
-
-    internal sealed class EndpointRegistrar
+    internal sealed class EndpointDIRegister
     {
         private readonly IServiceCollection _services;
 
-        public EndpointRegistrar(IServiceCollection services) => _services = services;
+        public EndpointDIRegister(IServiceCollection services) => _services = services;
 
         // Endpoints keyed by EndpointKey
         public void AddEndpoint(EndpointKey key, Func<TContext, Task> endpoint)
             => _services.AddKeyedScoped<Func<TContext, Task>>(key, (_, _) => endpoint);
+        public void AddEndpoint(EndpointKey key, Action<TContext> endpoint)
+            => _services.AddKeyedScoped<Func<TContext, Task>>(key,  (_, _) =>  (ctx) =>
+            {
+                endpoint(ctx);
+                return Task.CompletedTask;
+            });
 
         // Middlewares keyed by group's prefix (string)
         public void AddGroupMiddleware(string groupPrefix, Func<TContext, Func<TContext, Task>, Task> middleware)
@@ -201,7 +195,7 @@ public sealed class CompiledRoutes
     /// Populates (or augments) the target EncodedRoutes map with all compiled endpoints,
     /// grouped by HTTP method. Ensures key existence and avoids duplicates.
     /// </summary>
-    public void PopulateEncodedRoutes(IDictionary<string, HashSet<string>> encodedRoutes)
+    public void PopulateEncodedRoutes(IDictionary<string, List<string>> encodedRoutes)
     {
         foreach (var compiledEndpoint in CompiledEndpoints)
         {
@@ -210,11 +204,11 @@ public sealed class CompiledRoutes
 
             if (!encodedRoutes.TryGetValue(method, out var set))
             {
-                set = new HashSet<string>(StringComparer.Ordinal);
+                set = [];
                 encodedRoutes[method] = set;
             }
 
-            set.Add(path!); // HashSet => idempotent
+            set.Add(path!);
         }
     }
 

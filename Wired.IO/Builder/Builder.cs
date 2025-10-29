@@ -4,7 +4,6 @@ using System.Net;
 using System.Net.Security;
 using System.Reflection;
 using Wired.IO.App;
-using Wired.IO.Http11.Middleware;
 using Wired.IO.Mediator;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Handlers;
@@ -60,8 +59,8 @@ public sealed partial class Builder<THandler, TContext>
     /// <param name="sslApplicationProtocols">List of supported ALPN protocols.</param>
     private void Initialize(Func<THandler> handlerFactory, List<SslApplicationProtocol> sslApplicationProtocols)
     {
-        _registrar = new EndpointRegistrar(App.ServiceCollection);
-        _root = new Group(prefix: "/", parent: null, registrar: _registrar);
+        _endpointDIRegister = new EndpointDIRegister(App.ServiceCollection);
+        _root = new Group(prefix: "/", parent: null, diRegister: _endpointDIRegister);
 
         App.HttpHandler = handlerFactory();
         App.SslServerAuthenticationOptions.ApplicationProtocols = sslApplicationProtocols;
@@ -77,7 +76,7 @@ public sealed partial class Builder<THandler, TContext>
         
         if(App.UseRootOnlyEndpoints)
         {
-            BuildRoot(serviceProvider);
+            BuildRootOnly(serviceProvider);
         }
         else
         {
@@ -87,10 +86,21 @@ public sealed partial class Builder<THandler, TContext>
         App.LoggerFactory = App.Services.GetRequiredService<ILoggerFactory>();
         App.Logger = App.LoggerFactory.CreateLogger<WiredApp<TContext>>();
 
+        // Set up static resource routes in order of descending route length to avoid false matches
+        WiredApp<TContext>.StaticResourceRouteToLocation = WiredApp<TContext>.StaticResourceRouteToLocation
+            .OrderByDescending(kvp => kvp.Key.Length)
+            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+
         return App;
     }
-    
-    private void BuildRoot(IServiceProvider? serviceProvider = null!)
+
+    /// <summary>
+    /// Supports only root endpoints and middleware, no route groups.
+    /// Still supported for backwards compatibility and very simple webservers.
+    /// Will eventually be deprecated.
+    /// </summary>
+    /// <param name="serviceProvider"></param>
+    private void BuildRootOnly(IServiceProvider? serviceProvider = null!)
     {
         App.Services = serviceProvider ?? 
                        App.ServiceCollection.BuildServiceProvider();
@@ -102,12 +112,14 @@ public sealed partial class Builder<THandler, TContext>
 
         App.RootEndpoints = [];
 
-        foreach (var fullRoute in App.EncodedRoutes.SelectMany(kvp => kvp.Value.Select(route => kvp.Key + '_' + route)))
+        foreach (var fullRoute in App.RootEncodedRoutes.SelectMany(kvp => kvp.Value.Select(route => kvp.Key + '_' + route)))
         {
             App.RootEndpoints.Add(
                 fullRoute,
                 App.Services.GetRequiredKeyedService<Func<TContext, Task>>(fullRoute));
         }
+
+        RearrangeEncodedRoutes(App.RootEncodedRoutes);
     }
 
     private void BuildGroup(IServiceProvider? serviceProvider = null!)
@@ -123,28 +135,48 @@ public sealed partial class Builder<THandler, TContext>
         App.RootEndpoints = [];
         App.GroupEndpoints = [];
 
-        foreach (var kvp in App.EncodedRoutes)
+        App.RootMiddleware = App.Services.GetServices<Func<TContext, Func<TContext, Task>, Task>>().ToList();
+
+        foreach (var fullRoute in App.RootEncodedRoutes.SelectMany(kvp => kvp.Value.Select(route => kvp.Key + '_' + route)))
         {
-            if (kvp.Key.Equals("FlowControl", StringComparison.OrdinalIgnoreCase))
-            {
-                foreach (var route in kvp.Value)
-                {
-                    var fullRoute = $"{kvp.Key}_{route}";
-                    App.RootEndpoints.Add(fullRoute, App.Services.GetRequiredKeyedService<Func<TContext, Task>>(fullRoute));
-                }
-                continue;
-            }
-            /*foreach (var key in kvp.Value.Select(route => new EndpointKey(kvp.Key, route)))
-            {
-                App.GroupEndpoints.Add(
-                    key,
-                    App.Services.GetRequiredKeyedService<Func<TContext, Task>>(key));
-            }*/
+            App.RootEndpoints.Add(
+                fullRoute,
+                App.Services.GetRequiredKeyedService<Func<TContext, Task>>(fullRoute));
         }
 
         App.CachePipelines(App.Services);
-        
         App.SetPipeline(App.GroupPipeline);
+
+        // Rearrange EmbeddedRoutes
+        RearrangeEncodedRoutes(App.EncodedRoutes);
+        RearrangeEncodedRoutes(App.RootEncodedRoutes);
+    }
+
+    private static void RearrangeEncodedRoutes(Dictionary<string, List<string>> encodedRoutes)
+    {
+        foreach (var list in encodedRoutes.Select(kvp => kvp.Value))
+        {
+            // Sort in-place according to the custom rules
+            list.Sort(static (a, b) =>
+            {
+                var aIsWildcard = a.Contains('*');
+                var bIsWildcard = b.Contains('*');
+
+                // Non-wildcards before wildcards
+                if (aIsWildcard != bIsWildcard)
+                    return aIsWildcard ? 1 : -1;
+
+                // If both are wildcards, longer first (desc)
+                if (!aIsWildcard || !bIsWildcard) 
+                    return string.CompareOrdinal(a, b);
+                
+                var lenDiff = b.Length - a.Length;
+                return lenDiff != 0 ? 
+                    lenDiff :
+                    // Fallback: alphabetical for deterministic order
+                    string.CompareOrdinal(a, b);
+            });
+        }
     }
 
     private static void DefaultLoggingBuilder(ILoggingBuilder loggingBuilder)
@@ -236,13 +268,11 @@ public sealed partial class Builder<THandler, TContext>
     }
 
     /// <summary>
-    /// Replaces the default <see cref="IServiceCollection"/> with a custom one,
-    /// and injects default middleware for the current context type.
+    /// Replaces the default <see cref="IServiceCollection"/> with a custom one.
     /// </summary>
     public Builder<THandler, TContext> EmbedServices(IServiceCollection services)
     {
         App.ServiceCollection = services;
-        App.ServiceCollection.AddDefaultMiddleware<TContext>();
 
         return this;
     }
@@ -274,7 +304,7 @@ public sealed partial class Builder<THandler, TContext>
         if (!dispatchContextWiredEvents)
             return this;
 
-        UseMiddleware(scope => async (context, next) =>
+        UseRootMiddleware(scope => async (context, next) =>
         {
             await next(context);
 
@@ -297,7 +327,7 @@ public sealed partial class Builder<THandler, TContext>
     /// <param name="location">Source location (file system or embedded).</param>
     internal Builder<THandler, TContext> ServeStaticFiles(string baseRoute, Location location)
     {
-        App.StaticResourceRouteToLocation.Add(baseRoute, location);
+        WiredApp<TContext>.StaticResourceRouteToLocation.Add(baseRoute, location);
         App.CanServeStaticFiles = true;
         return this;
     }
