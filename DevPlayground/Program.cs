@@ -8,9 +8,6 @@ using Wired.IO.Http11Express.StaticHandlers;
 
 internal class Program
 {
-
-    //**** DIOGO NOTE: TRY WITH TRANSIENT ENDPOINTS *****
-
     private static readonly Func<Http11ExpressContext, Func<Http11ExpressContext, Task>, Task> MiddlewareExample = async (ctx, next) =>
     {
         Console.WriteLine("Executing Manual Pipeline Middleware");
@@ -27,7 +24,14 @@ internal class Program
             .Port(8080)
             .NoScopedEndpoints()
 
-            .AddStaticResourceProvider("/*",
+            .AddStaticResourceProvider("/aaa*",
+                new Location
+                {
+                    Assembly = Assembly.GetExecutingAssembly(),
+                    LocationType = LocationType.EmbeddedResource,
+                    Path = "Resources.Docs"
+                }, [])
+            .AddMpaProvider("/*",
                 new Location
                 {
                     Assembly = Assembly.GetExecutingAssembly(),
@@ -36,8 +40,8 @@ internal class Program
                 }, [])
 
             .AddManualPipeline(
-                "/api*", 
-                [HttpConstants.Get, HttpConstants.Post, HttpConstants.Delete, HttpConstants.Put], 
+                "/api*",
+                [HttpConstants.Get, HttpConstants.Post, HttpConstants.Delete, HttpConstants.Put],
                 ctx =>
                 {
                     Console.WriteLine("Running manual pipeline endpoint!");
@@ -48,20 +52,27 @@ internal class Program
                         .Content("Hello from manual pipeline!"u8);
 
                     return Task.CompletedTask;
-                }, [MiddlewareExample])
+                }, [MiddlewareExample]);
 
-            .UseRootMiddleware(async (ctx, nxt) =>
+            /*.UseRootMiddleware(async (ctx, nxt) =>
             {
                 Console.WriteLine("Executing root middleware!");
                 await nxt(ctx);
-            });
+            });*/
 
             _ = builder.MapGroup("/")
-            .UseMiddleware(async (ctx, next) =>
+            .MapGet("/json", static ctx =>
+            {
+                ctx
+                    .Respond()
+                    .Type("application/json"u8)
+                    .Content("\"message\": \"Hello, World!\""u8);
+            })
+            /*.UseMiddleware(async (ctx, next) =>
             {
                 Console.WriteLine("Executing Global middleware for group /");
                 await next(ctx);
-            });
+            })*/;
 
             _ = builder.MapGroup("/api")
             .UseMiddleware(async (ctx, next) =>

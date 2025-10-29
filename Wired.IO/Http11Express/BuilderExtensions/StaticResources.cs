@@ -110,12 +110,12 @@ public static class BuilderExtensions
                         if (WiredApp<Http11ExpressContext>.TryReadFallbackSpaResource(ctx.Request.Route, out var indexHtml))
                         {
                             // Cache the resource for future requests and short circuit to static file endpoint
-                            WiredApp<Http11ExpressContext>.StaticCachedResourceFiles[ctx.Request.Route] = resource;
+                            WiredApp<Http11ExpressContext>.StaticCachedResourceFiles[ctx.Request.Route] = indexHtml;
 
                             ctx.Respond()
                                 .Status(ResponseStatus.Ok)
-                                .Type(MimeTypes.GetMimeType(routePath))
-                                .Content(CreateBoundHandler(ctx.Writer, indexHtml), (ulong)resource.Length);
+                                .Type(MimeTypes.GetSpaMimeType(routePath))
+                                .Content(CreateBoundHandler(ctx.Writer, indexHtml), (ulong)indexHtml.Length);
                         }
 
                         return Task.CompletedTask;
@@ -142,7 +142,7 @@ public static class BuilderExtensions
 
                 ctx.Respond()
                     .Status(ResponseStatus.Ok)
-                    .Type(MimeTypes.GetMimeType(routePath))
+                    .Type(MimeTypes.GetSpaMimeType(routePath))
                     .Content(handler, (ulong)resource.Length);
 
                 return Task.CompletedTask;
@@ -183,12 +183,12 @@ public static class BuilderExtensions
                         if (WiredApp<Http11ExpressContext>.TryReadFallbackMpaResource(ctx.Request.Route, out var indexHtml))
                         {
                             // Cache the resource for future requests and short circuit to static file endpoint
-                            WiredApp<Http11ExpressContext>.StaticCachedResourceFiles[ctx.Request.Route] = resource;
+                            WiredApp<Http11ExpressContext>.StaticCachedResourceFiles[ctx.Request.Route] = indexHtml;
 
                             ctx.Respond()
                                 .Status(ResponseStatus.Ok)
-                                .Type(MimeTypes.GetMimeType(routePath))
-                                .Content(CreateBoundHandler(ctx.Writer, indexHtml), (ulong)resource.Length);
+                                .Type(MimeTypes.GetSpaMimeType(routePath))
+                                .Content(CreateBoundHandler(ctx.Writer, indexHtml), (ulong)indexHtml.Length);
                         }
 
                         return Task.CompletedTask;
@@ -215,7 +215,7 @@ public static class BuilderExtensions
 
                 ctx.Respond()
                     .Status(ResponseStatus.Ok)
-                    .Type(MimeTypes.GetMimeType(routePath))
+                    .Type(MimeTypes.GetSpaMimeType(routePath))
                     .Content(handler, (ulong)resource.Length);
 
                 return Task.CompletedTask;

@@ -61,90 +61,10 @@ public sealed partial class WiredApp<TContext>
     {
         if(_cachedEndpoints.TryGetValue(context.Request.Route, out var cachedEndpoint))
             return cachedEndpoint.Invoke(context);
-        //Console.WriteLine("Not cached");
         
-        //var httpMethod = context.Request.HttpMethod.ToUpperInvariant();
         var httpMethod = context.Request.HttpMethod;
 
-        if (CanServeStaticFiles && 
-            Path.HasExtension(context.Request.Route) && 
-            httpMethod.Equals("GET", StringComparison.OrdinalIgnoreCase))
-        {
-            // Quick cache check
-            if (StaticCachedResourceFiles.ContainsKey(context.Request.Route))
-            {
-                // Resource is already cached, short circuit to static file endpoint
-                
-                if (CanServeSpaFiles) 
-                {
-                    _cachedEndpoints[context.Request.Route] = RootEndpoints["GET_/serve-spa-resource"]; 
-                    return RootEndpoints["GET_/serve-spa-resource"].Invoke(context);
-                    
-                }
-                if (CanServeMpaFiles)
-                {
-                    _cachedEndpoints[context.Request.Route] = RootEndpoints["GET_/serve-mpa-resource"]; 
-                    return RootEndpoints["GET_/serve-mpa-resource"].Invoke(context);
-                }
-                
-                _cachedEndpoints[context.Request.Route] = RootEndpoints["GET_/serve-static-resource"]; 
-                return RootEndpoints["GET_/serve-static-resource"].Invoke(context);
-            }
-
-            // Resource is not cached, check if it exists
-            if (TryReadResource(context.Request.Route, out var resource))
-            {
-                // Cache the resource for future requests and short circuit to static file endpoint
-                StaticCachedResourceFiles[context.Request.Route] = resource;
-
-                if (CanServeSpaFiles) 
-                {
-                    _cachedEndpoints[context.Request.Route] = RootEndpoints["GET_/serve-spa-resource"]; 
-                    return RootEndpoints["GET_/serve-spa-resource"].Invoke(context);
-                    
-                }
-                if (CanServeMpaFiles)
-                {
-                    _cachedEndpoints[context.Request.Route] = RootEndpoints["GET_/serve-mpa-resource"]; 
-                    return RootEndpoints["GET_/serve-mpa-resource"].Invoke(context);
-                }
-                
-                _cachedEndpoints[context.Request.Route] = RootEndpoints["GET_/serve-static-resource"]; 
-                return RootEndpoints["GET_/serve-static-resource"].Invoke(context);
-            }
-
-            // Else if resource does not exist, continue to normal endpoint resolution
-        }
-
         var decodedRoute = MatchEndpoint(RootEncodedRoutes[httpMethod], context.Request.Route);
-
-        // If no matching route is found and SPA enabled, serve index.html in case the route starts with any of the SPA base routes
-        if (decodedRoute is null)
-        {
-            if (CanServeMpaFiles)
-            {
-                // Serve the index.html for the given base route
-                if (TryReadFallbackMpaResource(context.Request.Route, out var resource))
-                {
-                    // Cache the resource for future requests and short circuit to static file endpoint
-                    StaticCachedResourceFiles[context.Request.Route] = resource;
-                    _cachedEndpoints[context.Request.Route] = RootEndpoints["GET_/serve-mpa-resource"];
-                    return RootEndpoints["GET_/serve-mpa-resource"].Invoke(context);
-                }
-            }
-
-            if (CanServeSpaFiles)
-            {
-                // Serve the index.html for the given base route
-                if (TryReadFallbackSpaResource(context.Request.Route, out var resource))
-                {
-                    // Cache the resource for future requests and short circuit to static file endpoint
-                    StaticCachedResourceFiles[context.Request.Route] = resource;
-                    _cachedEndpoints[context.Request.Route] = RootEndpoints["GET_/serve-spa-resource"];
-                    return RootEndpoints["GET_/serve-spa-resource"].Invoke(context);
-                }
-            }
-        }
 
         if (decodedRoute is null)
         {

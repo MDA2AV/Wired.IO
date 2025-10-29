@@ -154,30 +154,27 @@ public sealed partial class Builder<THandler, TContext>
 
     private static void RearrangeEncodedRoutes(Dictionary<string, List<string>> encodedRoutes)
     {
-        foreach (var kvp in encodedRoutes)
+        foreach (var list in encodedRoutes.Select(kvp => kvp.Value))
         {
-            var list = kvp.Value;
-
             // Sort in-place according to the custom rules
             list.Sort(static (a, b) =>
             {
-                bool aIsWildcard = a.Contains('*');
-                bool bIsWildcard = b.Contains('*');
+                var aIsWildcard = a.Contains('*');
+                var bIsWildcard = b.Contains('*');
 
                 // Non-wildcards before wildcards
                 if (aIsWildcard != bIsWildcard)
                     return aIsWildcard ? 1 : -1;
 
                 // If both are wildcards, longer first (desc)
-                if (aIsWildcard && bIsWildcard)
-                {
-                    int lenDiff = b.Length - a.Length;
-                    if (lenDiff != 0)
-                        return lenDiff;
-                }
-
-                // Fallback: alphabetical for deterministic order
-                return string.CompareOrdinal(a, b);
+                if (!aIsWildcard || !bIsWildcard) 
+                    return string.CompareOrdinal(a, b);
+                
+                var lenDiff = b.Length - a.Length;
+                return lenDiff != 0 ? 
+                    lenDiff :
+                    // Fallback: alphabetical for deterministic order
+                    string.CompareOrdinal(a, b);
             });
         }
     }

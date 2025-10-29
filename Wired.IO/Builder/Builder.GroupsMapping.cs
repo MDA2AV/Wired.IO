@@ -2,6 +2,8 @@
 using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using Wired.IO.App;
+using Wired.IO.Http11.Context;
+using Wired.IO.Http11Express.Context;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Handlers;
 using Wired.IO.Protocol.Request;
@@ -60,6 +62,8 @@ public sealed partial class Builder<THandler, TContext>
 
         public Group MapGet(string route, Func<TContext, Task> endpoint)
             => Map(HttpConstants.Get, route, endpoint);
+        public Group MapGet(string route, Action<TContext> endpoint)
+            => Map(HttpConstants.Get, route, endpoint);
 
         public Group MapPost(string route, Func<TContext, Task> endpoint)
             => Map(HttpConstants.Post, route, endpoint);
@@ -67,6 +71,17 @@ public sealed partial class Builder<THandler, TContext>
         // Add MapPost/Put/Delete similarly…
 
         private Group Map(string method, string route, Func<TContext, Task> endpoint)
+        {
+            var fullPath = RouteUtils.Combine(Prefix, route);
+            var key = new EndpointKey(method, fullPath);
+
+            // Register endpoint in DI keyed by EndpointKey
+            DiRegister.AddEndpoint(key, endpoint);
+
+            _endpoints.Add(new EndpointDef(key));
+            return this;
+        }
+        private Group Map(string method, string route, Action<TContext> endpoint)
         {
             var fullPath = RouteUtils.Combine(Prefix, route);
             var key = new EndpointKey(method, fullPath);
@@ -106,6 +121,12 @@ public sealed partial class Builder<THandler, TContext>
         // Endpoints keyed by EndpointKey
         public void AddEndpoint(EndpointKey key, Func<TContext, Task> endpoint)
             => _services.AddKeyedScoped<Func<TContext, Task>>(key, (_, _) => endpoint);
+        public void AddEndpoint(EndpointKey key, Action<TContext> endpoint)
+            => _services.AddKeyedScoped<Func<TContext, Task>>(key,  (_, _) =>  (ctx) =>
+            {
+                endpoint(ctx);
+                return Task.CompletedTask;
+            });
 
         // Middlewares keyed by group's prefix (string)
         public void AddGroupMiddleware(string groupPrefix, Func<TContext, Func<TContext, Task>, Task> middleware)
