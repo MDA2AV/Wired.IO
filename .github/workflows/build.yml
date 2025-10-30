@@ -2,58 +2,105 @@ name: Build, Test, and Publish
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   pull_request:
-    branches:
-      - main
+    branches: [ main ]
+  workflow_dispatch:
 
 permissions:
-  contents: read   # Required for reading repository content
-  packages: write  # Required for publishing packages to NuGet
+  contents: read
+  packages: write
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  build-test:
+    name: Build & Test (${{ matrix.name }})
+    strategy:
+      matrix:
+        include:
+          - name: ubuntu-x64
+            runs_on: ubuntu-latest
+            is_self_hosted: false
+          - name: raspi-arm32
+            runs_on: [ self-hosted, Linux, ARM ] # match your runner labels
+            is_self_hosted: true
+    runs-on: ${{ matrix.runs_on }}
 
     steps:
-      # Checkout the repository
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      # Set up .NET SDK
-      - name: Set up .NET SDK
-        uses: actions/setup-dotnet@v3
+      # Hosted lane: install SDK
+      - name: Set up .NET SDK (hosted)
+        if: ${{ matrix.is_self_hosted == false }}
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0' # Specify your .NET SDK version
+          dotnet-version: '9.0.x'
 
-      # Restore dependencies
-      - name: Restore dependencies
+      # Self-hosted lane: DO NOT install — just assert it's there
+      - name: Assert .NET SDK present (self-hosted ARM32)
+        if: ${{ matrix.is_self_hosted == true }}
+        shell: bash
+        run: |
+          set -e
+          if ! command -v dotnet >/dev/null 2>&1; then
+            echo "dotnet not found on PATH. Install .NET 9 SDK on the runner or add it to PATH."
+            exit 1
+          fi
+          echo "dotnet on PATH:"
+          which dotnet
+          dotnet --info
+          v="$(dotnet --version)"
+          echo "dotnet version: $v"
+          if [[ ! "$v" =~ ^9\. ]]; then
+            echo "This job requires .NET 9.x on the self-hosted runner. Found: $v"
+            exit 1
+          fi
+
+      - name: Restore
         run: dotnet restore Wired.IO/Wired.IO.csproj
 
-      # Build the project
-      - name: Build project
+      - name: Build (Release)
         run: dotnet build Wired.IO/Wired.IO.csproj --configuration Release --no-restore
-        
-      - name: Pack NuGet package
+
+      - name: Test (Debug)
+        run: dotnet test Wired.IO.Tests/Wired.IO.Tests.csproj --verbosity normal
+
+      # Pack only on ubuntu to avoid duplicate packages
+      - name: Pack NuGet (ubuntu only)
+        if: ${{ matrix.name == 'ubuntu-x64' }}
         run: dotnet pack Wired.IO/Wired.IO.csproj --configuration Release --output ./artifacts
 
-      # Run tests only for .NET 9
-      - name: Run tests (only for .NET 9)
-        run: |
-          if [[ "$(dotnet --version)" == 9.* ]]; then
-            dotnet test Wired.IO.Tests/Wired.IO.Tests.csproj --verbosity normal
-          else
-            echo "Skipping tests: Not running on .NET 9."
-          fi
-        
+      - name: Upload artifacts (ubuntu only)
+        if: ${{ matrix.name == 'ubuntu-x64' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: nupkgs
+          path: ./artifacts/*.nupkg
+          if-no-files-found: error
+
+  publish:
+    name: Publish packages
+    runs-on: ubuntu-latest
+    needs: build-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Download nupkgs
+        uses: actions/download-artifact@v4
+        with:
+          name: nupkgs
+          path: ./artifacts
+
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
       - name: Publish to NuGet
         env:
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
-        run: dotnet nuget push ./artifacts/*.nupkg --source https://api.nuget.org/v3/index.json --api-key $NUGET_API_KEY --skip-duplicate
-        
-      # Publish to GitHub Packages
+        run: dotnet nuget push ./artifacts/*.nupkg --source https://api.nuget.org/v3/index.json --api-key "$NUGET_API_KEY" --skip-duplicate
+
       - name: Publish to GitHub Packages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: dotnet nuget push ./artifacts/*.nupkg --source https://nuget.pkg.github.com/MDA2AV/index.json --api-key $GITHUB_TOKEN --skip-duplicate
+        run: dotnet nuget push ./artifacts/*.nupkg --source https://nuget.pkg.github.com/MDA2AV/index.json --api-key "$GITHUB_TOKEN" --skip-duplicate
