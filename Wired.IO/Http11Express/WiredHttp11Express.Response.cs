@@ -72,8 +72,6 @@ public partial class WiredHttp11Express<TContext>
             writer.Write("\r\n"u8);
         }
 
-        // TODO: Add Content Encoding header
-
         // If ContentLength is not zero, its length is known and is valid to use Content-Length header
         if (context.Response.ContentLength is not null)
         {
@@ -91,12 +89,28 @@ public partial class WiredHttp11Express<TContext>
         {
             writer.Write(TransferEncodingChunkedHeader);
         }
-
-        //TODO: Implement adding headers
-        /*foreach (var header in context.Response!.Utf8Headers)
+        
+        if (context.Response.Utf8Headers is not null)
         {
+            foreach (var header in context.Response.Utf8Headers)
+            {
+                writer.Write(header.Key.AsSpan());
+                writer.Write(": "u8);
+                writer.Write(header.Value.AsSpan());
+                writer.Write("\r\n"u8);
+            }
+        }
 
-        }*/
+        if (context.Response.Headers.Count > 0)
+        {
+            foreach (var header in context.Response.Headers)
+            {
+                writer.WriteString(header.Key);
+                writer.Write(": "u8);
+                writer.WriteString(header.Value);
+                writer.Write("\r\n"u8);
+            }
+        }
 
         // TODO: Add Modified and Expires headers
 
