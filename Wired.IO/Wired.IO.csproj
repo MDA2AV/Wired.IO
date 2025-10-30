@@ -19,7 +19,7 @@
 	  <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
 	  <!-- Required for self-contained publish in linux-x64 -->
-      <!--<RuntimeIdentifier>linux-x64</RuntimeIdentifier>-->
+      <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
       
   </PropertyGroup>
 

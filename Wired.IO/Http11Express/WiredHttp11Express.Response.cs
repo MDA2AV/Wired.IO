@@ -97,6 +97,14 @@ public partial class WiredHttp11Express<TContext>
         {
 
         }*/
+        
+        foreach (var header in context.Response.Headers)
+        {
+            writer.WriteString(header.Key);
+            writer.Write(": "u8);
+            writer.WriteString(header.Value);
+            writer.Write("\r\n"u8);
+        }
 
         // TODO: Add Modified and Expires headers
 
