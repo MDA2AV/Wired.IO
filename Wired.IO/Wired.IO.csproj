@@ -8,9 +8,9 @@
 	  <Authors>Diogo Martins</Authors>
 	  <RepositoryUrl>https://github.com/MDA2AV/Wired.IO</RepositoryUrl>
 	  <RepositoryType>git</RepositoryType>
-	  <AssemblyVersion>9.5.10</AssemblyVersion>
-	  <FileVersion>9.5.10</FileVersion>
-	  <Version>9.5.10</Version>
+	  <AssemblyVersion>9.5.11</AssemblyVersion>
+	  <FileVersion>9.5.11</FileVersion>
+	  <Version>9.5.11</Version>
 	  <PackageReadmeFile>README.md</PackageReadmeFile>
 	  <PackageTags>socket;webserver;lightweight;embeddable</PackageTags>
 	  <PackageLicenseFile>LICENSE</PackageLicenseFile>
@@ -19,7 +19,7 @@
 	  <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
 	  <!-- Required for self-contained publish in linux-x64 -->
-      <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
+      <!--<RuntimeIdentifier>linux-x64</RuntimeIdentifier>-->
       
   </PropertyGroup>
 
