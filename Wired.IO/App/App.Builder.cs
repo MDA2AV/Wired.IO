@@ -86,13 +86,13 @@ public sealed partial class WiredApp<TContext>
     /// Gets or sets the local IP address the server will bind to.
     /// Defaults to 127.0.0.1.
     /// </summary>
-    internal IPAddress IpAddress { get; set; } = IPAddress.Any;
+    public IPAddress IpAddress { get; internal set; } = IPAddress.Any;
 
     /// <summary>
     /// Gets or sets the port the server will listen on.
     /// Defaults to 9001.
     /// </summary>
-    internal int Port { get; set; } = 9001;
+    public int Port { get; internal set; } = 9001;
 
     /// <summary>
     /// Gets or sets the maximum number of pending connections in the socket backlog.
@@ -102,7 +102,7 @@ public sealed partial class WiredApp<TContext>
     /// <summary>
     /// Gets or sets a value indicating whether TLS is enabled for this server instance.
     /// </summary>
-    internal bool TlsEnabled { get; set; }
+    public bool TlsEnabled { get; internal set; }
 
     /// <summary>
     /// Gets or sets the logger factory used to create loggers for internal components.
