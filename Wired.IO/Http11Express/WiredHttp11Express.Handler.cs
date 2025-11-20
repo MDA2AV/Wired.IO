@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.ObjectPool;
 using System.Buffers;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO.Pipelines;
 using System.Runtime.CompilerServices;
@@ -107,8 +108,8 @@ public partial class WiredHttp11Express<TContext> : IHttpHandler<TContext>
             new StreamPipeReaderOptions(
                 MemoryPool<byte>.Shared, 
                 leaveOpen: false,
-                bufferSize: 4096*4, 
-                minimumReadSize: 1024));
+                bufferSize: 8*4, 
+                minimumReadSize: 1));
 
         context.Writer = PipeWriter.Create(stream,
             new StreamPipeWriterOptions(
@@ -239,12 +240,24 @@ public partial class WiredHttp11Express<TContext> : IHttpHandler<TContext>
                     }
 
                     //Try to get the body, if the full body isn't read, break
-                    var bodyReceived = TryExtractBodyFromMultipleSegment(context, ref buffer, ref currentPosition, ref state);
+                    var bodyReceived = TryExtractBodyFromMultipleSegment(context, ref buffer, ref currentPosition, ref state, out var bodyExists);
 
-                    if (!bodyReceived)
-                        break;
+                    if (bodyExists)
+                    {
+                        if (!bodyReceived)
+                        {
+                            break;
+                        }
+                        
+                        context.Reader.AdvanceTo(currentPosition, buffer.End);
+                    }
 
                     await pipeline(context);
+                    
+                    // Respond
+                    if(context.Response is not null && context.Response.IsActive())
+                        await WriteResponse(context);
+                    
                     context.Clear();
                     flush = true;
 
@@ -290,6 +303,7 @@ public partial class WiredHttp11Express<TContext> : IHttpHandler<TContext>
         bodyEmpty = true;
 
         // Content-Length header present
+        // TODO: Test if this works, it's odd that the position is not used by method caller
         var contentLengthAvailable = context.Request.Headers.TryGetValue(ContentLength, out var contentLengthValue);
         if (contentLengthAvailable)
         {
@@ -311,6 +325,8 @@ public partial class WiredHttp11Express<TContext> : IHttpHandler<TContext>
             buffer.FirstSpan.Slice(position, contentLength).CopyTo(context.Request.Content);
 
             position += contentLength;
+
+            return true;
         }
 
         // Transfer-Encoding header present
@@ -358,7 +374,7 @@ public partial class WiredHttp11Express<TContext> : IHttpHandler<TContext>
         return true;
     }
 
-    
+
     /// <summary>
     /// Attempts to extract the HTTP request body from a multi-segment <see cref="ReadOnlySequence{T}"/> buffer.
     /// </summary>
@@ -369,6 +385,7 @@ public partial class WiredHttp11Express<TContext> : IHttpHandler<TContext>
     /// Updated to point just after the body if extraction succeeds.
     /// </param>
     /// <param name="state">Parser state, may be advanced after body extraction.</param>
+    /// <param name="bodyExists"></param>
     /// <returns>
     /// <c>true</c> if the body was fully extracted or no body is required;  
     /// <c>false</c> if more data is needed from the transport.
@@ -380,12 +397,18 @@ public partial class WiredHttp11Express<TContext> : IHttpHandler<TContext>
         TContext context,
         ref ReadOnlySequence<byte> buffer,
         ref SequencePosition position,
-        ref State state)
+        ref State state,
+        out bool bodyExists)
     {
+        bodyExists = false;
+        
         // Content-Length header present
         var contentLengthAvailable = context.Request.Headers.TryGetValue(ContentLength, out var contentLengthValue);
+        // TODO: Test if this works, it's odd that the position is not used by method caller
         if (contentLengthAvailable)
         {
+            bodyExists = true;
+            
             var validContentLength = int.TryParse(contentLengthValue, out var contentLength);
 
             if (!validContentLength || contentLength < 0)
@@ -400,11 +423,15 @@ public partial class WiredHttp11Express<TContext> : IHttpHandler<TContext>
             context.Request.ContentLength = contentLength;
 
             position = buffer.GetPosition(contentLength, position);
+
+            return true;
         }
 
         var transferEncodingAvailable = context.Request.Headers.TryGetValue(TransferEncoding, out var transferEncodingValue);
         if (transferEncodingAvailable && transferEncodingValue.Equals("chunked", StringComparison.OrdinalIgnoreCase))
         {
+            bodyExists = true;
+            
             var reader = new SequenceReader<byte>(buffer.Slice(position));
             var currentOffset = context.Request.Content != null ? context.Request.ContentLength : 0;
 
@@ -458,7 +485,7 @@ public partial class WiredHttp11Express<TContext> : IHttpHandler<TContext>
             context.Request.ContentLength = currentOffset;
             position = reader.Position;
         }
-
+        
         return true;
     }
 

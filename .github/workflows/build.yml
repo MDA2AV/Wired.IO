@@ -25,7 +25,7 @@ jobs:
       - name: Set up .NET SDK
         uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: '9.0' # Specify your .NET SDK version
+          dotnet-version: '10.0' # Specify your .NET SDK version
 
       # Restore dependencies
       - name: Restore dependencies
@@ -39,12 +39,12 @@ jobs:
         run: dotnet pack Wired.IO/Wired.IO.csproj --configuration Release --output ./artifacts
 
       # Run tests only for .NET 9
-      - name: Run tests (only for .NET 9)
+      - name: Run tests (only for .NET 10)
         run: |
-          if [[ "$(dotnet --version)" == 9.* ]]; then
+          if [[ "$(dotnet --version)" == 10.* ]]; then
             dotnet test Wired.IO.Tests/Wired.IO.Tests.csproj --verbosity normal
           else
-            echo "Skipping tests: Not running on .NET 9."
+            echo "Skipping tests: Not running on .NET 10."
           fi
         
       - name: Publish to NuGet

@@ -1,12 +1,16 @@
-﻿namespace Wired.IO.Utilities.StringCache;
+﻿using System.Collections.Concurrent;
+
+namespace Wired.IO.Utilities.StringCache;
 
 public sealed class FastHashStringCache16
 {
-    private readonly Dictionary<ushort, string> _map; // Changed from ulong
+    private readonly ConcurrentDictionary<ushort, string> _map; // Changed from ulong
+    
+    private const int ConcurrencyLevel = 1;
 
     public FastHashStringCache16(List<string>? preCacheableStrings, int capacity = 256)
     {
-        _map = new Dictionary<ushort, string>(capacity); // Changed from ulong
+        _map = new ConcurrentDictionary<ushort, string>(ConcurrencyLevel, capacity); // Changed from ulong
         if (preCacheableStrings is not null)
         {
             foreach (var preCacheableString in preCacheableStrings)
@@ -18,14 +22,15 @@ public sealed class FastHashStringCache16
 
     public FastHashStringCache16(int capacity = 256)
     {
-        _map = new Dictionary<ushort, string>(capacity); // Changed from ulong
+        _map = new ConcurrentDictionary<ushort, string>(ConcurrencyLevel, capacity); // Changed from ulong
     }
 
+    // TODO: This method should be atomic
     public string GetOrAdd(ReadOnlySpan<byte> bytes)
     {
         ushort h = Fnv1a16(bytes); // Changed from ulong
         if (_map.TryGetValue(h, out var s))
-            return s;                           // may be a false hit if collision
+            return s; // may be a false hit if collision
         s = Encoders.Utf8Encoder.GetString(bytes);
         _map[h] = s;
         return s;
