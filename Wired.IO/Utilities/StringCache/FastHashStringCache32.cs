@@ -1,12 +1,16 @@
-﻿namespace Wired.IO.Utilities.StringCache;
+﻿using System.Collections.Concurrent;
+
+namespace Wired.IO.Utilities.StringCache;
 
 public sealed class FastHashStringCache32
 {
-    private readonly Dictionary<uint, string> _map; // Changed from ulong
+    private readonly ConcurrentDictionary<uint, string> _map; // Changed from ulong
+    
+    private const int ConcurrencyLevel = 1;
 
     public FastHashStringCache32(List<string>? preCacheableStrings, int capacity = 256)
     {
-        _map = new Dictionary<uint, string>(capacity); // Changed from ulong
+        _map = new ConcurrentDictionary<uint, string>(ConcurrencyLevel, capacity); // Changed from ulong
         if (preCacheableStrings is not null)
         {
             foreach (var preCacheableString in preCacheableStrings)
@@ -18,7 +22,7 @@ public sealed class FastHashStringCache32
 
     public FastHashStringCache32(int capacity = 256)
     {
-        _map = new Dictionary<uint, string>(capacity); // Changed from ulong
+        _map = new ConcurrentDictionary<uint, string>(ConcurrencyLevel, capacity); // Changed from ulong
     }
 
     public string GetOrAdd(ReadOnlySpan<byte> bytes)

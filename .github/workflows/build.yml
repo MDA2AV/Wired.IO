@@ -34,7 +34,7 @@ jobs:
         if: ${{ matrix.is_self_hosted == false }}
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
 
       # Self-hosted lane: DO NOT install — just assert it's there
       - name: Assert .NET SDK present (self-hosted ARM32)
@@ -43,7 +43,7 @@ jobs:
         run: |
           set -e
           if ! command -v dotnet >/dev/null 2>&1; then
-            echo "dotnet not found on PATH. Install .NET 9 SDK on the runner or add it to PATH."
+            echo "dotnet not found on PATH. Install .NET 10 SDK on the runner or add it to PATH."
             exit 1
           fi
           echo "dotnet on PATH:"
@@ -51,8 +51,8 @@ jobs:
           dotnet --info
           v="$(dotnet --version)"
           echo "dotnet version: $v"
-          if [[ ! "$v" =~ ^9\. ]]; then
-            echo "This job requires .NET 9.x on the self-hosted runner. Found: $v"
+          if [[ ! "$v" =~ ^10\. ]]; then
+            echo "This job requires .NET 10.x on the self-hosted runner. Found: $v"
             exit 1
           fi
 
@@ -93,7 +93,7 @@ jobs:
       - name: Set up .NET SDK
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
 
       - name: Publish to NuGet
         env:
