@@ -59,7 +59,7 @@ public partial class WiredHttp11Express<TContext> : IHttpHandler<TContext>
     /// Object pool used to recycle request contexts for reduced allocations and improved performance.
     /// </summary>
     private static readonly ObjectPool<TContext> ContextPool =
-        new DefaultObjectPool<TContext>(new PipelinedContextPoolPolicy(), 4096);
+        new DefaultObjectPool<TContext>(new PipelinedContextPoolPolicy(), 4096 * 4);
 
     /// <summary>
     /// Pool policy that defines how to create and reset pooled <typeparamref name="{TContext}"/> instances.
@@ -108,8 +108,8 @@ public partial class WiredHttp11Express<TContext> : IHttpHandler<TContext>
             new StreamPipeReaderOptions(
                 MemoryPool<byte>.Shared, 
                 leaveOpen: false,
-                bufferSize: 8*4, 
-                minimumReadSize: 1));
+                bufferSize: 4096 * 4, 
+                minimumReadSize: 1024));
 
         context.Writer = PipeWriter.Create(stream,
             new StreamPipeWriterOptions(
