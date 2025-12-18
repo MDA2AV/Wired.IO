@@ -272,7 +272,7 @@ public partial class WiredHttp11Express<TContext> : IHttpHandler<TContext>
                 await context.Writer.FlushAsync();
         }
     }
-
+    
     /// <summary>
     /// Attempts to extract the HTTP request body from a single-segment <see cref="ReadOnlySequence{T}"/> buffer.
     /// </summary>
