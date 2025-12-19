@@ -1,11 +1,9 @@
 ﻿using Microsoft.Extensions.ObjectPool;
-using System.Buffers;
 using System.IO.Pipelines;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using Wired.IO.Protocol.Writers;
-using Wired.IO.Utilities;
 
 namespace Wired.IO.Http11Express.Response.Content;
 
@@ -143,7 +141,7 @@ public class ExpressJsonContent<T> : IExpressResponseContent<T>
 /// </summary>
 /// <param name="data">The object to serialize as JSON.</param>
 /// <param name="length">Optional known length of the serialized payload.</param>
-public class ExpressJsonObjectContent(object data, ulong? length = null) : IExpressResponseContent
+public class ExpressJsonObjectContent(object data, JsonSerializerOptions? jsonSerializerOptions = null, ulong? length = null) : IExpressResponseContent
 {
     /// <summary>
     /// Gets the length of the payload in bytes, if known.
@@ -162,7 +160,7 @@ public class ExpressJsonObjectContent(object data, ulong? length = null) : IExpr
             Writers.TWriter ??= new Utf8JsonWriter(writer, new JsonWriterOptions { SkipValidation = true });
             Writers.TWriter.Reset(writer);
 
-            JsonSerializer.Serialize(Writers.TWriter, data);
+            JsonSerializer.Serialize(Writers.TWriter, data, jsonSerializerOptions);
             return;
         }
 
@@ -172,7 +170,7 @@ public class ExpressJsonObjectContent(object data, ulong? length = null) : IExpr
         Writers.TWriter ??= new Utf8JsonWriter(chunkedWriter, new JsonWriterOptions { SkipValidation = true });
         Writers.TWriter.Reset(chunkedWriter);
 
-        JsonSerializer.Serialize(Writers.TWriter, data);
+        JsonSerializer.Serialize(Writers.TWriter, data, jsonSerializerOptions);
 
         chunkedWriter.Complete();
     }

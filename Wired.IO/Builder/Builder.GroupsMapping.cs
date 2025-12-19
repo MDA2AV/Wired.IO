@@ -2,8 +2,6 @@
 using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using Wired.IO.App;
-using Wired.IO.Http11.Context;
-using Wired.IO.Http11Express.Context;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Handlers;
 using Wired.IO.Protocol.Request;

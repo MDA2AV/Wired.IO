@@ -1,8 +1,5 @@
 ﻿using System.Net.Security;
 using Wired.IO.Builder;
-using Wired.IO.Http11;
-using Wired.IO.Http11.Context;
-using Wired.IO.Http11.Middleware;
 using Wired.IO.Http11Express;
 using Wired.IO.Http11Express.Context;
 using Wired.IO.Http11Express.StaticHandlers;
@@ -35,70 +32,6 @@ public sealed class WiredApp
             new WiredHttp11Express<TContext>(), [SslApplicationProtocol.Http11]);
 
         return builder.MapFlowControl("NotFound", FlowControl.CreateEndpointNotFoundHandler());
-    }
-
-    /// <summary>
-    /// Creates a default HTTP/1.1 builder with built-in middleware and a default <see cref="WiredHttp11{TContext}"/> handler.
-    /// </summary>
-    /// <returns>A configured <see cref="Builder{THandler, TContext}"/> for HTTP/1.1 with default settings.</returns>
-    public static Builder<WiredHttp11, Http11Context> CreateBuilder()
-    {
-        return CreateBuilder([SslApplicationProtocol.Http11]);
-    }
-
-    /// <summary>
-    /// Creates a default HTTP/1.1 builder with built-in middleware and a default <see cref="WiredHttp11{TContext}"/> handler,
-    /// using a custom list of supported ALPN protocols.
-    /// </summary>
-    /// <param name="sslApplicationProtocols">
-    /// A list of supported <see cref="SslApplicationProtocol"/> values (e.g., <see cref="SslApplicationProtocol.Http11"/>).
-    /// </param>
-    /// <returns>A configured <see cref="Builder{THandler, TContext}"/> instance.</returns>
-    public static Builder<WiredHttp11, Http11Context> CreateBuilder(
-        List<SslApplicationProtocol> sslApplicationProtocols)
-    {
-        var builder = new Builder<WiredHttp11, Http11Context>(() =>
-            new WiredHttp11(
-                new Http11HandlerArgs(
-                    false,
-                    null!,
-                    null!)), sslApplicationProtocols);
-
-        builder.Services.AddDefaultMiddleware<Http11Context>();
-
-        return builder;
-    }
-
-    /// <summary>
-    /// Creates a custom HTTP/1.1 builder using the provided handler factory and built-in middleware.
-    /// </summary>
-    /// <param name="handlerFactory">A factory delegate that produces a <see cref="WiredHttp11{TContext}"/> instance.</param>
-    /// <returns>A configured <see cref="Builder{THandler, TContext}"/> instance using the specified handler.</returns>
-    public static Builder<WiredHttp11, Http11Context> CreateBuilder(
-        Func<WiredHttp11> handlerFactory)
-    {
-        return CreateBuilder(handlerFactory, [SslApplicationProtocol.Http11]);
-    }
-
-    /// <summary>
-    /// Creates a custom HTTP/1.1 builder using the provided handler factory and supported ALPN protocols.
-    /// </summary>
-    /// <param name="handlerFactory">A factory delegate that produces a <see cref="WiredHttp11{TContext}"/> instance.</param>
-    /// <param name="sslApplicationProtocols">
-    /// A list of supported <see cref="SslApplicationProtocol"/> values for ALPN negotiation.
-    /// </param>
-    /// <returns>A configured <see cref="Builder{THandler, TContext}"/> instance.</returns>
-    public static Builder<WiredHttp11, Http11Context> CreateBuilder(
-        Func<WiredHttp11> handlerFactory,
-        List<SslApplicationProtocol> sslApplicationProtocols)
-    {
-        var builder = new Builder<WiredHttp11, Http11Context>(
-            handlerFactory,
-            sslApplicationProtocols);
-
-        builder.Services.AddDefaultMiddleware<Http11Context>();
-
-        return builder;
     }
 
     /// <summary>

@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using System.IO.Pipelines;
-using Wired.IO.Http11.Response;
+﻿using System.IO.Pipelines;
 using Wired.IO.Http11Express.Request;
 using Wired.IO.Http11Express.Response;
 using Wired.IO.Protocol;
