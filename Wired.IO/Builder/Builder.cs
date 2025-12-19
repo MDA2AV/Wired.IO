@@ -4,11 +4,9 @@ using System.Net;
 using System.Net.Security;
 using System.Reflection;
 using Wired.IO.App;
-using Wired.IO.Mediator;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Handlers;
 using Wired.IO.Protocol.Response;
-using Wired.IO.WiredEvents;
 using IBaseRequest = Wired.IO.Protocol.Request.IBaseRequest;
 
 namespace Wired.IO.Builder;
@@ -273,49 +271,6 @@ public sealed partial class Builder<THandler, TContext>
     public Builder<THandler, TContext> EmbedServices(IServiceCollection services)
     {
         App.ServiceCollection = services;
-
-        return this;
-    }
-
-    /// <summary>
-    /// Registers request handlers from the specified assembly and sets up a dispatcher service.
-    /// </summary>
-    /// <param name="assembly">The assembly to scan for handler definitions.</param>
-    public Builder<THandler, TContext> AddHandlers(Assembly assembly)
-    {
-        App.ServiceCollection
-            .AddHandlers(assembly, App)
-            .AddScoped<IRequestDispatcher<TContext>, RequestDispatcher<TContext>>();
-
-        return this;
-    }
-
-    /// <summary>
-    /// Enables automatic dispatch of domain events ("WiredEvents") after each request completes.
-    /// </summary>
-    /// <param name="dispatchContextWiredEvents">
-    /// If <c>true</c>, will dispatch events stored in <see cref="IBaseContext{TRequest,TResponse}.WiredEvents"/>.
-    /// </param>
-    /// <returns>The current builder instance.</returns>
-    public Builder<THandler, TContext> AddWiredEvents(bool dispatchContextWiredEvents = true) 
-    {
-        App.ServiceCollection.AddWiredEventDispatcher();
-
-        if (!dispatchContextWiredEvents)
-            return this;
-
-        UseRootMiddleware(scope => async (context, next) =>
-        {
-            await next(context);
-
-            if (context is IHasWiredEvents hasWiredEvents)
-            {
-                var wiredEventDispatcher = scope.GetRequiredService<Func<IEnumerable<IWiredEvent>, Task>>();
-
-                await wiredEventDispatcher(hasWiredEvents.WiredEvents);
-                hasWiredEvents.ClearWiredEvents();
-            } 
-        });
 
         return this;
     }

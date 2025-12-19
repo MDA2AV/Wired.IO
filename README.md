@@ -10,26 +10,16 @@ Whether you're building APIs, embedded servers, developer tools, or hybrid appli
 
 ## Existing Main Features
 
- - **Http/1.1**
+ - **Http/1.1 Support out of the box**
  - **Custom Http Handlers for custom Http/x protocols**
- - **Inbuilt Dependency Injection/IoC Container with IServiceCollecion/IServiceProvider**
- - **Fast/Minimal and Mediator-like Endpoints**
+ - **Baked in Dependency Injection/IoC Container with IServiceCollecion/IServiceProvider**
  - **Full Secure/TLS**
  - **Full Custom Middleware**
- - **Pipeline Behaviors Support with Mediator**
  - **Native ILoggingFactory**
  - **Static Resource Hosting**
- - **Websockets RFC 6455**
+ - **SPA, MPA Hosting**
  - **Wired Events for Event Driven Design**
  - **Embeddable with exising Apps**
-
-## Upcoming features
-
- - **Compression** (planned, needs some research for mobile app compatibility)
- - **ETag** caching (planned next release)
- - **JWT Support** (planned)
- - **CORS Support** (planned next release)
- - **form-data support** (not planned, low priority)
 
 ## Why Wired.IO?
 
@@ -39,7 +29,6 @@ Unlike other lightweight web servers such as NetCoreServer or EmbedIO, Wired.IO 
 - 🧩 **Fully embeddable** – Add a production-ready HTTP server directly into your desktop, mobile, or console app.
 - 🧵 **Lean and composable** – Define only what you need: your context, your pipeline, your handlers.
 - 🔧 **Customizable by design** – TLS, routing, DI, and middleware are all open and easily replaceable.
-- 🌐 **Hybrid app ready** – Serve a full **web-based frontend** from inside your app. Pair your MAUI or desktop backend with a modern SPA or HTML/JS UI — all self-hosted.
 - 🪶 **No runtime magic** – Everything is explicit. No black boxes, no surprises.
 
 ## Built for Embedding

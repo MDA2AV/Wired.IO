@@ -1,6 +1,3 @@
-using Microsoft.Extensions.ObjectPool;
-using System.IO.Pipelines;
-using Wired.IO.Http11.Response.Content;
 using Wired.IO.Http11Express.Response.Content;
 using Wired.IO.Protocol.Response;
 using Wired.IO.Protocol.Response.Headers;
