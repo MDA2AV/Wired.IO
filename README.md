@@ -19,7 +19,6 @@ Whether you're building APIs, embedded servers, developer tools, or hybrid appli
  - **Native ILoggingFactory**
  - **Static Resource Hosting**
  - **SPA, MPA Hosting**
- - **Wired Events for Event Driven Design**
  - **Embeddable with exising Apps**
 
 ## Why Wired.IO?
