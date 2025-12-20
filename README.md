@@ -2,8 +2,6 @@
 
 [![NuGet](https://img.shields.io/nuget/v/Wired.IO.svg)](https://www.nuget.org/packages/Wired.IO/)
 
-### This project is currently undergoing full documentation restructuring as the whole Http logic was improved in the new Http11Express module for performance boost.
-
 [Full project documentation](https://mda2av.github.io/Wired.IO.Docs/)
 
 **Wired.IO** is a lightweight, high-performance, MIT licensed HTTP server framework for .NET. Designed from the ground up for **embedding**, **extensibility**, and **raw speed**, it gives you full control over your request pipeline without the weight of traditional web frameworks.
