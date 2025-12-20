@@ -65,8 +65,43 @@ public sealed partial class Builder<THandler, TContext>
 
         public Group MapPost(string route, Func<TContext, Task> endpoint)
             => Map(HttpConstants.Post, route, endpoint);
-
-        // Add MapPost/Put/Delete similarly…
+        public Group MapPost(string route, Action<TContext> endpoint)
+            => Map(HttpConstants.Post, route, endpoint);
+        
+        public Group MapPut(string route, Func<TContext, Task> endpoint)
+            => Map(HttpConstants.Put, route, endpoint);
+        public Group MapPut(string route, Action<TContext> endpoint)
+            => Map(HttpConstants.Put, route, endpoint);
+        
+        public Group MapDelete(string route, Func<TContext, Task> endpoint)
+            => Map(HttpConstants.Delete, route, endpoint);
+        public Group MapDelete(string route, Action<TContext> endpoint)
+            => Map(HttpConstants.Delete, route, endpoint);
+        
+        public Group MapPatch(string route, Func<TContext, Task> endpoint)
+            => Map(HttpConstants.Patch, route, endpoint);
+        public Group MapPatch(string route, Action<TContext> endpoint)
+            => Map(HttpConstants.Patch, route, endpoint);
+        
+        public Group MapOptions(string route, Func<TContext, Task> endpoint)
+            => Map(HttpConstants.Options, route, endpoint);
+        public Group MapOptions(string route, Action<TContext> endpoint)
+            => Map(HttpConstants.Options, route, endpoint);
+        
+        public Group MapHead(string route, Func<TContext, Task> endpoint)
+            => Map(HttpConstants.Head, route, endpoint);
+        public Group MapHead(string route, Action<TContext> endpoint)
+            => Map(HttpConstants.Head, route, endpoint);
+        
+        public Group MapTrace(string route, Func<TContext, Task> endpoint)
+            => Map(HttpConstants.Trace, route, endpoint);
+        public Group MapTrace(string route, Action<TContext> endpoint)
+            => Map(HttpConstants.Trace, route, endpoint);
+        
+        public Group MapConnect(string route, Func<TContext, Task> endpoint)
+            => Map(HttpConstants.Connect, route, endpoint);
+        public Group MapConnect(string route, Action<TContext> endpoint)
+            => Map(HttpConstants.Connect, route, endpoint);
 
         private Group Map(string method, string route, Func<TContext, Task> endpoint)
         {
