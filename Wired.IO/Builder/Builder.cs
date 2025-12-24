@@ -58,7 +58,7 @@ public sealed partial class Builder<THandler, TContext>
     /// <param name="sslApplicationProtocols">List of supported ALPN protocols.</param>
     private void Initialize(Func<THandler> handlerFactory, List<SslApplicationProtocol> sslApplicationProtocols)
     {
-        _endpointDIRegister = new EndpointDIRegister(App.ServiceCollection);
+        _endpointDIRegister = new EndpointDIRegister(this);
         _root = new Group(prefix: "/", parent: null, diRegister: _endpointDIRegister);
 
         App.HttpHandler = handlerFactory();

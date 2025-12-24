@@ -10,6 +10,8 @@ using Wired.IO.Utilities;
 
 namespace Wired.IO.Builder;
 
+// TODO: Refactor this file, better naming and potentially less classes/inner classes
+
 public sealed partial class Builder<THandler, TContext>
     where TContext : IBaseContext<IBaseRequest, IBaseResponse>
     where THandler : IHttpHandler<TContext>
@@ -147,23 +149,31 @@ public sealed partial class Builder<THandler, TContext>
 
     internal sealed class EndpointDIRegister
     {
-        private readonly IServiceCollection _services;
+        // Keeping reference to the builder, this is required because
+        // the IServiceCollection might change due to embedding
+        private readonly Builder<THandler, TContext> _builder;
+        //private readonly IServiceCollection _services;
 
-        public EndpointDIRegister(IServiceCollection services) => _services = services;
+        public EndpointDIRegister(Builder<THandler, TContext> builder) => _builder = builder;
 
         // Endpoints keyed by EndpointKey
         public void AddEndpoint(EndpointKey key, Func<TContext, Task> endpoint)
-            => _services.AddKeyedScoped<Func<TContext, Task>>(key, (_, _) => endpoint);
+        {
+            _builder.Services.AddKeyedScoped<Func<TContext, Task>>(key, (_, _) => endpoint);
+        }
+
         public void AddEndpoint(EndpointKey key, Action<TContext> endpoint)
-            => _services.AddKeyedScoped<Func<TContext, Task>>(key,  (_, _) =>  (ctx) =>
+        {
+            _builder.Services.AddKeyedScoped<Func<TContext, Task>>(key, (_, _) => (ctx) =>
             {
                 endpoint(ctx);
                 return Task.CompletedTask;
             });
+        }
 
         // Middlewares keyed by group's prefix (string)
         public void AddGroupMiddleware(string groupPrefix, Func<TContext, Func<TContext, Task>, Task> middleware)
-            => _services.AddKeyedScoped<Func<TContext, Func<TContext, Task>, Task>>(groupPrefix, (_, _) => middleware);
+            => _builder.Services.AddKeyedScoped<Func<TContext, Func<TContext, Task>, Task>>(groupPrefix, (_, _) => middleware);
     }
 
     internal readonly record struct EndpointDef(EndpointKey Key);
