@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Security;
 using System.Reflection;
 using Wired.IO.App;
+using Wired.IO.Http11Express.StaticHandlers;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Handlers;
 using Wired.IO.Protocol.Response;
@@ -62,16 +63,12 @@ public sealed partial class Builder<THandler, TContext>
 
         App.HttpHandler = handlerFactory();
         App.SslServerAuthenticationOptions.ApplicationProtocols = sslApplicationProtocols;
+        
+        App.ServiceCollection.AddLogging(DefaultLoggingBuilder);
     }
 
     public WiredApp<TContext> Build(IServiceProvider? serviceProvider = null!)
     {
-        var isLoggerFactoryRegistered = App.ServiceCollection.Any(
-            d => d.ServiceType == typeof(ILoggerFactory));
-
-        if(!isLoggerFactoryRegistered)
-            App.ServiceCollection.AddLogging(DefaultLoggingBuilder);
-        
         if(App.UseRootOnlyEndpoints)
         {
             BuildRootOnly(serviceProvider);
@@ -109,14 +106,15 @@ public sealed partial class Builder<THandler, TContext>
         App.SetPipeline(App.RootPipeline);
 
         App.RootEndpoints = [];
-
-        foreach (var fullRoute in App.RootEncodedRoutes.SelectMany(kvp => kvp.Value.Select(route => kvp.Key + '_' + route)))
+        
+        foreach (var fullRoute in App.RootEncodedRoutes.SelectMany(kvp =>
+                     kvp.Value.Select(route => kvp.Key + '_' + route)))
         {
             App.RootEndpoints.Add(
                 fullRoute,
                 App.Services.GetRequiredKeyedService<Func<TContext, Task>>(fullRoute));
         }
-
+        
         RearrangeEncodedRoutes(App.RootEncodedRoutes);
     }
 
@@ -270,6 +268,11 @@ public sealed partial class Builder<THandler, TContext>
     /// </summary>
     public Builder<THandler, TContext> EmbedServices(IServiceCollection services)
     {
+        foreach (var descriptor in App.ServiceCollection )
+        {
+            services.Add(descriptor);
+        }
+        
         App.ServiceCollection = services;
 
         return this;

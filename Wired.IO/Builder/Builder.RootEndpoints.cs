@@ -630,7 +630,7 @@ public sealed partial class Builder<THandler, TContext>
     {
         var fullRoute = $"{httpMethod}_{route}";
         App.RootEncodedRoutes[httpMethod].Add(route);
-
+        
         App.ServiceCollection.AddKeyedScoped<Func<TContext, Task>>(fullRoute, (sp, key) => func(sp));
     }
     /// <summary>
@@ -645,7 +645,7 @@ public sealed partial class Builder<THandler, TContext>
     {
         var fullRoute = $"{httpMethod}_{route}";
         App.RootEncodedRoutes[httpMethod].Add(route);
-
+        
         App.ServiceCollection.AddKeyedScoped<Func<TContext, Task>>(fullRoute, (sp, key) =>
         {
             return (ctx) =>
@@ -668,7 +668,7 @@ public sealed partial class Builder<THandler, TContext>
     {
         var fullRoute = $"{httpMethod}_{route}";
         App.RootEncodedRoutes[httpMethod].Add(route);
-
+        
         App.ServiceCollection.AddKeyedScoped<Func<TContext, Task>>(fullRoute, (_, _) => func);
     }
     /// <summary>
@@ -682,7 +682,7 @@ public sealed partial class Builder<THandler, TContext>
     {
         var fullRoute = $"{httpMethod}_{route}";
         App.RootEncodedRoutes[httpMethod].Add(route);
-
+        
         App.ServiceCollection.AddKeyedScoped<Func<TContext, Task>>(fullRoute, (_, _) =>
         {
             return (ctx) =>
