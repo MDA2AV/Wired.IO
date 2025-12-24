@@ -1,11 +1,16 @@
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.DependencyInjection;
 using Wired.IO.App;
 using Wired.IO.Http11Express.Response.Content;
 using Wired.IO.Protocol.Response;
 
+var services = new ServiceCollection();
+
 var builder = WiredApp
     .CreateExpressBuilder()
     .Port(8080);
+
+builder.EmbedServices(services);
     
 builder
     .MapGroup("/")
@@ -23,8 +28,10 @@ builder
             }, SerializerContext.JsonMessage));
     });
 
+var provider = services.BuildServiceProvider();
+
 await builder
-    .Build()
+    .Build(provider)
     .RunAsync();
     
 public struct JsonMessage { public string Message { get; set; } }
