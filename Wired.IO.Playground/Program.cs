@@ -1,33 +1,34 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+using System.Text.Json.Serialization;
 using Wired.IO.App;
+using Wired.IO.Http11Express.Response.Content;
 using Wired.IO.Protocol.Response;
 
-
-var services = new ServiceCollection();
 var builder = WiredApp
     .CreateExpressBuilder()
-    .Port(8080)
-    .EmbedServices(services)
-    .UseRootEndpoints()
-    .MapGet("/", context =>
+    .Port(8080);
+    
+builder
+    .MapGroup("/")
+    .MapGet("/my-endpoint", context =>
     {
-        var logger = context.Services.GetRequiredService<ILogger<Program>>();
-        logger.LogInformation("WiredApp started");
+        JsonContext SerializerContext = JsonContext.Default;
         
         context
             .Respond()
             .Status(ResponseStatus.Ok)
-            .Type("text/plain"u8)
-            .Content("Hello World!"u8);
+            .Type("application/json"u8)
+            .Content(new ExpressJsonAotContent(new JsonMessage
+            {
+                Message = "Hello World!"
+            }, SerializerContext.JsonMessage));
     });
 
-builder.Services.AddLogging(loggingBuilder =>
-{
-    loggingBuilder.SetMinimumLevel(LogLevel.Critical);
-});
-
-var provider = services.BuildServiceProvider();
-    
-await builder.Build(provider)
+await builder
+    .Build()
     .RunAsync();
+    
+public struct JsonMessage { public string Message { get; set; } }
+
+[JsonSourceGenerationOptions(GenerationMode = JsonSourceGenerationMode.Serialization | JsonSourceGenerationMode.Metadata)]
+[JsonSerializable(typeof(JsonMessage))]
+public partial class JsonContext : JsonSerializerContext { }

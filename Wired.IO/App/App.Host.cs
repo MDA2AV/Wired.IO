@@ -33,15 +33,13 @@ public sealed partial class WiredApp<TContext> : IDisposable
     /// </summary>
     private sealed class Engine(Func<CancellationToken, Task> action)
     {
-        private readonly Func<CancellationToken, Task> _action = action;
-
         /// <summary>
         /// Executes the engine logic using the provided cancellation token.
         /// </summary>
         /// <param name="stoppingToken">Token used to signal cancellation of the server loop.</param>
         public async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            await _action(stoppingToken);
+            await action(stoppingToken);
         }
     }
 
