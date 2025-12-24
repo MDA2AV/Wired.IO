@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
 	  <TargetFrameworks>net9.0;net10.0</TargetFrameworks>
@@ -8,9 +8,9 @@
 	  <Authors>Diogo Martins</Authors>
 	  <RepositoryUrl>https://github.com/MDA2AV/Wired.IO</RepositoryUrl>
 	  <RepositoryType>git</RepositoryType>
-	  <AssemblyVersion>10.1.1</AssemblyVersion>
-	  <FileVersion>10.1.1</FileVersion>
-	  <Version>10.1.1</Version>
+	  <AssemblyVersion>10.1.2</AssemblyVersion>
+	  <FileVersion>10.1.2</FileVersion>
+	  <Version>10.1.2</Version>
 	  <PackageReadmeFile>README.md</PackageReadmeFile>
 	  <PackageTags>socket;webserver;lightweight;embeddable</PackageTags>
 	  <PackageLicenseFile>LICENSE</PackageLicenseFile>

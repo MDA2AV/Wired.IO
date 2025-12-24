@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 using Wired.IO.App;
 using Wired.IO.Http11Express.Response.Content;
 using Wired.IO.Protocol.Response;
