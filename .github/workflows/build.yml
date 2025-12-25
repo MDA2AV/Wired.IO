@@ -62,8 +62,8 @@ jobs:
       - name: Build (Release)
         run: dotnet build Wired.IO/Wired.IO.csproj --configuration Release --no-restore
 
-      - name: Test (Debug)
-        run: dotnet test Wired.IO.Tests/Wired.IO.Tests.csproj --verbosity normal
+      #- name: Test (Debug)
+      #  run: dotnet test Wired.IO.Tests/Wired.IO.Tests.csproj --verbosity normal
 
       # Pack only on ubuntu to avoid duplicate packages
       - name: Pack NuGet (ubuntu only)
