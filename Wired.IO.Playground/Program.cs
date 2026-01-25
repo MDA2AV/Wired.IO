@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 using Wired.IO.App;
@@ -17,6 +18,9 @@ builder
     .MapGet("/my-endpoint", context =>
     {
         JsonContext SerializerContext = JsonContext.Default;
+        
+        var ip = ((IPEndPoint)context.Inner.RemoteEndPoint!).Address;
+        Console.WriteLine($"Client: {ip.ToString()}");
         
         context
             .Respond()

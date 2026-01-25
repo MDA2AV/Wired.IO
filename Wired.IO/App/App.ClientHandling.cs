@@ -27,6 +27,7 @@ public sealed partial class WiredApp<TContext>
     {
         await using var networkStream = new PoolBufferedStream(new NetworkStream(client, ownsSocket: true), 65 * 1024);
         await HttpHandler.HandleClientAsync(
+            client,
             networkStream, 
             _pipeline, 
             stoppingToken);
@@ -72,6 +73,7 @@ public sealed partial class WiredApp<TContext>
         // Handle the client connection securely
         //
         await HttpHandler.HandleClientAsync(
+            client,
             sslStream,
             _pipeline,
             stoppingToken);

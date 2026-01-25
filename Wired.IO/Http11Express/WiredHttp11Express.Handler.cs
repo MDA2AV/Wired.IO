@@ -3,6 +3,8 @@ using System.Buffers;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO.Pipelines;
+using System.Net.Security;
+using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices.Marshalling;
 using System.Text;
@@ -87,6 +89,7 @@ public partial class WiredHttp11Express<TContext> : IHttpHandler<TContext>
     /// Handles a client connection using a <see cref="Stream"/>, wiring it to <see cref="PipeReader"/>/<see cref="PipeWriter"/>
     /// and processing zero or more HTTP/1.1 requests in sequence.
     /// </summary>
+    /// <param name="inner"></param>
     /// <param name="stream">The underlying duplex stream (e.g., network stream).</param>
     /// <param name="pipeline">The application pipeline delegate that processes a fully-parsed request.</param>
     /// <param name="stoppingToken">Cancellation token signaling server shutdown.</param>
@@ -94,10 +97,12 @@ public partial class WiredHttp11Express<TContext> : IHttpHandler<TContext>
     /// <remarks>
     /// The connection is half-managed here: exceptions are swallowed to avoid noisy logs in benchmark scenarios; the stream is closed when the reader/writer complete.
     /// </remarks>
-    public async Task HandleClientAsync(Stream stream, Func<TContext, Task> pipeline, CancellationToken stoppingToken)
+    public async Task HandleClientAsync(Socket inner, Stream stream, Func<TContext, Task> pipeline, CancellationToken stoppingToken)
     {
         // Rent a context object from the pool
         var context = ContextPool.Get();
+        
+        context.Inner = inner;
 
         // Assign a new CancellationTokenSource to support per-request cancellation
         var cts = new CancellationTokenSource();
