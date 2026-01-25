@@ -1,9 +1,9 @@
-using Wired.IO.Http11Express.Response.Content;
 using Wired.IO.Protocol.Response;
 using Wired.IO.Protocol.Response.Headers;
+using Wired.IO.Transport.Socket.Http11Express.Response.Content;
 using Wired.IO.Utilities;
 
-namespace Wired.IO.Http11Express.Response;
+namespace Wired.IO.Transport.Socket.Http11Express.Response;
 
 public class Http11ExpressResponse : IExpressResponse
 {

@@ -3,7 +3,7 @@ using System.IO.Pipelines;
 using System.Runtime.CompilerServices;
 using Wired.IO.Utilities;
 
-namespace Wired.IO.Http11Express.Response.Content;
+namespace Wired.IO.Transport.Socket.Http11Express.Response.Content;
 
 [SkipLocalsInit]
 public class ExpressStringContent : IExpressResponseContent

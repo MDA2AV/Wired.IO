@@ -3,7 +3,7 @@ using Wired.IO.Utilities;
 
 // ReSharper disable MemberCanBePrivate.Global
 
-namespace Wired.IO.Http11Express.Context;
+namespace Wired.IO.Transport.Socket.Http11Express.Context;
 
 public static class Http11ExpressContextExtensions
 {

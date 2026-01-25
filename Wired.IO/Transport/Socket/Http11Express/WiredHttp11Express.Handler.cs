@@ -1,22 +1,16 @@
-﻿using Microsoft.Extensions.ObjectPool;
-using System.Buffers;
-using System.Diagnostics;
+﻿using System.Buffers;
 using System.Globalization;
 using System.IO.Pipelines;
-using System.Net.Security;
-using System.Net.Sockets;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices.Marshalling;
 using System.Text;
-using Wired.IO.Http11Express.Context;
-using Wired.IO.Http11Express.Request;
-using Wired.IO.Protocol.Handlers;
+using Microsoft.Extensions.ObjectPool;
 using Wired.IO.Protocol.Writers;
-using Wired.IO.Transport.Socket;
+using Wired.IO.Transport.Socket.Http11Express.Context;
+using Wired.IO.Transport.Socket.Http11Express.Request;
 using Wired.IO.Utilities;
 using Wired.IO.Utilities.StringCache;
 
-namespace Wired.IO.Http11Express;
+namespace Wired.IO.Transport.Socket.Http11Express;
 
 #pragma warning disable CS1591 // (We document via XML comments below; suppress warnings if any members stay undocumented.)
 
@@ -98,7 +92,7 @@ public partial class WiredHttp11Express<TContext> : ISocketHttpHandler<TContext>
     /// <remarks>
     /// The connection is half-managed here: exceptions are swallowed to avoid noisy logs in benchmark scenarios; the stream is closed when the reader/writer complete.
     /// </remarks>
-    public async Task HandleClientAsync(Socket inner, Stream stream, Func<TContext, Task> pipeline, CancellationToken stoppingToken)
+    public async Task HandleClientAsync(System.Net.Sockets.Socket inner, Stream stream, Func<TContext, Task> pipeline, CancellationToken stoppingToken)
     {
         // Rent a context object from the pool
         var context = ContextPool.Get();

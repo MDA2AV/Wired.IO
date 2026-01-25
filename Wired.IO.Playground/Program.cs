@@ -2,8 +2,10 @@ using System.Text.Json.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Wired.IO.App;
-using Wired.IO.Http11Express.Response.Content;
 using Wired.IO.Protocol.Response;
+using Wired.IO.Transport.Socket.Http11Express.Response.Content;
+
+// dotnet publish -f net10.0 -c Release /p:PublishAot=true /p:OptimizationPreference=Speed
 
 var services = new ServiceCollection();
 
@@ -11,12 +13,29 @@ services.AddScoped<Service>();
 
 var builder = WiredApp
     .CreateExpressBuilder()
+    .NoScopedEndpoints()
     .Port(8080);
 
 builder.EmbedServices(services);
-    
+
 builder
     .MapGroup("/")
+    .MapGet("/route", context =>
+    {
+        JsonContext SerializerContext = JsonContext.Default;
+        
+        context
+            .Respond()
+            .Status(ResponseStatus.Ok)
+            .Type("application/json"u8)
+            .Content(new ExpressJsonAotContent(new JsonMessage
+            {
+                Message = "Hello World!"
+            }, SerializerContext.JsonMessage));
+    });
+    
+builder
+    .MapGroup("/api")
     .UseMiddleware(async (context, next) =>
     {
         // logger or any dependencies can be resolved using scope

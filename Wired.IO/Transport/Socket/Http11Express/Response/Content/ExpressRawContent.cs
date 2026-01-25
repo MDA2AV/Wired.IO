@@ -2,7 +2,7 @@ using System.Buffers;
 using System.IO.Pipelines;
 using System.Runtime.CompilerServices;
 
-namespace Wired.IO.Http11Express.Response.Content;
+namespace Wired.IO.Transport.Socket.Http11Express.Response.Content;
 
 [SkipLocalsInit]
 public class ExpressRawContent : IExpressResponseContent

@@ -1,6 +1,4 @@
-﻿using Wired.IO.Http11Express;
-
-namespace Wired.IO.Protocol.Response;
+﻿namespace Wired.IO.Protocol.Response;
 
 public enum ResponseStatus
 {

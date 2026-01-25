@@ -1,12 +1,11 @@
 using System.Buffers;
 using System.Buffers.Text;
-using System.ComponentModel.DataAnnotations;
 using System.IO.Pipelines;
 using System.Runtime.CompilerServices;
 using Wired.IO.Protocol.Response;
 using Wired.IO.Utilities;
 
-namespace Wired.IO.Http11Express;
+namespace Wired.IO.Transport.Socket.Http11Express;
 
 public partial class WiredHttp11Express<TContext>
 {

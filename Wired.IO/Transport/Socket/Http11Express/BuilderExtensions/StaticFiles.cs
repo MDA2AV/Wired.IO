@@ -1,9 +1,8 @@
 ﻿using Wired.IO.App;
 using Wired.IO.Builder;
-using Wired.IO.Http11Express.Context;
-using Wired.IO.Http11Express.StaticHandlers;
+using Wired.IO.Transport.Socket.Http11Express.Context;
 
-namespace Wired.IO.Http11Express.BuilderExtensions;
+namespace Wired.IO.Transport.Socket.Http11Express.BuilderExtensions;
 
 /// <summary>
 /// Extension methods that wire up **static** and **SPA** file serving into

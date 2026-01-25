@@ -1,12 +1,11 @@
-﻿using Microsoft.Extensions.ObjectPool;
-using System.IO.Pipelines;
+﻿using System.IO.Pipelines;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
+using Microsoft.Extensions.ObjectPool;
 using Wired.IO.Protocol.Writers;
 
-namespace Wired.IO.Http11Express.Response.Content;
+namespace Wired.IO.Transport.Socket.Http11Express.Response.Content;
 
 /// <summary>
 /// Provides pooled writers and utilities for JSON serialization.

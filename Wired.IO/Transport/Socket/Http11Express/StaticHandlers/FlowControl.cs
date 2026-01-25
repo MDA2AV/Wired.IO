@@ -1,12 +1,10 @@
 ﻿using System.Buffers;
 using System.IO.Pipelines;
 using System.Runtime.CompilerServices;
-using Wired.IO.App;
-using Wired.IO.Http11Express.Context;
 using Wired.IO.Protocol.Response;
-using Wired.IO.Utilities;
+using Wired.IO.Transport.Socket.Http11Express.Context;
 
-namespace Wired.IO.Http11Express.StaticHandlers;
+namespace Wired.IO.Transport.Socket.Http11Express.StaticHandlers;
 
 /// <summary>
 /// Provides prebuilt lightweight response handlers for exceptional or control flow

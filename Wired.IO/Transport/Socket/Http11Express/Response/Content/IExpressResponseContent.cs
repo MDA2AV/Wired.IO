@@ -1,7 +1,7 @@
 ﻿using System.IO.Pipelines;
 using System.Text.Json.Serialization.Metadata;
 
-namespace Wired.IO.Http11Express.Response.Content;
+namespace Wired.IO.Transport.Socket.Http11Express.Response.Content;
 
 public interface IExpressResponseContent
 {

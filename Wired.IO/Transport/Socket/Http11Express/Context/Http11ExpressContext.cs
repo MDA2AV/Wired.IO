@@ -1,19 +1,21 @@
 ﻿using System.IO.Pipelines;
-using System.Net.Sockets;
-using Wired.IO.Http11Express.Request;
-using Wired.IO.Http11Express.Response;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Response;
+using Wired.IO.Transport.Socket.Http11Express.Request;
+using Wired.IO.Transport.Socket.Http11Express.Response;
 using Wired.IO.Utilities;
 
-namespace Wired.IO.Http11Express.Context;
+namespace Wired.IO.Transport.Socket.Http11Express.Context;
 
 // This class cannot be sealed, might have super types
 public class Http11ExpressContext : IBaseContext<IExpressRequest, IExpressResponse>
 {
-    public Socket Inner { get; internal set; } = null!;
+    public System.Net.Sockets.Socket Inner { get; internal set; } = null!;
+    
     public PipeReader Reader { get; set; } = null!;
+    
     public PipeWriter Writer { get; set; } = null!;
+    
     public IExpressRequest Request { get; set; } = new Http11ExpressRequest()
     {
         Headers = new PooledDictionary<string, string>(
@@ -23,9 +25,11 @@ public class Http11ExpressContext : IBaseContext<IExpressRequest, IExpressRespon
             capacity: 8,
             comparer: StringComparer.OrdinalIgnoreCase)
     };
+    
     public IExpressResponse? Response { get; private set; }
 
     private ExpressResponseBuilder? _responseBuilder;
+    
     private ExpressResponseBuilder ResponseBuilder => _responseBuilder ??= new ExpressResponseBuilder(Response!);
     
     public ExpressResponseBuilder Respond()

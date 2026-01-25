@@ -1,7 +1,7 @@
 ﻿using Wired.IO.Protocol.Request;
 using Wired.IO.Utilities;
 
-namespace Wired.IO.Http11Express.Request;
+namespace Wired.IO.Transport.Socket.Http11Express.Request;
 
 public interface IExpressRequest : IBaseRequest
 {

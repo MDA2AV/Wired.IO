@@ -4,10 +4,8 @@ using System.Security.Authentication;
 using Microsoft.Extensions.Logging;
 using Wired.IO.Builder;
 using Wired.IO.Protocol;
-using Wired.IO.Protocol.Handlers;
 using Wired.IO.Protocol.Request;
 using Wired.IO.Protocol.Response;
-using Wired.IO.Transport.Socket;
 
 namespace Wired.IO.App;
 
