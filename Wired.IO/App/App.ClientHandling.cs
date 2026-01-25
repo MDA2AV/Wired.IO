@@ -7,16 +7,18 @@ using Wired.IO.MemoryBuffers;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Request;
 using Wired.IO.Protocol.Response;
+using Wired.IO.Transport.Socket;
 
 namespace Wired.IO.App;
 
 public sealed partial class WiredApp<TContext>
     where TContext : IBaseContext<IBaseRequest, IBaseResponse>
 {
-    private Func<TContext, Task> _pipeline = null!;
+    //private Func<TContext, Task> _pipeline = null!;
     
-    internal void SetPipeline(Func<TContext, Task> pipeline) => _pipeline = pipeline;
+    //internal void SetPipeline(Func<TContext, Task> pipeline) => _pipeline = pipeline;
     
+    /*
     /// <summary>
     /// Handles an incoming plain (non-TLS) TCP client connection.
     /// Wraps the client socket in a <see cref="PoolBufferedStream"/> and delegates request handling to <see cref="HttpHandler"/>.
@@ -26,7 +28,7 @@ public sealed partial class WiredApp<TContext>
     private async Task HandlePlainClientAsync(Socket client, CancellationToken stoppingToken)
     {
         await using var networkStream = new PoolBufferedStream(new NetworkStream(client, ownsSocket: true), 65 * 1024);
-        await HttpHandler.HandleClientAsync(
+        await ((ISocketHttpHandler<TContext>)HttpHandler).HandleClientAsync(
             client,
             networkStream, 
             _pipeline, 
@@ -72,7 +74,7 @@ public sealed partial class WiredApp<TContext>
 
         // Handle the client connection securely
         //
-        await HttpHandler.HandleClientAsync(
+        await ((ISocketHttpHandler<TContext>)HttpHandler).HandleClientAsync(
             client,
             sslStream,
             _pipeline,
@@ -126,4 +128,5 @@ public sealed partial class WiredApp<TContext>
             client.Close();
         }
     }
+    */
 }

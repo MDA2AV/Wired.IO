@@ -2,6 +2,7 @@
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Request;
 using Wired.IO.Protocol.Response;
+using Wired.IO.Transport;
 
 namespace Wired.IO.App;
 
@@ -22,26 +23,18 @@ public sealed partial class WiredApp<TContext> : IDisposable
     /// Gets or sets the service collection used to configure application dependencies before building the provider.
     /// </summary>
     public IServiceCollection ServiceCollection { get; set; } = new ServiceCollection();
+    
+    /// <summary>
+    /// Underlying Engine Ongoing Task
+    /// </summary>
+    public Task? TransportTask => _transportTask;
+    
+    internal ITransport<TContext> Transport { get; set; } = null!;
 
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly TaskCompletionSource<bool> _startedTcs = new();
-    private Task? _engineTask;
     private bool _disposed;
-
-    /// <summary>
-    /// Encapsulates the server's execution logic and abstracts the engine behavior (e.g., plain or TLS).
-    /// </summary>
-    private sealed class Engine(Func<CancellationToken, Task> action)
-    {
-        /// <summary>
-        /// Executes the engine logic using the provided cancellation token.
-        /// </summary>
-        /// <param name="stoppingToken">Token used to signal cancellation of the server loop.</param>
-        public async Task ExecuteAsync(CancellationToken stoppingToken)
-        {
-            await action(stoppingToken);
-        }
-    }
+    private Task? _transportTask;
 
     /// <summary>
     /// Asynchronously starts the application and begins listening for incoming requests.
@@ -52,9 +45,14 @@ public sealed partial class WiredApp<TContext> : IDisposable
     {
         if (_disposed)
             throw new ObjectDisposedException(nameof(WiredApp<TContext>));
-
-        var engine = TlsEnabled ? CreateTlsEnabledEngine() : CreatePlainEngine();
-        _engineTask = engine.ExecuteAsync(_cancellationTokenSource.Token);
+        
+        Transport.IPAddress = IpAddress;
+        Transport.Port = Port;
+        Transport.Backlog = Backlog;
+        Transport.TlsEnabled = TlsEnabled;
+        Transport.Logger = Logger;
+        Transport.SslServerAuthenticationOptions = SslServerAuthenticationOptions;
+        _transportTask = Transport.ExecuteAsync(_cancellationTokenSource.Token);
 
         // Give the engine a moment to start listening
         await Task.Delay(10);
@@ -73,10 +71,10 @@ public sealed partial class WiredApp<TContext> : IDisposable
         if (_disposed)
             throw new ObjectDisposedException(nameof(WiredApp<TContext>));
 
-        if (_engineTask == null)
+        if (_transportTask == null)
             await StartAsync();
 
-        await _engineTask!;
+        await _transportTask!;
     }
 
     /// <summary>
@@ -88,9 +86,14 @@ public sealed partial class WiredApp<TContext> : IDisposable
     {
         if (_disposed)
             throw new ObjectDisposedException(nameof(WiredApp<TContext>));
-
-        var engine = TlsEnabled ? CreateTlsEnabledEngine() : CreatePlainEngine();
-        _engineTask = engine.ExecuteAsync(_cancellationTokenSource.Token);
+        
+        Transport.IPAddress = IpAddress;
+        Transport.Port = Port;
+        Transport.Backlog = Backlog;
+        Transport.TlsEnabled = TlsEnabled;
+        Transport.Logger = Logger;
+        Transport.SslServerAuthenticationOptions = SslServerAuthenticationOptions;
+        _transportTask = Transport.ExecuteAsync(_cancellationTokenSource.Token);
 
         // Brief delay to ensure listening starts
         Thread.Sleep(10);
@@ -109,10 +112,10 @@ public sealed partial class WiredApp<TContext> : IDisposable
         if (_disposed)
             throw new ObjectDisposedException(nameof(WiredApp<TContext>));
 
-        if (_engineTask == null)
+        if (_transportTask == null)
             Start();
 
-        _engineTask!.GetAwaiter().GetResult();
+        _transportTask!.GetAwaiter().GetResult();
     }
 
     /// <summary>
@@ -125,11 +128,11 @@ public sealed partial class WiredApp<TContext> : IDisposable
 
         await _cancellationTokenSource.CancelAsync();
 
-        if (_engineTask != null)
+        if (_transportTask != null)
         {
             try
             {
-                await _engineTask;
+                await _transportTask;
             }
             catch (OperationCanceledException)
             {
@@ -151,7 +154,9 @@ public sealed partial class WiredApp<TContext> : IDisposable
 
         _cancellationTokenSource.Cancel();
         _cancellationTokenSource.Dispose();
-        _socket?.Dispose();
+        
+        Transport.Dispose();
+        //_socket?.Dispose();
 
         if (Services is IDisposable disposableProvider)
             disposableProvider.Dispose();

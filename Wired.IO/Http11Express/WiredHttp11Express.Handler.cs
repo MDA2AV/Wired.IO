@@ -12,6 +12,7 @@ using Wired.IO.Http11Express.Context;
 using Wired.IO.Http11Express.Request;
 using Wired.IO.Protocol.Handlers;
 using Wired.IO.Protocol.Writers;
+using Wired.IO.Transport.Socket;
 using Wired.IO.Utilities;
 using Wired.IO.Utilities.StringCache;
 
@@ -40,7 +41,7 @@ public sealed class WiredHttp11Express : WiredHttp11Express<Http11ExpressContext
 /// It focuses on parsing the request line and headers efficiently for typical benchmarking/plaintext-style endpoints.
 /// </para>
 /// </remarks>
-public partial class WiredHttp11Express<TContext> : IHttpHandler<TContext>
+public partial class WiredHttp11Express<TContext> : ISocketHttpHandler<TContext>
     // TContext can be a super type of Http11ExpressContext
     where TContext : Http11ExpressContext, new()
 {

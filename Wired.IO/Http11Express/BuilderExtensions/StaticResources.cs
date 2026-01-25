@@ -1,5 +1,4 @@
 ﻿using System.Buffers;
-using System.Diagnostics.Contracts;
 using System.IO.Pipelines;
 using System.Runtime.CompilerServices;
 using Wired.IO.App;
@@ -8,7 +7,7 @@ using Wired.IO.Http11Express.Context;
 using Wired.IO.Protocol.Response;
 using Wired.IO.Utilities;
 
-namespace Wired.IO.Http11Express.StaticHandlers;
+namespace Wired.IO.Http11Express.BuilderExtensions;
 
 public static class BuilderExtensions
 {
