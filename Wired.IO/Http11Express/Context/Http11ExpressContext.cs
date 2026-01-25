@@ -1,4 +1,5 @@
 ﻿using System.IO.Pipelines;
+using System.Net.Sockets;
 using Wired.IO.Http11Express.Request;
 using Wired.IO.Http11Express.Response;
 using Wired.IO.Protocol;
@@ -10,6 +11,7 @@ namespace Wired.IO.Http11Express.Context;
 // This class cannot be sealed, might have super types
 public class Http11ExpressContext : IBaseContext<IExpressRequest, IExpressResponse>
 {
+    public Socket Inner { get; internal set; } = null!;
     public PipeReader Reader { get; set; } = null!;
     public PipeWriter Writer { get; set; } = null!;
     public IExpressRequest Request { get; set; } = new Http11ExpressRequest()

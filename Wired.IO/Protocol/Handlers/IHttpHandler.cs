@@ -1,4 +1,5 @@
-﻿using Wired.IO.Protocol.Request;
+﻿using System.Net.Sockets;
+using Wired.IO.Protocol.Request;
 using Wired.IO.Protocol.Response;
 
 namespace Wired.IO.Protocol.Handlers;
@@ -12,6 +13,7 @@ public interface IHttpHandler<out TContext>
     /// <summary>
     /// Processes a client connection and dispatches one or more protocol-compliant requests.
     /// </summary>
+    /// <param name="inner"></param>
     /// <param name="stream">The <see cref="Stream"/> representing the client connection.</param>
     /// <param name="pipeline">
     /// A delegate that executes the application's request-handling pipeline, typically consisting of middleware and endpoint logic.
@@ -23,6 +25,7 @@ public interface IHttpHandler<out TContext>
     /// A <see cref="Task"/> that represents the asynchronous operation of handling the client session.
     /// </returns>
     Task HandleClientAsync(
+        Socket inner,
         Stream stream,
         Func<TContext, Task> pipeline,
         CancellationToken stoppingToken);
