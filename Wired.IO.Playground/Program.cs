@@ -12,7 +12,8 @@ var services = new ServiceCollection();
 services.AddScoped<Service>();
 
 var builder = WiredApp
-    .CreateExpressBuilder()
+    .CreateRocketBuilder()
+    //.CreateExpressBuilder()
     .NoScopedEndpoints()
     .Port(8080);
 
