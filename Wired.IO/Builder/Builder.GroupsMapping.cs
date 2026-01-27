@@ -14,7 +14,7 @@ namespace Wired.IO.Builder;
 
 public sealed partial class Builder<THandler, TContext>
     where TContext : IBaseContext<IBaseRequest, IBaseResponse>
-    where THandler : IHttpHandler<TContext>
+    where THandler : IHttpHandler
 {
     // Public entry that creates/returns a top-level group
     public Group MapGroup(string groupRoute)
