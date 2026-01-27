@@ -4,11 +4,11 @@ using System.Net.Sockets;
 using System.Security;
 using System.Security.Authentication;
 using Microsoft.Extensions.Logging;
-using Wired.IO.MemoryBuffers;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Handlers;
 using Wired.IO.Protocol.Request;
 using Wired.IO.Protocol.Response;
+using Wired.IO.Utilities.MemoryBuffers;
 
 namespace Wired.IO.Transport.Socket;
 

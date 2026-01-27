@@ -3,7 +3,6 @@ using System.Net.Security;
 using System.Net.Sockets;
 using System.Security;
 using System.Security.Authentication;
-using Wired.IO.MemoryBuffers;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Request;
 using Wired.IO.Protocol.Response;

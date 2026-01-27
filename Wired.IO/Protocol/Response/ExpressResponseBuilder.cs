@@ -1,7 +1,7 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization.Metadata;
-using Wired.IO.Transport.Socket.Http11Express.Response;
-using Wired.IO.Transport.Socket.Http11Express.Response.Content;
+using Wired.IO.Handlers.Http11Express.Response;
+using Wired.IO.Handlers.Http11Express.Response.Content;
 using Wired.IO.Utilities;
 
 namespace Wired.IO.Protocol.Response;
