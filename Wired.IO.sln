@@ -9,6 +9,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Wired.IO.Playground", "Wire
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Wired.IO.Tests", "Wired.IO.Tests\Wired.IO.Tests.csproj", "{21364EC0-8822-40F5-8EEB-339919ABD5C6}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{8BA4F484-5D28-4E2B-BE5A-BA62BD943FB7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OverclockedApp", "OverclockedApp\OverclockedApp.csproj", "{068FC1BE-C9B2-4C82-BACE-98547D68DDB5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,11 +31,18 @@ Global
 		{21364EC0-8822-40F5-8EEB-339919ABD5C6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{21364EC0-8822-40F5-8EEB-339919ABD5C6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{21364EC0-8822-40F5-8EEB-339919ABD5C6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{068FC1BE-C9B2-4C82-BACE-98547D68DDB5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{068FC1BE-C9B2-4C82-BACE-98547D68DDB5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{068FC1BE-C9B2-4C82-BACE-98547D68DDB5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{068FC1BE-C9B2-4C82-BACE-98547D68DDB5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DC158062-AC46-467E-AFC4-2ED35B471D73}
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{068FC1BE-C9B2-4C82-BACE-98547D68DDB5} = {8BA4F484-5D28-4E2B-BE5A-BA62BD943FB7}
 	EndGlobalSection
 EndGlobal

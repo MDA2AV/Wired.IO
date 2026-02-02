@@ -4,7 +4,6 @@ using System.Security.Authentication;
 using Microsoft.Extensions.Logging;
 using Wired.IO.Builder;
 using Wired.IO.Protocol;
-using Wired.IO.Protocol.Handlers;
 using Wired.IO.Protocol.Request;
 using Wired.IO.Protocol.Response;
 
@@ -124,11 +123,6 @@ public sealed partial class WiredApp<TContext>
     /// If false: Use GroupEndpoints, all user endpoints and middleware must be inside a group route.
     /// </summary>
     internal bool UseRootOnlyEndpoints { get; set; } = false;
-
-    /// <summary>
-    /// Gets or sets the HTTP handler responsible for dispatching requests and handling routing.
-    /// </summary>
-    public IHttpHandler<TContext> HttpHandler { get; set; } = null!;
 
     #endregion
 }
