@@ -1,10 +1,10 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization.Metadata;
-using Wired.IO.Handlers.Http11Express.Response;
 using Wired.IO.Handlers.Http11Express.Response.Content;
+using Wired.IO.Protocol.Response;
 using Wired.IO.Utilities;
 
-namespace Wired.IO.Protocol.Response;
+namespace Wired.IO.Handlers.Http11Express.Response;
 
 public enum ContentLengthStrategy
 {

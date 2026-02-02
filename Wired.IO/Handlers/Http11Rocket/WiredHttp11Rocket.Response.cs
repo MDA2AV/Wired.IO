@@ -6,9 +6,9 @@ using Wired.IO.Handlers.Http11Express.Response;
 using Wired.IO.Protocol.Response;
 using Wired.IO.Utilities;
 
-namespace Wired.IO.Handlers.Http11Express;
+namespace Wired.IO.Handlers.Http11Rocket;
 
-public partial class WiredHttp11Express<TContext>
+public partial class WiredHttp11Rocket<TContext> 
 {
     private static ReadOnlySpan<byte> ServerHeaderName => "Server: "u8;
     private static ReadOnlySpan<byte> ContentTypeHeader => "Content-Type: "u8;

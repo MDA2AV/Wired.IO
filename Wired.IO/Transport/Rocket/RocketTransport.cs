@@ -15,6 +15,8 @@ public class RocketTransport<TContext> : ITransport<TContext>
 {
     private Engine _engine = null!;
     
+    private EngineOptions _options;
+    
     public IPAddress IPAddress { get; set; } = null!;
     
     public int Port { get; set; }
@@ -30,6 +32,11 @@ public class RocketTransport<TContext> : ITransport<TContext>
     public SslServerAuthenticationOptions SslServerAuthenticationOptions { get; set; } = null!; // Not Supported yet by uRocket
     
     public Func<TContext, Task> Pipeline { get; set; } = null!;
+
+    public RocketTransport(EngineOptions? options = null)
+    {
+        _options = options ?? new EngineOptions();
+    }
 
     public async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -53,7 +60,7 @@ public class RocketTransport<TContext> : ITransport<TContext>
             Port = (ushort)Port,
             Ip = "0.0.0.0",
             Backlog = Backlog,
-            ReactorCount = 12
+            ReactorCount = 32
         });
         
         _engine.Listen();

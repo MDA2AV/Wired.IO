@@ -1,8 +1,8 @@
+using System.IO.Pipelines;
 using URocket.Connection;
 using Wired.IO.Handlers.Http11Express.Request;
 using Wired.IO.Handlers.Http11Express.Response;
 using Wired.IO.Protocol;
-using Wired.IO.Protocol.Response;
 using Wired.IO.Utilities;
 
 namespace Wired.IO.Handlers.Http11Rocket.Context;
@@ -11,6 +11,10 @@ namespace Wired.IO.Handlers.Http11Rocket.Context;
 public class Http11RocketContext : IBaseContext<IExpressRequest, IExpressResponse>
 {
     public Connection Connection { get; internal set; } = null!;
+    
+    public PipeReader Reader { get; set; } = null!;
+    
+    public PipeWriter Writer { get; set; } = null!;
 
     public IExpressRequest Request { get; } = new Http11ExpressRequest()
     {

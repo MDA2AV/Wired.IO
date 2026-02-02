@@ -7,8 +7,11 @@ public class Http11OverclockedRequest : IBaseRequest
     public string Route { get; set; } = null!;
 
     public string HttpMethod { get; set; } = null!;
-    
-    public void Clear() { }
+
+    public void Clear()
+    {
+        
+    }
     
     public void Dispose() { }
 }

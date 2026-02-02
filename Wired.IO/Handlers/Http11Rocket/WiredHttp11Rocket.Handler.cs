@@ -1,16 +1,17 @@
 using System.Buffers;
+using System.Globalization;
+using System.IO.Pipelines;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
+using System.Text;
 using Microsoft.Extensions.ObjectPool;
 using URocket.Connection;
-using URocket.Utils;
-using URocket.Utils.UnmanagedMemoryManager;
+using Wired.IO.Handlers.Http11Express.Request;
 using Wired.IO.Handlers.Http11Rocket.Context;
+using Wired.IO.Protocol.Writers;
 using Wired.IO.Transport.Rocket;
+using Wired.IO.Utilities;
 
 namespace Wired.IO.Handlers.Http11Rocket;
-
-// *************************** WORK IN PROGRESS **********************************
 
 // Public non-generic facade
 public sealed class WiredHttp11Rocket : WiredHttp11Rocket<Http11RocketContext> { }
@@ -23,6 +24,8 @@ public partial class WiredHttp11Rocket<TContext> : IRocketHttpHandler<TContext>
     /// </summary>
     private enum State
     {
+        /// <summary>Expecting the request line: METHOD SP PATH SP HTTP/VERSION CRLF</summary>
+        StartLine,
         /// <summary>Reading header lines until a blank line (CRLF) is found.</summary>
         Headers,
         /// <summary>Headers complete; body (if any) would be processed next.</summary>
@@ -56,415 +59,730 @@ public partial class WiredHttp11Rocket<TContext> : IRocketHttpHandler<TContext>
             return true;
         }
     }
-    
-    private readonly unsafe byte* _inflightData;
-    private int _inflightTail;
-    private readonly int _length;
 
-    public unsafe WiredHttp11Rocket()
-    {
-        _length = 1024 * 16;
-        
-        // Allocating an unmanaged byte slab to store inflight data
-        _inflightData = (byte*)NativeMemory.AlignedAlloc((nuint)_length, 64);
-
-        _inflightTail = 0;
-    }
-    
+    /// <summary>
+    /// Handles a client connection using a <see cref="Stream"/>, wiring it to <see cref="PipeReader"/>/<see cref="PipeWriter"/>
+    /// and processing zero or more HTTP/1.1 requests in sequence.
+    /// </summary>
+    /// <param name="connection"></param>
+    /// <param name="pipeline">The application pipeline delegate that processes a fully-parsed request.</param>
+    /// <param name="stoppingToken">Cancellation token signaling server shutdown.</param>
+    /// <returns>A task that completes when the connection closes or parsing finishes.</returns>
+    /// <remarks>
+    /// The connection is half-managed here: exceptions are swallowed to avoid noisy logs in benchmark scenarios; the stream is closed when the reader/writer complete.
+    /// </remarks>
     public async Task HandleClientAsync(Connection connection, Func<TContext, Task> pipeline, CancellationToken stoppingToken)
     {
         // Rent a context object from the pool
         var context = ContextPool.Get();
-        context.Connection = connection;
         
+        var stream = new ConnectionStream(connection);
+
+        // Assign a new CancellationTokenSource to support per-request cancellation
+        var cts = new CancellationTokenSource();
+        context.CancellationToken = cts.Token;
+
+        // Wrap the stream in a PipeReader and PipeWriter for efficient buffered reads/writes
+        context.Reader = PipeReader.Create(stream,
+            new StreamPipeReaderOptions(
+                MemoryPool<byte>.Shared, 
+                leaveOpen: false,
+                bufferSize: 4096 * 4, 
+                minimumReadSize: 1024));
+
+        context.Writer = PipeWriter.Create(stream,
+            new StreamPipeWriterOptions(
+                MemoryPool<byte>.Shared, 
+                leaveOpen: false,
+                minimumBufferSize: 512));
+
         try
         {
             await ProcessRequestsAsync(context, pipeline);
         }
-        catch(Exception e)
+        catch
         {
-            Console.WriteLine(e.Message);
-            // TODO Check the CancellationTokenSource Impl @ Express Handler
+            // Swallow all exceptions; connection will be closed silently
+            await cts.CancelAsync();
         }
         finally
         {
-            unsafe { NativeMemory.AlignedFree(_inflightData); }
+            // Gracefully complete the reader/writer to release underlying resources
+            await context.Reader.CompleteAsync();
+            await context.Writer.CompleteAsync();
+
             // Return context to pool for reuse
             ContextPool.Return(context);
         }
     }
-    
-    private static async Task ProcessRequestsAsync2(TContext context, Func<TContext, Task> pipeline)
+
+    /// <summary>
+    /// Reads from the <see cref="PipeReader"/> and parses as many complete HTTP requests as are currently available,
+    /// dispatching each to <paramref name="pipeline"/>.
+    /// </summary>
+    /// <param name="context">The pooled per-connection context.</param>
+    /// <param name="pipeline">Application delegate to invoke once a request line and headers are parsed.</param>
+    /// <remarks>
+    /// Uses a fast path for single-segment buffers to minimize copying and branching. For multi-segment buffers,
+    /// a <see cref="SequenceReader{T}"/> is used to parse across segments safely.
+    /// </remarks>
+    [SkipLocalsInit]
+    private static async Task ProcessRequestsAsync(TContext context, Func<TContext, Task> pipeline)
     {
+        var state = State.StartLine;
+
         while (true)
         {
-            var result = await context.Connection.ReadAsync();
-            if (result.IsClosed)
-                break;
-            
-            // Get all ring buffers data
-            var rings = context.Connection.GetAllSnapshotRingsAsUnmanagedMemory(result);
-            // Create a ReadOnlySequence<byte> to easily slice the data
-            var sequence = rings.ToReadOnlySequence();
-            
-            // Process received data...
-            
-            context.Request.HttpMethod = "GET";
-            context.Request.Route = "/route";
-            await pipeline(context);
-            
-            // Return rings to the kernel
-            foreach (var ring in rings)
-                context.Connection.ReturnRing(ring.BufferId);
-            
-            // Write the response
-            var msg =
-                "HTTP/1.1 200 OK\r\nContent-Length: 13\r\nContent-Type: text/plain\r\n\r\nHello, World!"u8;
+            var readResult = await context.Reader.ReadAsync();
+            var buffer = readResult.Buffer;
 
-            // Building an UnmanagedMemoryManager wrapping the msg, this step has no data allocation
-            // however msg must be fixed/pinned because the engine reactor's needs to pass a byte* to liburing
-            unsafe
-            {
-                var unmanagedMemory = new UnmanagedMemoryManager(
-                    (byte*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(msg)),
-                    msg.Length,
-                    false); // Setting freeable to false signaling that this unmanaged memory should not be freed because it comes from an u8 literal
+            var isCompleted = readResult.IsCompleted;
                 
-                if (!context.Connection.Write(new WriteItem(unmanagedMemory, context.Connection.ClientFd)))
-                    throw new InvalidOperationException("Failed to write response");
-            }
-            
-            // Signal that written data can be flushed
-            context.Connection.Flush();
-            // Signal we are ready for a new read
-            context.Connection.ResetRead();
-        }
-    }
+            if (buffer.IsEmpty && isCompleted)
+                return;
 
-    // Zero allocation read and write example
-    // No Peeking
-    private async Task ProcessRequestsAsync(TContext context, Func<TContext, Task> pipeline)
-    {
-        var state = State.Headers;
+            var flush = false;
 
-        while (true) // Outer loop, iterates everytime we read more data from the wire
-        {
-            var result = await context.Connection.ReadAsync(); // Read data from the wire
-            if (result.IsClosed)
-                break;
-            
-            // Signals where at least one request was handled, and we can flush written response data
-            var flushable = false;
-
-            var totalAdvanced = 0;
-
-            // Get the "head" ring - first ring received
-            var rings = context.Connection.GetAllSnapshotRingsAsUnmanagedMemory(result);
-            var ringsTotalLength = CalculateRingsTotalLength(rings);
-            var ringCount = rings.Length;
-            
-            if(ringCount == 0) continue;
-            
-            while (true) // Inner loop, iterates every request handling, it can happen 0, 1 or n times
-                // per read as we may read an incomplete, one single or multiple requests at once
+            // Hot path: A new request is starting, and the buffer is a single segment
+            // If some of the request is already read, always fall back to multi-segment path
+            // This avoids complex state management in the single-segment path
+            // This optimizes for the common case of small requests that fit in one segment (vast majority of cases)
+            if (buffer.IsSingleSegment && state == State.StartLine)
             {
-                bool found;
-                int advanced;
-                
-                // Here we want to merge existing inflight data with the just read new data
-                if (_inflightTail == 0)
+                var currentPosition = 0;
+
+                while (true)
                 {
-                    if (ringCount == 1)
+                    if (buffer.Length == 0 || isCompleted)
+                        break;
+
+                    var requestReceived = ExtractHeaderFromSingleSegment(context, ref buffer, ref currentPosition);
+
+                    if (!requestReceived)
                     {
-                        // Very Hot Path, typically each ring contains a full request and inflight buffer isn't used
-                        unsafe
-                        {
-                            var span = new ReadOnlySpan<byte>(rings[0].Ptr + totalAdvanced,
-                                rings[0].Length - totalAdvanced);
-                            found = HandleNoInflightSingleRing(context, ref span, out advanced);
-                        }
+                        context.Reader.AdvanceTo(buffer.GetPosition(0), buffer.GetPosition(buffer.FirstSpan.Length));
+                        break;
                     }
-                    else
-                    {
-                        // Lukewarm Path
-                        found = HandleNoInflightMultipleRings(context.Connection, rings, out advanced);
-                    }
-                }
-                else
-                {
-                    // Cold path
-                    UnmanagedMemoryManager[] mems = new UnmanagedMemoryManager[ringCount + 1];
-                    unsafe { mems[0] = new(_inflightData, _inflightTail); }
-                    for (int i = 1; i < ringCount + 1; i++) mems[i] = rings[i];
+
+                    context.Reader.AdvanceTo(buffer.GetPosition(currentPosition));
                     
-                    found = HandleWithInflight(context.Connection, mems, out advanced);
+                    state = State.Body;
+                    
+                    var bodyReceived = TryExtractBodyFromSingleSegment(context, ref buffer, ref currentPosition, out var bodyEmpty);
+                    if (!bodyReceived)
+                        break;
 
-                    if (found)  // a request was handled so inflight data can be discarded
-                        _inflightTail = 0;
+                    if (!bodyEmpty)
+                        context.Reader.AdvanceTo(buffer.GetPosition(currentPosition));
+
+                    // Handle the request pipeline
+                    await pipeline(context);
+
+                    // Respond
+                    if(context.Response is not null && context.Response.IsActive())
+                        await WriteResponse(context);
+
+                    // Clear context for next request
+                    context.Clear();
+                    
+                    // Signal that there is something to flush
+                    flush = true;
+
+                    state = State.StartLine;
+
+                    if (currentPosition == buffer.Length) // There is no more data, need to ReadAsync()
+                        break;
                 }
+            }
+            // Slower path: multi-segment buffer or already partway through a request
+            // This handles cases where the request line or headers span multiple segments
+            else
+            {
+                var currentPosition = buffer.Start;
 
-                totalAdvanced += advanced;
-
-                var currentRingIndex = GetCurrentRingIndex(in totalAdvanced, rings, out var currentRingAdvanced);
-
-                if (!found)
+                while (true)
                 {
-                    unsafe
+                    if (buffer.Length == 0 || isCompleted)
+                        break;
+
+                    if (state != State.Body)
                     {
-                        // \r\n\r\n not found, full headers are not yet available
-                        // Copy the leftover rings data to the inflight buffer and read more
+                        var requestReceived =
+                            ExtractHeaderFromMultipleSegment(context, ref buffer, ref currentPosition, ref state);
 
-                        // Copy current ring unused data
-                        Buffer.MemoryCopy(
-                            rings[currentRingIndex].Ptr + currentRingAdvanced, // source
-                            _inflightData + _inflightTail, // destination
-                            _length - _inflightTail, // destinationSizeInBytes
-                            rings[currentRingIndex].Length - currentRingAdvanced); // sourceBytesToCopy
+                        context.Reader.AdvanceTo(currentPosition, buffer.End);
 
-                        _inflightTail += rings[currentRingIndex].Length - currentRingAdvanced;
+                        if (!requestReceived)
+                            break;
 
-                        // Copy untouched rings data
-                        for (int i = currentRingIndex + 1; i < rings.Length; i++)
-                        {
-                            Buffer.MemoryCopy(
-                                rings[i].Ptr, // source
-                                _inflightData + _inflightTail, // destination
-                                _length - _inflightTail, // destinationSizeInBytes
-                                rings[i].Length); // sourceBytesToCopy
-
-                            _inflightTail += rings[i].Length;
-                        }
+                        state = State.Body;
                     }
 
+                    //Try to get the body, if the full body isn't read, break
+                    var bodyReceived = TryExtractBodyFromMultipleSegment(context, ref buffer, ref currentPosition, ref state, out var bodyExists);
+
+                    if (bodyExists)
+                    {
+                        if (!bodyReceived)
+                        {
+                            break;
+                        }
+                        
+                        context.Reader.AdvanceTo(currentPosition, buffer.End);
+                    }
+
+                    await pipeline(context);
+                    
+                    // Respond
+                    if(context.Response is not null && context.Response.IsActive())
+                        await WriteResponse(context);
+                    
+                    context.Clear();
+                    flush = true;
+
+                    state = State.StartLine;
+
+                    if (buffer.Slice(currentPosition).IsEmpty) // There is no more data, need to ReadAsync()
+                        break;
+                }
+            }
+
+            if (flush)
+                await context.Writer.FlushAsync();
+        }
+    }
+
+    /// <summary>
+    /// Attempts to extract the HTTP request body from a single-segment <see cref="ReadOnlySequence{T}"/> buffer.
+    /// </summary>
+    /// <param name="context">The HTTP request context to populate with body data.</param>
+    /// <param name="buffer">The input buffer containing the body.</param>
+    /// <param name="position">
+    /// The current offset in the single segment span.  
+    /// Updated to point just after the body if extraction succeeds.
+    /// </param>
+    /// <param name="bodyEmpty">
+    /// Output flag indicating whether the request body was empty or absent.  
+    /// <c>true</c> if no body is present, otherwise <c>false</c>.
+    /// </param>
+    /// <returns>
+    /// <c>true</c> if the body was fully extracted or no body is required;  
+    /// <c>false</c> if more data is needed from the transport.
+    /// </returns>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown if the Content-Length or chunked encoding format is invalid.
+    /// </exception>
+    [SkipLocalsInit]
+    private static bool TryExtractBodyFromSingleSegment(
+        TContext context, 
+        ref ReadOnlySequence<byte> buffer, 
+        ref int position, 
+        out bool bodyEmpty)
+    {
+        bodyEmpty = true;
+
+        // Content-Length header present
+        // TODO: Test if this works, it's odd that the position is not used by method caller
+        var contentLengthAvailable = context.Request.Headers.TryGetValue(ContentLength, out var contentLengthValue);
+        if (contentLengthAvailable)
+        {
+            var validContentLength = int.TryParse(contentLengthValue, out var contentLength);
+            if (contentLength <= 0 || !validContentLength)
+            {
+                return true; // Invalid Content-Length header
+            }
+
+            bodyEmpty = false;
+
+            var remainingBytes = buffer.FirstSpan.Length - position;
+
+            if(remainingBytes < contentLength)
+                return false; // Not enough bytes yet
+
+            context.Request.ContentLength = contentLength;
+            context.Request.Content = ArrayPool<byte>.Shared.Rent(contentLength);
+            buffer.FirstSpan.Slice(position, contentLength).CopyTo(context.Request.Content);
+
+            position += contentLength;
+
+            return true;
+        }
+
+        // Transfer-Encoding header present
+        var transferEncodingAvailable = context.Request.Headers.TryGetValue(TransferEncoding, out var transferEncodingValue);
+        if (transferEncodingAvailable && transferEncodingValue.Equals("chunked", StringComparison.OrdinalIgnoreCase))
+        {
+            var currentOffset = 0;
+            var bufferSpan = buffer.FirstSpan[position..];
+
+            var bodyEndIndex = bufferSpan.IndexOf("0\r\n\r\n"u8);
+            if (bodyEndIndex == -1)
+                return false;   // Not enough bytes yet
+
+            context.Request.Content = ArrayPool<byte>.Shared.Rent(bodyEndIndex);
+
+            while (true)
+            {
+                var chunkSizeEnd = bufferSpan[currentOffset..].IndexOf(Crlf);
+                var validChunkSize = int.TryParse(bufferSpan[currentOffset..(currentOffset + chunkSizeEnd)], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var currentChunkSize);
+                if (!validChunkSize)
+                    throw new InvalidOperationException("Invalid chunk size");
+
+                if (currentChunkSize == 0) // End of body detected
+                {
+                    if (chunkSizeEnd + currentOffset != bodyEndIndex + 1)
+                        throw new InvalidOperationException("Invalid chunked body termination");
+
+                    position += 5; // Move past "0\r\n\r\n"
+                    
+                    bodyEmpty = false;
+                    return true;
+                }
+
+                bodyEmpty = false;
+
+                var destinationSpan = context.Request.Content.AsSpan().Slice(currentOffset, currentChunkSize);
+                bufferSpan.Slice(chunkSizeEnd + 2, currentChunkSize).CopyTo(destinationSpan);
+
+                context.Request.ContentLength += currentChunkSize;
+                currentOffset += chunkSizeEnd + 2 + currentChunkSize + 2; // Move past chunk size line, chunk data, and trailing CRLF
+                position += currentOffset;
+            }
+        }
+
+        return true;
+    }
+
+
+    /// <summary>
+    /// Attempts to extract the HTTP request body from a multi-segment <see cref="ReadOnlySequence{T}"/> buffer.
+    /// </summary>
+    /// <param name="context">The HTTP request context to populate with body data.</param>
+    /// <param name="buffer">The input buffer containing the body.</param>
+    /// <param name="position">
+    /// The current position in the buffer.  
+    /// Updated to point just after the body if extraction succeeds.
+    /// </param>
+    /// <param name="state">Parser state, may be advanced after body extraction.</param>
+    /// <param name="bodyExists"></param>
+    /// <returns>
+    /// <c>true</c> if the body was fully extracted or no body is required;  
+    /// <c>false</c> if more data is needed from the transport.
+    /// </returns>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown if the Content-Length or chunked encoding format is invalid.
+    /// </exception>
+    private static bool TryExtractBodyFromMultipleSegment(
+        TContext context,
+        ref ReadOnlySequence<byte> buffer,
+        ref SequencePosition position,
+        ref State state,
+        out bool bodyExists)
+    {
+        bodyExists = false;
+        
+        // Content-Length header present
+        var contentLengthAvailable = context.Request.Headers.TryGetValue(ContentLength, out var contentLengthValue);
+        // TODO: Test if this works, it's odd that the position is not used by method caller
+        if (contentLengthAvailable)
+        {
+            bodyExists = true;
+            
+            var validContentLength = int.TryParse(contentLengthValue, out var contentLength);
+
+            if (!validContentLength || contentLength < 0)
+                return false; // Invalid Content-Length header
+
+            if (buffer.Slice(position).Length < contentLength)
+                return false; // Not enough bytes yet
+
+            context.Request.Content = ArrayPool<byte>.Shared.Rent(contentLength);
+            buffer.Slice(position, contentLength).CopyTo(context.Request.Content);
+
+            context.Request.ContentLength = contentLength;
+
+            position = buffer.GetPosition(contentLength, position);
+
+            return true;
+        }
+
+        var transferEncodingAvailable = context.Request.Headers.TryGetValue(TransferEncoding, out var transferEncodingValue);
+        if (transferEncodingAvailable && transferEncodingValue.Equals("chunked", StringComparison.OrdinalIgnoreCase))
+        {
+            bodyExists = true;
+            
+            var reader = new SequenceReader<byte>(buffer.Slice(position));
+            var currentOffset = context.Request.Content != null ? context.Request.ContentLength : 0;
+
+            while (true)
+            {
+                if (!reader.TryReadTo(out ReadOnlySequence<byte> chunkSizeSequence, Crlf))
+                    return false; // Not enough bytes yet
+
+                var chunkSizeSpan = chunkSizeSequence.ToSpan();
+                if (!TryParseChunkSize(chunkSizeSpan, out var chunkSize))
+                    throw new InvalidOperationException("Invalid chunk size");
+
+                if (chunkSize == 0) // End of body detected
+                {
+                    if (!reader.TryReadTo(out ReadOnlySequence<byte> _, Crlf))
+                        return false; // Not enough bytes yet
+
+                    position = reader.Position;
                     break;
                 }
 
-                flushable = true;
-                
-                if (ringsTotalLength == advanced)
-                    break;
-            }
-                
-            // Return the rings to the kernel, at this stage the request was either handled or the rings' data
-            // has already been copied to the inflight buffer.
-            for (int i = 0; i < rings.Length; i++) 
-                context.Connection.ReturnRing(rings[i].BufferId);
-            
-            /*if (HandleResult(context.Connection, ref result))
-            {
-                context.Connection.Flush(); // Mark data to be ready to be flushed
-            }*/
-            if(flushable)
-                context.Connection.Flush();
-            context.Connection.ResetRead(); // Reset connection's ManualResetValueTaskSourceCore<ReadResult>
-        }
-    }
-    
-    private static bool HandleNoInflightSingleRing(TContext context, ref ReadOnlySpan<byte> data, out int advanced)
-    {
-        // Hotpath, typically each ring contains a full request and inflight buffer isn't used
-        advanced = data.IndexOf("\r\n\r\n"u8);
-        var found = advanced != -1;
+                if (reader.Remaining < chunkSize + 2) // +2 for trailing CRLF
+                    return false; // Not enough bytes yet
 
-        if (!found)
-        {
-            advanced = 0;
-            return false;
-        }
-        
-        advanced += 4;
-
-        var requestSpan = data[..advanced];
-        
-        // Handle the request
-        // ...
-        if(found) WriteResponse(context.Connection); // Simulating writing the response after handling the received request
-
-        return found;
-    }
-
-    private static bool HandleNoInflightMultipleRings(Connection connection, UnmanagedMemoryManager[] rings, out int position)
-    {
-        var sequence = rings.ToReadOnlySequence();
-        var reader = new SequenceReader<byte>(sequence);
-        var found = reader.TryReadTo(out ReadOnlySequence<byte> headersSequence, "\r\n\r\n"u8);
-
-        if (!found)
-        {
-            position = 0;
-            return false;
-        }
-
-        position = reader.Position.GetInteger();
-
-        // Handle the request
-        // ...
-        if(found) WriteResponse(connection); // Simulating writing the response after handling the received request
-
-        return found;
-    }
-
-    private static bool HandleWithInflight(Connection connection, UnmanagedMemoryManager[] unmanagedMemories, out int position)
-    {
-        var sequence = unmanagedMemories.ToReadOnlySequence();
-        var reader = new SequenceReader<byte>(sequence);
-        var found = reader.TryReadTo(out ReadOnlySequence<byte> headersSequence, "\r\n\r\n"u8);
-
-        if (!found)
-        {
-            position = 0;
-            return false;
-        }
-
-        // Calculating how many bytes from the received rings were consumed
-        // inflight data is subtracted
-        position = reader.Position.GetInteger() - unmanagedMemories[0].Length;
-
-        // Handle the request
-        // ...
-        if(found) WriteResponse(connection); // Simulating writing the response after handling the received request
-
-        return found;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static unsafe void WriteResponse(Connection connection)
-    {
-        // Write the response
-        var msg =
-            "HTTP/1.1 200 OK\r\nContent-Length: 13\r\nContent-Type: text/plain\r\n\r\nHello, World!"u8;
-
-        // Building an UnmanagedMemoryManager wrapping the msg, this step has no data allocation
-        // however msg must be fixed/pinned because the engine reactor's needs to pass a byte* to liburing
-        var unmanagedMemory = new UnmanagedMemoryManager(
-            (byte*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(msg)),
-            msg.Length,
-            false); // Setting freeable to false signaling that this unmanaged memory should not be freed because it comes from an u8 literal
-
-        if (!connection.Write(new WriteItem(unmanagedMemory, connection.ClientFd)))
-            throw new InvalidOperationException("Failed to write response");
-    }
-    
-    private static int GetCurrentRingIndex(in int totalAdvanced, UnmanagedMemoryManager[] rings, out int currentRingAdvanced)
-    {
-        var total = 0;
-
-        for (int i = 0; i < rings.Length; i++)
-        {
-            if (rings[i].Length + total >= totalAdvanced)
-            {
-                currentRingAdvanced = totalAdvanced - total;
-                return i;
-            }
-            
-            total += rings[i].Length;
-        }
-
-        currentRingAdvanced = -1;
-        return -1;
-    }
-
-    private static int CalculateRingsTotalLength(UnmanagedMemoryManager[] rings)
-    {
-        var total = 0;
-        for (int i = 0; i < rings.Length; i++) total += rings[i].Length;
-        return total;
-    }
-}
-
-/*
-private unsafe bool HandleResult(Connection connection, ref ReadResult result)
-    {
-        // Signals where at least one request was handled, and we can flush written response data
-        var flushable = false;
-
-        var totalAdvanced = 0;
-
-        // Get the "head" ring - first ring received
-        var rings = connection.GetAllSnapshotRingsAsUnmanagedMemory(result);
-        var ringsTotalLength = CalculateRingsTotalLength(rings);
-        var ringCount = rings.Length;
-        
-        if(ringCount == 0)
-            return false;
-        
-        while (true) // Inner loop, iterates every request handling, it can happen 0, 1 or n times
-            // per read as we may read an incomplete, one single or multiple requests at once
-        {
-            bool found;
-            int advanced;
-            // Here we want to merge existing inflight data with the just read new data
-            if (_inflightTail == 0)
-            {
-                if (ringCount == 1)
+                if (context.Request.Content == null)
                 {
-                    // Very Hot Path, typically each ring contains a full request and inflight buffer isn't used
-                    var span = new ReadOnlySpan<byte>(rings[0].Ptr + totalAdvanced, rings[0].Length - totalAdvanced);
-                    found = HandleNoInflightSingleRing(connection, ref span, out advanced);
+                    // Estimate a reasonable buffer size for the first chunk, will be re-rented if more chunks arrive
+                    context.Request.Content = ArrayPool<byte>.Shared.Rent(chunkSize);
+                }
+                else if (context.Request.Content.Length < currentOffset + chunkSize)
+                {
+                    // Grow the buffer if needed
+                    var newBuffer = ArrayPool<byte>.Shared.Rent(currentOffset + chunkSize);
+                    context.Request.Content.AsSpan(0, currentOffset).CopyTo(newBuffer);
+                    ArrayPool<byte>.Shared.Return(context.Request.Content);
+                    context.Request.Content = newBuffer;
+                }
+
+                var destinationSpan = context.Request.Content.AsSpan(currentOffset, chunkSize);
+                if (!reader.TryCopyTo(destinationSpan))
+                    return false; // Not enough bytes yet
+
+                currentOffset += chunkSize;
+
+                // Advance past chunk data and trailing CRLF
+                reader.Advance(chunkSize);
+                if (!reader.TryReadTo(out ReadOnlySequence<byte> _, Crlf))
+                    return false; // Not enough bytes yet
+            }
+
+            context.Request.ContentLength = currentOffset;
+            position = reader.Position;
+        }
+        
+        return true;
+    }
+
+    // Helper for parsing chunk size (hex)
+    //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool TryParseChunkSize(ReadOnlySpan<byte> span, out int value)
+    {
+        value = 0;
+        int i = 0;
+        for (; i < span.Length; i++)
+        {
+            byte b = span[i];
+            if (b >= '0' && b <= '9')
+                value = (value << 4) + (b - '0');
+            else if (b >= 'A' && b <= 'F')
+                value = (value << 4) + (b - 'A' + 10);
+            else if (b >= 'a' && b <= 'f')
+                value = (value << 4) + (b - 'a' + 10);
+            else
+                return false;
+        }
+        return i > 0;
+    }
+
+    /// <summary>
+    /// Parses the request line and headers from a single-segment buffer.
+    /// </summary>
+    /// <param name="context">Target request context to populate.</param>
+    /// <param name="buffer">The read-only buffer (single segment).</param>
+    /// <param name="position">Current integer offset in the first segment; updated to point just after the header terminator.</param>
+    /// <returns><see langword="true"/> if a complete header block was parsed; otherwise <see langword="false"/>.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the request line is malformed.</exception>
+    [SkipLocalsInit]
+    private static bool ExtractHeaderFromSingleSegment(
+        TContext context,
+        ref ReadOnlySequence<byte> buffer, 
+        ref int position)
+    {
+        // Hot path, single segment buffer
+        var bufferSpan = buffer.FirstSpan[position..];
+        var fullHeaderIndex = bufferSpan.IndexOf("\r\n\r\n"u8);
+
+        if (fullHeaderIndex == -1)
+            return false;
+
+        // Whole headers are present for the request
+        // Parse first header
+
+        var lineEnd = bufferSpan.IndexOf("\r\n"u8);
+        var firstHeader = bufferSpan[..lineEnd];
+
+        var firstSpace = firstHeader.IndexOf(Space);
+        if (firstSpace == -1)
+            throw new InvalidOperationException("Invalid request line");
+
+        context.Request.HttpMethod = CachedData.PreCachedHttpMethods.GetOrAdd(firstHeader[..firstSpace]);
+        
+        var secondSpaceRelative = firstHeader[(firstSpace + 1)..].IndexOf(Space);
+        if (secondSpaceRelative == -1)
+            throw new InvalidOperationException("Invalid request line");
+
+        var secondSpace = firstSpace + secondSpaceRelative + 1;
+        var url = firstHeader[(firstSpace + 1)..secondSpace];
+        var queryStart = url.IndexOf(Question); // (byte)'?'
+
+        if (queryStart != -1)
+        {
+            // Route has params
+            context.Request.Route = CachedData.CachedRoutes.GetOrAdd(url[..queryStart]);
+            var querySpan = url[(queryStart + 1)..];
+            var current = 0;
+            while (current < querySpan.Length)
+            {
+                var separator = querySpan[current..].IndexOf(QuerySeparator); // (byte)'&'
+                ReadOnlySpan<byte> pair;
+
+                if (separator == -1)
+                {
+                    pair = querySpan[current..];
+                    current = querySpan.Length;
                 }
                 else
                 {
-                    // Lukewarm Path
-                    found = HandleNoInflightMultipleRings(connection, rings, out advanced);
+                    pair = querySpan.Slice(current, separator);
+                    current += separator + 1;
                 }
+
+                var equalsIndex = pair.IndexOf(Equal); // (byte)'='
+                if (equalsIndex == -1)
+                    break;
+
+                context.Request.QueryParameters?
+                    .TryAdd(CachedData.CachedQueryKeys.GetOrAdd(pair[..equalsIndex]),
+                         Encoders.Utf8Encoder.GetString(pair[(equalsIndex + 1)..]));
+            }
+        }
+        else
+        {
+            // Url is same as route
+            context.Request.Route = CachedData.CachedRoutes.GetOrAdd(url);
+        }
+
+        // Parse remaining headers
+        var lineStart = 0;
+        while (true)
+        {
+            lineStart += lineEnd + 2;
+
+            lineEnd = bufferSpan[lineStart..].IndexOf("\r\n"u8);
+            if (lineEnd == 0)
+            {
+                // All Headers read
+                break;
+            }
+
+            var header = bufferSpan.Slice(lineStart, lineEnd);
+            var colonIndex = header.IndexOf(Colon);
+
+            if (colonIndex == -1)
+            {
+                // Malformed header
+                continue;
+            }
+
+            var headerKey = header[..colonIndex];
+            var headerValue = header[(colonIndex + 2)..];
+
+            context.Request.Headers
+                .TryAdd(CachedData.PreCachedHeaderKeys.GetOrAdd(headerKey), CachedData.PreCachedHeaderValues.GetOrAdd(headerValue));
+        }
+
+        position += fullHeaderIndex + 4;
+        //context.Reader.AdvanceTo(buffer.GetPosition(position));
+
+        return true;
+    }
+
+    /// <summary>
+    /// Parses the request line and headers from a multi-segment buffer using <see cref="SequenceReader{T}"/>.
+    /// </summary>
+    /// <param name="context">Target request context to populate.</param>
+    /// <param name="buffer">The read-only buffer (may span multiple segments).</param>
+    /// <param name="position">The current sequence position; updated as bytes are consumed.</param>
+    /// <param name="state">State machine indicating where to resume parsing.</param>
+    /// <returns><see langword="true"/> if a complete header block was parsed; otherwise <see langword="false"/>.</returns>
+    [SkipLocalsInit]
+    private static bool ExtractHeaderFromMultipleSegment(
+        TContext context,
+        ref ReadOnlySequence<byte> buffer,
+        ref SequencePosition position,
+        ref State state)
+    {
+        // Parse the complete headers, taking off from where it left off
+        var headerReader = new SequenceReader<byte>(buffer.Slice(position));
+
+        if (state == State.StartLine)
+        {
+            if (!TryParseRequestLine(ref headerReader, context.Request))
+                return false;
+        }
+        
+        // Header route was read, update state
+        position = headerReader.Position;
+        state = State.Headers;
+
+        // Parse remaining headers
+        while (true)
+        {
+            if (!headerReader.TryReadTo(out ReadOnlySequence<byte> headerLine, Crlf))
+                return false;
+            
+            position = headerReader.Position;
+            
+            if (headerLine.Length == 0)
+                break; // Empty line indicates end of headers
+
+            ParseHeaderLine(in headerLine, context.Request);
+
+            if (headerReader.End)
+                return false;
+            
+        }
+        // All headers were read
+        //state = State.Body;
+        position = headerReader.Position;
+        return true;
+    }
+
+    // ---- Parsing helpers ----
+    /// <summary>
+    /// Parses the request line (method, URL, version) from the reader position and advances past CRLF.
+    /// </summary>
+    /// <param name="reader">Sequence reader positioned at the start of the request line.</param>
+    /// <param name="request">Target request object to populate.</param>
+    /// <returns><see langword="true"/> if the full request line was parsed; otherwise <see langword="false"/>.</returns>
+    //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [SkipLocalsInit]
+    private static bool TryParseRequestLine(ref SequenceReader<byte> reader, IExpressRequest request)
+    {
+        // Read method
+        if (!reader.TryReadTo(out ReadOnlySequence<byte> methodSequence, (byte)' '))
+            return false;
+
+        request.HttpMethod = CachedData.PreCachedHttpMethods.GetOrAdd(methodSequence.ToSpan());
+
+        // Read URL/path
+        if (!reader.TryReadTo(out ReadOnlySequence<byte> urlSequence, (byte)' '))
+            return false;
+        
+        ParseUrl(in urlSequence, request);
+
+        // Skip HTTP version (read to end of line)
+        return reader.TryReadTo(out ReadOnlySequence<byte> _, Crlf);
+    }
+    
+    /// <summary>
+    /// Parses the URL and optional query string into the request route and query dictionary.
+    /// </summary>
+    //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [SkipLocalsInit]
+    private static void ParseUrl(in ReadOnlySequence<byte> urlSequence, IExpressRequest request)
+    {
+        var urlSpan = urlSequence.ToSpan();
+        var queryStart = urlSpan.IndexOf((byte)'?');
+
+        if (queryStart != -1)
+        {
+            // URL has query parameters
+            var routeSpan = urlSpan[..queryStart];
+            request.Route = CachedData.CachedRoutes.GetOrAdd(routeSpan);
+
+            // Parse query parameters
+            ParseQueryParameters(urlSpan[(queryStart + 1)..], request);
+        }
+        else
+        {
+            // Simple URL without query parameters  
+            request.Route = CachedData.CachedRoutes.GetOrAdd(urlSpan);
+        }
+    }
+    
+    /// <summary>
+    /// Parses a query string in <c>key=value&amp;key2=value2</c> form into <see cref="IExpressRequest.QueryParameters"/>.
+    /// </summary>
+    //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [SkipLocalsInit]
+    private static void ParseQueryParameters(in ReadOnlySpan<byte> querySpan, IExpressRequest request)
+    {
+        var current = 0;
+        while (current < querySpan.Length)
+        {
+            var separator = querySpan[current..].IndexOf((byte)'&');
+            ReadOnlySpan<byte> pair;
+
+            if (separator == -1)
+            {
+                pair = querySpan[current..];
+                current = querySpan.Length;
             }
             else
             {
-                // Cold path
-                UnmanagedMemoryManager[] mems = new UnmanagedMemoryManager[ringCount + 1];
-                mems[0] = new(_inflightData, _inflightTail);
-                for (int i = 1; i < ringCount + 1; i++) mems[i] = rings[i];
-                
-                found = HandleWithInflight(connection, mems, out advanced);
-
-                if (found)  // a request was handled so inflight data can be discarded
-                    _inflightTail = 0;
+                pair = querySpan.Slice(current, separator);
+                current += separator + 1;
             }
 
-            totalAdvanced += advanced;
+            var equalsIndex = pair.IndexOf((byte)'=');
+            if (equalsIndex == -1)
+                continue;
 
-            var currentRingIndex = GetCurrentRingIndex(in totalAdvanced, rings, out var currentRingAdvanced);
+            var key = CachedData.CachedQueryKeys.GetOrAdd(pair[..equalsIndex]);
+            var value = Encoding.UTF8.GetString(pair[(equalsIndex + 1)..]);
 
-            if (!found)
-            {
-                // \r\n\r\n not found, full headers are not yet available
-                // Copy the leftover rings data to the inflight buffer and read more
-                
-                // Copy current ring unused data
-                Buffer.MemoryCopy(
-                    rings[currentRingIndex].Ptr + currentRingAdvanced, // source
-                    _inflightData + _inflightTail, // destination
-                    _length - _inflightTail, // destinationSizeInBytes
-                    rings[currentRingIndex].Length - currentRingAdvanced); // sourceBytesToCopy
-                
-                _inflightTail += rings[currentRingIndex].Length - currentRingAdvanced;
-                
-                // Copy untouched rings data
-                for (int i = currentRingIndex + 1; i < rings.Length; i++)
-                {
-                    Buffer.MemoryCopy(
-                        rings[i].Ptr, // source
-                        _inflightData + _inflightTail, // destination
-                        _length - _inflightTail, // destinationSizeInBytes
-                        rings[i].Length); // sourceBytesToCopy
-                    
-                    _inflightTail += rings[i].Length;
-                }
-
-                break;
-            }
-
-            flushable = true;
-            
-            if (ringsTotalLength == advanced)
-                break;
+            request.QueryParameters?.TryAdd(key, value);
         }
-            
-        // Return the rings to the kernel, at this stage the request was either handled or the rings' data
-        // has already been copied to the inflight buffer.
-        for (int i = 0; i < rings.Length; i++) 
-            connection.ReturnRing(rings[i].BufferId);
-
-        return flushable;
     }
-    */
+    
+    /// <summary>
+    /// Parses a single header line and adds it to <see cref="IExpressRequest.Headers"/>.
+    /// </summary>
+    /// <param name="headerLine">A buffer containing a single header line with trailing CRLF removed.</param>
+    /// <param name="request">Target request.</param>
+    //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [SkipLocalsInit]
+    private static void ParseHeaderLine(in ReadOnlySequence<byte> headerLine, IExpressRequest request)
+    {
+        var headerSpan = headerLine.ToSpan();
+        var colonIndex = headerSpan.IndexOf((byte)':');
+
+        if (colonIndex == -1)
+            return; // Malformed header, skip
+
+        var headerKey = headerSpan[..colonIndex];
+
+        // Skip colon and optional whitespace
+        var valueStart = colonIndex + 1;
+        while (valueStart < headerSpan.Length && headerSpan[valueStart] == (byte)' ')
+            valueStart++;
+
+        var headerValue = headerSpan[valueStart..];
+
+        request.Headers?.TryAdd(
+            CachedData.PreCachedHeaderKeys.GetOrAdd(headerKey),
+            CachedData.PreCachedHeaderValues.GetOrAdd(headerValue));
+    }
+
+    // ---- Constants & literals ----
+
+    /// <summary>CRLF delimiter used for line termination.</summary>
+    private static ReadOnlySpan<byte> Crlf => "\r\n"u8;
+    private static ReadOnlySpan<byte> CrlfCrlf => "\r\n\r\n"u8;
+
+    private const string ContentLength = "Content-Length";
+    private const string TransferEncoding = "Transfer-Encoding";
+            
+    private const byte Space = 0x20; // ' '
+    private const byte Question = 0x3F; // '?'
+    private const byte QuerySeparator = 0x26; // '&'
+    private const byte Equal = 0x3D; // '='
+    private const byte Colon = 0x3A; // ':'
+    private const byte SemiColon = 0x3B; // ';'
+}
