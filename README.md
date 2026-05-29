@@ -2,7 +2,7 @@
 
 <div align="center">
   <a href="https://www.http-arena.com/leaderboard/">
-    <img alt="Benchmarked by HttpArena" src="site/static/images/wordmark.svg" width="235">
+    <img alt="Benchmarked by HttpArena" src="https://cdn.jsdelivr.net/gh/MDA2AV/httparena-badge/wordmark.svg" width="235">
   </a>
 </div>
 
