@@ -1,6 +1,10 @@
 ## Wired.IO
 
-[![HttpArena](https://www.http-arena.com/images/logo.svg)](https://www.http-arena.com/leaderboard/)
+<div align="center">
+  <a href="https://www.http-arena.com/leaderboard/">
+    <img alt="Benchmarked by HttpArena" src="site/static/images/wordmark.svg" width="235">
+  </a>
+</div>
 
 [![NuGet](https://img.shields.io/nuget/v/Wired.IO.svg)](https://www.nuget.org/packages/Wired.IO/)
 
