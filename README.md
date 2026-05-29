@@ -1,5 +1,8 @@
 ## Wired.IO
 
+[![HttpArena](https://www.http-arena.com/images/logo.svg)](https://www.http-ar
+  ena.com/leaderboard/)
+
 [![NuGet](https://img.shields.io/nuget/v/Wired.IO.svg)](https://www.nuget.org/packages/Wired.IO/)
 
 [Full project documentation](https://mda2av.github.io/Wired.IO.Docs/)
