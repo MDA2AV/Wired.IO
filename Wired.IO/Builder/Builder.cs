@@ -2,12 +2,11 @@
 using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Net.Security;
-using System.Reflection;
 using Wired.IO.App;
-using Wired.IO.Http11Express.StaticHandlers;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Handlers;
 using Wired.IO.Protocol.Response;
+using Wired.IO.Transport;
 using IBaseRequest = Wired.IO.Protocol.Request.IBaseRequest;
 
 namespace Wired.IO.Builder;
@@ -16,11 +15,11 @@ namespace Wired.IO.Builder;
 /// Provides a fluent configuration API to build and configure a <see cref="WiredApp{TContext}"/> instance.
 /// Supports setting up dependency injection, middleware, routes, TLS options, and runtime parameters.
 /// </summary>
-/// <typeparam name="THandler">The HTTP handler type implementing <see cref="IHttpHandler{TContext}"/>.</typeparam>
+/// <typeparam name="THandler">The HTTP handler type implementing <see cref="IHttpHandler"/>.</typeparam>
 /// <typeparam name="TContext"></typeparam>
 public sealed partial class Builder<THandler, TContext>
     where TContext : IBaseContext<IBaseRequest, IBaseResponse>
-    where THandler : IHttpHandler<TContext>
+    where THandler : IHttpHandler
 {
     /// <summary>
     /// Gets the service collection used to register middleware, handlers, and services.
@@ -36,9 +35,10 @@ public sealed partial class Builder<THandler, TContext>
     /// Initializes the builder using a handler factory and defaults to HTTP/1.1 protocol.
     /// </summary>
     /// <param name="handlerFactory">A delegate that creates the HTTP handler.</param>
-    public Builder(Func<THandler> handlerFactory)
+    /// <param name="transport"></param>
+    public Builder(Func<THandler> handlerFactory, ITransport<TContext> transport)
     {
-        Initialize(handlerFactory, [SslApplicationProtocol.Http11]);
+        Initialize(handlerFactory, [SslApplicationProtocol.Http11], transport);
     }
 
     /// <summary>
@@ -46,9 +46,10 @@ public sealed partial class Builder<THandler, TContext>
     /// </summary>
     /// <param name="handlerFactory">A delegate that creates the HTTP handler.</param>
     /// <param name="sslApplicationProtocols">The list of supported ALPN protocols.</param>
-    public Builder(Func<THandler> handlerFactory, List<SslApplicationProtocol> sslApplicationProtocols)
+    /// <param name="transport"></param>
+    public Builder(Func<THandler> handlerFactory, List<SslApplicationProtocol> sslApplicationProtocols, ITransport<TContext> transport)
     {
-        Initialize(handlerFactory, sslApplicationProtocols);
+        Initialize(handlerFactory, sslApplicationProtocols, transport);
     }
 
     /// <summary>
@@ -56,13 +57,16 @@ public sealed partial class Builder<THandler, TContext>
     /// </summary>
     /// <param name="handlerFactory">The handler creation delegate.</param>
     /// <param name="sslApplicationProtocols">List of supported ALPN protocols.</param>
-    private void Initialize(Func<THandler> handlerFactory, List<SslApplicationProtocol> sslApplicationProtocols)
+    /// <param name="transport"></param>
+    private void Initialize(Func<THandler> handlerFactory, List<SslApplicationProtocol> sslApplicationProtocols, ITransport<TContext> transport)
     {
         _endpointDIRegister = new EndpointDIRegister(this);
         _root = new Group(prefix: "/", parent: null, diRegister: _endpointDIRegister);
-
-        App.HttpHandler = handlerFactory();
+        
         App.SslServerAuthenticationOptions.ApplicationProtocols = sslApplicationProtocols;
+        
+        App.Transport = transport;
+        App.Transport.HttpHandler = handlerFactory();
         
         App.ServiceCollection.AddLogging(DefaultLoggingBuilder);
     }
@@ -103,7 +107,7 @@ public sealed partial class Builder<THandler, TContext>
         App.RootMiddleware = App.Services.GetServices<Func<TContext, Func<TContext, Task>, Task>>().ToList();
         App.BuildPipeline(App.RootMiddleware, App.EndpointInvoker);
 
-        App.SetPipeline(App.RootPipeline);
+        App.Transport.Pipeline = App.RootPipeline;
 
         App.RootEndpoints = [];
         
@@ -141,7 +145,7 @@ public sealed partial class Builder<THandler, TContext>
         }
 
         App.CachePipelines(App.Services);
-        App.SetPipeline(App.GroupPipeline);
+        App.Transport.Pipeline = App.GroupPipeline;
 
         // Rearrange EmbeddedRoutes
         RearrangeEncodedRoutes(App.EncodedRoutes);

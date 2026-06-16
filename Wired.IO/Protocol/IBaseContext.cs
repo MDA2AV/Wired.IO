@@ -10,24 +10,6 @@ public interface IBaseContext<out TRequest, out TResponse> : IDisposable
     where TResponse : IBaseResponse
 {
     /// <summary>
-    /// Gets or sets the <see cref="PipeReader"/> used to read incoming data from the client connection.
-    /// </summary>
-    /// <remarks>
-    /// This reader is typically bound to the network stream and used to consume HTTP request data
-    /// such as headers, body content, or raw bytes from the client.
-    /// </remarks>
-    PipeReader Reader { get; set; }
-
-    /// <summary>
-    /// Gets or sets the <see cref="PipeWriter"/> used to write outgoing data to the client connection.
-    /// </summary>
-    /// <remarks>
-    /// This writer is used to serialize the HTTP response, including headers and body, and flush it
-    /// to the client. It can be wrapped with encoders like chunked or plain writers.
-    /// </remarks>
-    PipeWriter Writer { get; set; }
-
-    /// <summary>
     /// Gets or sets the HTTP request for the current connection.
     /// This property contains all the details of the incoming HTTP request,
     /// such as the request method, headers, URI, and body.

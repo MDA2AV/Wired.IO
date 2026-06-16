@@ -10,6 +10,7 @@ namespace Wired.IO.App;
 public sealed partial class WiredApp<TContext>
     where TContext : IBaseContext<IBaseRequest, IBaseResponse>
 {
+    /*
     /// <summary>
     /// Creates an <see cref="Engine"/> instance configured to accept and process plain (non-TLS) HTTP connections.
     /// </summary>
@@ -126,4 +127,5 @@ public sealed partial class WiredApp<TContext>
             client.Dispose();
         }
     }
+    */
 }

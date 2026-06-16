@@ -1,12 +1,19 @@
 ﻿using System.Net.Security;
 using Wired.IO.Builder;
-using Wired.IO.Http11Express;
-using Wired.IO.Http11Express.Context;
-using Wired.IO.Http11Express.StaticHandlers;
+using Wired.IO.Handlers.Http11Express;
+using Wired.IO.Handlers.Http11Express.Context;
+using Wired.IO.Handlers.Http11Express.StaticHandlers;
+using Wired.IO.Handlers.Http11Overclocked;
+using Wired.IO.Handlers.Http11Overclocked.Context;
+using Wired.IO.Handlers.Http11Rocket;
+using Wired.IO.Handlers.Http11Rocket.Context;
 using Wired.IO.Protocol;
 using Wired.IO.Protocol.Handlers;
 using Wired.IO.Protocol.Request;
 using Wired.IO.Protocol.Response;
+using Wired.IO.Transport;
+using Wired.IO.Transport.Rocket;
+using Wired.IO.Transport.Socket;
 
 namespace Wired.IO.App;
 
@@ -16,10 +23,26 @@ namespace Wired.IO.App;
 /// </summary>
 public sealed class WiredApp
 {
+    public static Builder<WiredHttp11Overclocked, Http11OverclockedContext> CreateOverclockedBuilder()
+    {
+        var builder = new Builder<WiredHttp11Overclocked, Http11OverclockedContext>(() => new WiredHttp11Overclocked(), 
+            [SslApplicationProtocol.Http11], new RocketTransport<Http11OverclockedContext>());
+        
+        return builder;
+    }
+    
+    public static Builder<WiredHttp11Rocket, Http11RocketContext> CreateRocketBuilder()
+    {
+        var builder = new Builder<WiredHttp11Rocket, Http11RocketContext>(() => new WiredHttp11Rocket(), 
+            [SslApplicationProtocol.Http11], new RocketTransport<Http11RocketContext>());
+        
+        return builder;
+    }
+    
     public static Builder<WiredHttp11Express, Http11ExpressContext> CreateExpressBuilder()
     {
-        var builder = new Builder<WiredHttp11Express, Http11ExpressContext>(() =>
-            new WiredHttp11Express(), [SslApplicationProtocol.Http11]);
+        var builder = new Builder<WiredHttp11Express, Http11ExpressContext>(() => new WiredHttp11Express(), 
+            [SslApplicationProtocol.Http11], new SocketTransport<Http11ExpressContext>());
         
         return builder.MapFlowControl("NotFound", FlowControl.CreateEndpointNotFoundHandler());
     }
@@ -28,8 +51,8 @@ public sealed class WiredApp
     public static Builder<WiredHttp11Express<TContext>, TContext> CreateExpressBuilder<TContext>()
         where TContext : Http11ExpressContext, new()
     {
-        var builder = new Builder<WiredHttp11Express<TContext>, TContext>(() =>
-            new WiredHttp11Express<TContext>(), [SslApplicationProtocol.Http11]);
+        var builder = new Builder<WiredHttp11Express<TContext>, TContext>(() => new WiredHttp11Express<TContext>(), 
+            [SslApplicationProtocol.Http11], new SocketTransport<TContext>());
 
         return builder.MapFlowControl("NotFound", FlowControl.CreateEndpointNotFoundHandler());
     }
@@ -37,34 +60,37 @@ public sealed class WiredApp
     /// <summary>
     /// Creates a generic <see cref="Builder{THandler, TContext}"/> for a custom handler and context type.
     /// </summary>
-    /// <typeparam name="THandler">The custom HTTP handler type implementing <see cref="IHttpHandler{TContext}"/>.</typeparam>
+    /// <typeparam name="THandler">The custom HTTP handler type implementing <see cref="IHttpHandler"/>.</typeparam>
     /// <typeparam name="TContext">The request context type implementing <see cref="IBaseContext{TRequest,TResponse}"/>.</typeparam>
     /// <param name="handlerFactory">A factory delegate that produces an instance of <typeparamref name="THandler"/>.</param>
+    /// <param name="transport"></param>
     /// <returns>A configured <see cref="Builder{THandler, TContext}"/> instance.</returns>
-    public static Builder<THandler, TContext> CreateBuilder<THandler, TContext>(Func<THandler> handlerFactory)
-        where THandler : IHttpHandler<TContext>
+    public static Builder<THandler, TContext> CreateBuilder<THandler, TContext>(Func<THandler> handlerFactory, ITransport<TContext> transport)
+        where THandler : IHttpHandler
         where TContext : IBaseContext<IBaseRequest, IBaseResponse>
     {
-        return CreateBuilder<THandler, TContext>(handlerFactory, [SslApplicationProtocol.Http11]);
+        return CreateBuilder<THandler, TContext>(handlerFactory, [SslApplicationProtocol.Http11], transport);
     }
 
     /// <summary>
     /// Creates a generic <see cref="Builder{THandler, TContext}"/> for a custom handler and context type,
     /// using a custom list of supported ALPN protocols.
     /// </summary>
-    /// <typeparam name="THandler">The custom HTTP handler type implementing <see cref="IHttpHandler{TContext}"/>.</typeparam>
+    /// <typeparam name="THandler">The custom HTTP handler type implementing <see cref="IHttpHandler"/>.</typeparam>
     /// <typeparam name="TContext">The request context type implementing <see cref="IBaseContext{TRequest,TResponse}"/>.</typeparam>
     /// <param name="handlerFactory">A factory delegate that produces an instance of <typeparamref name="THandler"/>.</param>
     /// <param name="sslApplicationProtocols">
     /// A list of supported <see cref="SslApplicationProtocol"/> values for ALPN negotiation.
     /// </param>
+    /// <param name="transport"></param>
     /// <returns>A configured <see cref="Builder{THandler, TContext}"/> instance.</returns>
     public static Builder<THandler, TContext> CreateBuilder<THandler, TContext>(
         Func<THandler> handlerFactory,
-        List<SslApplicationProtocol> sslApplicationProtocols)
-        where THandler : IHttpHandler<TContext>
+        List<SslApplicationProtocol> sslApplicationProtocols,
+        ITransport<TContext> transport)
+        where THandler : IHttpHandler
         where TContext : IBaseContext<IBaseRequest, IBaseResponse>
     {
-        return new Builder<THandler, TContext>(handlerFactory, sslApplicationProtocols);
+        return new Builder<THandler, TContext>(handlerFactory, sslApplicationProtocols, transport);
     }
 }

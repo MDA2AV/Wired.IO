@@ -9,7 +9,7 @@ namespace Wired.IO.Builder;
 
 public sealed partial class Builder<THandler, TContext>
     where TContext : IBaseContext<IBaseRequest, IBaseResponse>
-    where THandler : IHttpHandler<TContext>
+    where THandler : IHttpHandler
 {
     public Builder<THandler, TContext> AddManualPipeline(
             string route,
