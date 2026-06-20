@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Standalone net11-only tier: the Http11Ioxide handler + ioxide transport + Glyph11 parse.
+       Kept out of the multi-target Wired.IO core (net9/10/11) because ioxide targets net11.0 only;
+       a separate project avoids #if/Compile-Remove conditional compilation (and the IDE noise it
+       causes when analyzing the tier under a non-net11 target). References the full Wired framework. -->
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Wired.IO\Wired.IO.csproj" />
+    <PackageReference Include="ioxide" Version="0.0.10" />
+    <PackageReference Include="Glyph11" Version="0.3.5" />
+  </ItemGroup>
+
+</Project>

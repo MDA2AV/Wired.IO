@@ -25,8 +25,8 @@ public static class Program
 
     public static async Task Main(string[] args)
     {
-        var builder = WiredApp
-            .CreateIoxideBuilder()   // ioxide transport + Glyph11 parse; App / DI / middleware / Map are Wired's
+        var builder = WiredIoxide
+            .CreateBuilder()   // ioxide transport + Glyph11 parse; App / DI / middleware / Map are Wired's
             .NoScopedEndpoints()
             .UseRootEndpoints()
             .Port(8080);

@@ -12,8 +12,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <!-- The ioxide tier lives in Wired.IO's net11.0 target; this app consumes it. -->
-        <ProjectReference Include="..\..\Wired.IO\Wired.IO.csproj" />
+        <!-- The ioxide tier is the standalone net11-only Wired.IO.Ioxide project; it pulls the core in. -->
+        <ProjectReference Include="..\..\Wired.IO.Ioxide\Wired.IO.Ioxide.csproj" />
     </ItemGroup>
 
 </Project>

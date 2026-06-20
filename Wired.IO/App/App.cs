@@ -14,11 +14,6 @@ using Wired.IO.Protocol.Response;
 using Wired.IO.Transport;
 using Wired.IO.Transport.Rocket;
 using Wired.IO.Transport.Socket;
-#if NET11_0_OR_GREATER
-using Wired.IO.Transport.Ioxide;
-using Wired.IO.Handlers.Http11Ioxide;
-using Wired.IO.Handlers.Http11Ioxide.Context;
-#endif
 
 namespace Wired.IO.App;
 
@@ -43,25 +38,6 @@ public sealed class WiredApp
 
         return builder;
     }
-
-#if NET11_0_OR_GREATER
-    /// <summary>
-    /// io_uring tier on the <c>ioxide</c> engine with Glyph11 parsing. Reuses the full Wired framework
-    /// (DI, middleware, routing, the Map API); only the transport + request parse are ioxide-native, and
-    /// the Glyph11 <c>BinaryRequest</c> is exposed on the context (<c>ctx.Binary</c>).
-    /// </summary>
-    public static Builder<WiredHttp11Ioxide, Http11IoxideContext> CreateIoxideBuilder()
-    {
-        var builder = new Builder<WiredHttp11Ioxide, Http11IoxideContext>(() => new WiredHttp11Ioxide(),
-            [SslApplicationProtocol.Http11], new IoxideTransport<Http11IoxideContext>());
-
-        // Default 404 for unmatched routes (mirrors CreateExpressBuilder).
-        return builder.MapFlowControl("NotFound", static ctx =>
-        {
-            ctx.Respond().Status(ResponseStatus.NotFound).Content(static () => { }, 0);
-        });
-    }
-#endif
 
     public static Builder<WiredHttp11Express, Http11ExpressContext> CreateExpressBuilder()
     {
