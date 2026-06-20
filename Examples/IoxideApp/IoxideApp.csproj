@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net11.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <IsTestAssetProject>true</IsTestAssetProject>
+        <ServerGarbageCollection>true</ServerGarbageCollection>
+        <TieredPGO>true</TieredPGO>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- The ioxide tier lives in Wired.IO's net11.0 target; this app consumes it. -->
+        <ProjectReference Include="..\..\Wired.IO\Wired.IO.csproj" />
+    </ItemGroup>
+
+</Project>
