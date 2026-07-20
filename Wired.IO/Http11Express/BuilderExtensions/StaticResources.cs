@@ -5,6 +5,8 @@ using System.Runtime.CompilerServices;
 using Wired.IO.App;
 using Wired.IO.Builder;
 using Wired.IO.Http11Express.Context;
+using Wired.IO.Protocol;
+using Wired.IO.Protocol.Request;
 using Wired.IO.Protocol.Response;
 using Wired.IO.Utilities;
 
@@ -12,6 +14,75 @@ namespace Wired.IO.Http11Express.StaticHandlers;
 
 public static class BuilderExtensions
 {
+    public static Builder<WiredHttp11Express<TContext>, TContext> AddStaticResourceProvider<TContext>(
+        this Builder<WiredHttp11Express<TContext>, TContext> builder,
+        string route,
+        Location location,
+        List<Func<TContext, Func<TContext, Task>, Task>>? middlewares,
+        List<string>? keys = null) 
+        
+        where TContext : Http11ExpressContext, new()
+    {
+        keys ??= [HttpConstants.Get];
+
+        // Trim out the wildcard to get the base route for static files
+        builder.ServeStaticFiles(route.Replace("*", ""), location);
+
+        builder.AddManualPipeline(
+            route,
+            keys,
+
+            // Pure delegate: static + only uses parameters/local variables
+            static ctx =>
+            {
+                var routePath = ctx.Request.Route;
+
+                if (!Path.HasExtension(routePath))
+                {
+                    // Not a valid resource, short-circuit
+
+                    ctx.Respond()
+                        .Status(ResponseStatus.NotFound)
+                        .Type("text/plain"u8)
+                        .Content("Resource does not have a valid file extension."u8);
+
+                    return Task.CompletedTask;
+                }
+
+                // Try the cache first
+                if (!WiredApp<TContext>.StaticCachedResourceFiles.TryGetValue(routePath, out var resource))
+                {
+                    // Load from source on miss
+                    if (!WiredApp<TContext>.TryReadResource(routePath, out resource))
+                    {
+                        // Not found
+                        ctx.Respond()
+                            .Status(ResponseStatus.NotFound)
+                            .Type("text/plain"u8)
+                            .Content("Resource was not found."u8);
+
+                        return Task.CompletedTask;
+                    }
+
+                    // Populate cache
+                    WiredApp<TContext>.StaticCachedResourceFiles[routePath] = resource;
+                }
+
+                // Serve cached (or freshly loaded) resource
+                var handler = CreateBoundHandler(ctx.Writer, resource);
+
+                ctx.Respond()
+                    .Status(ResponseStatus.Ok)
+                    .Type(MimeTypes.GetMimeType(routePath))
+                    .Content(handler, (ulong)resource.Length);
+
+                return Task.CompletedTask;
+            },
+            middlewares);
+
+        return builder;
+    }
+    
     public static Builder<WiredHttp11Express, Http11ExpressContext> AddStaticResourceProvider(
         this Builder<WiredHttp11Express, Http11ExpressContext> builder,
         string route,

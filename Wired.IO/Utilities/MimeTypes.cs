@@ -20,7 +20,7 @@
 ///  • Zero heap allocation in the hot path  
 ///  • SPA variant defaults to <c>text/html</c> when no extension is present
 /// </summary>
-internal static class MimeTypes
+public static class MimeTypes
 {
     /// <summary>
     /// Resolves the MIME type for a given route or file name.
