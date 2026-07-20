@@ -1,9 +1,9 @@
 using Wired.IO.Protocol.Response;
 using Wired.IO.Utilities;
 
-namespace Wired.IO.Handlers.Http11Overclocked.Response;
+namespace Wired.IO.Handlers.Http11Oxide.Response;
 
-public interface IOverclockedResponse : IBaseResponse
+public interface IOxideResponse : IBaseResponse
 {
     void Activate();
 

@@ -1,26 +1,26 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-	  <TargetFrameworks>net9.0;net10.0</TargetFrameworks>
-	  <ImplicitUsings>enable</ImplicitUsings>
-	  <Nullable>enable</Nullable>
-	  <Title>Wired.IO</Title>
-	  <Authors>Diogo Martins</Authors>
-	  <RepositoryUrl>https://github.com/MDA2AV/Wired.IO</RepositoryUrl>
-	  <RepositoryType>git</RepositoryType>
-	  <AssemblyVersion>10.1.4</AssemblyVersion>
-	  <FileVersion>10.1.4</FileVersion>
-	  <Version>10.1.4</Version>
-	  <PackageReadmeFile>README.md</PackageReadmeFile>
-	  <PackageTags>socket;webserver;lightweight;embeddable</PackageTags>
-	  <PackageLicenseFile>LICENSE</PackageLicenseFile>
-	  <Description>https://mda2av.github.io/Wired.IO.Docs/</Description>
-	  <PackageProjectUrl>https://github.com/MDA2AV/Wired.IO</PackageProjectUrl>
-	  <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <TargetFramework>net11.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Title>Wired.IO</Title>
+    <Authors>Diogo Martins</Authors>
+    <RepositoryUrl>https://github.com/MDA2AV/Wired.IO</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <AssemblyVersion>10.1.4</AssemblyVersion>
+    <FileVersion>10.1.4</FileVersion>
+    <Version>10.1.4</Version>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageTags>socket;webserver;lightweight;embeddable</PackageTags>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <Description>https://mda2av.github.io/Wired.IO.Docs/</Description>
+    <PackageProjectUrl>https://github.com/MDA2AV/Wired.IO</PackageProjectUrl>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
-	  <!-- Required for self-contained publish in linux-x64 -->
-      <!--<RuntimeIdentifier>linux-x64</RuntimeIdentifier>-->
-      
+    <!-- Required for self-contained publish in linux-x64 -->
+    <!--<RuntimeIdentifier>linux-x64</RuntimeIdentifier>-->
+
   </PropertyGroup>
 
   <ItemGroup>
@@ -29,24 +29,25 @@
     <None Remove="Http11Express\Websockets\**" />
   </ItemGroup>
 
-	<ItemGroup>
-		<None Include="..\LICENSE">
-			<Pack>True</Pack>
-			<PackagePath>\</PackagePath>
-		</None>
-		<None Include="..\README.md">
-			<Pack>True</Pack>
-			<PackagePath>\</PackagePath>
-		</None>
-	</ItemGroup>
+  <ItemGroup>
+    <None Include="..\LICENSE">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
 
-	<ItemGroup>
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.2" />
-		<PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.2" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.2" />
-		<PackageReference Include="Microsoft.Extensions.ObjectPool" Version="10.0.2" />
-		<PackageReference Include="System.IO.Pipelines" Version="10.0.2" />
-		<PackageReference Include="URocket" Version="10.5.1" />
-	</ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.2" />
+    <PackageReference Include="Microsoft.Extensions.ObjectPool" Version="10.0.2" />
+    <PackageReference Include="System.IO.Pipelines" Version="10.0.2" />
+    <PackageReference Include="ioxide" Version="0.0.10" />
+    <PackageReference Include="Glyph11" Version="0.3.5" />
+  </ItemGroup>
 
 </Project>

@@ -76,6 +76,7 @@ public partial class WiredHttp11Express<TContext> : ISocketHttpHandler<TContext>
         public override bool Return(TContext context)
         {
             context.Clear(); // User-defined reset method to clean internal state.
+            context.Inner = null!;
             return true;
         }
     }

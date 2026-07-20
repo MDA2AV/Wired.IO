@@ -47,7 +47,6 @@ public class Http11ExpressContext : IBaseContext<IExpressRequest, IExpressRespon
 
     public void Clear()
     {
-        Inner = null!;
         Response?.Clear();
         Request.Clear();
     }
