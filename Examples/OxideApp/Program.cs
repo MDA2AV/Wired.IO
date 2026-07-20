@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Wired.IO.App;
 using Wired.IO.Protocol.Response;
 
-namespace IoxideApp;
+namespace OxideApp;
 
 // A service registered in DI and resolved inside a handler via ctx.Services — proves the new ioxide
 // tier reuses Wired's dependency-injection container unchanged.
@@ -25,7 +25,7 @@ public static class Program
 
     public static async Task Main(string[] args)
     {
-        var builder = WiredIoxide
+        var builder = WiredOxide
             .CreateBuilder()   // ioxide transport + Glyph11 parse; App / DI / middleware / Map are Wired's
             .NoScopedEndpoints()
             .UseRootEndpoints()
@@ -109,7 +109,7 @@ public static class Program
                 .Content(() => ctx.Connection.Write(Json), (ulong)Json.Length);
         });
 
-        Console.WriteLine("IoxideApp — Wired.IO ioxide + Glyph11 tier — http://0.0.0.0:8080");
+        Console.WriteLine("OxideApp — Wired.IO ioxide + Glyph11 tier — http://0.0.0.0:8080");
         Console.WriteLine("  /plaintext  /request  /di  /json  /mw");
 
         await builder.Build().RunAsync();

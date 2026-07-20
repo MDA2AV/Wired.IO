@@ -7,14 +7,14 @@ using Wired.IO.Protocol.Handlers;
 using Wired.IO.Protocol.Request;
 using Wired.IO.Protocol.Response;
 
-namespace Wired.IO.Transport.Ioxide;
+namespace Wired.IO.Transport.Oxide;
 
 /// <summary>
 /// The ioxide (io_uring) transport. Shared-nothing: one <see cref="Reactor"/> per core, each on its own
 /// thread, each calling the tier handler per accepted connection. Reuses every other Wired layer (App,
 /// Builder, DI, middleware, routing) unchanged — only the transport + parse core is ioxide-native.
 /// </summary>
-public sealed class IoxideTransport<TContext> : ITransport<TContext>
+public sealed class OxideTransport<TContext> : ITransport<TContext>
     where TContext : IBaseContext<IBaseRequest, IBaseResponse>
 {
     public IPAddress IPAddress { get; set; } = null!;
@@ -32,7 +32,9 @@ public sealed class IoxideTransport<TContext> : ITransport<TContext>
     {
         var reactors = Math.Min(Environment.ProcessorCount, 64);
         if (int.TryParse(Environment.GetEnvironmentVariable("IOXIDE_REACTORS"), out var r) && r > 0)
+        {
             reactors = r;
+        }
 
         var config = new ServerConfig
         {
@@ -41,7 +43,7 @@ public sealed class IoxideTransport<TContext> : ITransport<TContext>
             Incremental = false,
         };
 
-        var handler = (IIoxideHttpHandler<TContext>)HttpHandler;
+        var handler = (IOxideHttpHandler<TContext>)HttpHandler;
         var pipeline = Pipeline;
 
         _threads = new Thread[config.ReactorCount];

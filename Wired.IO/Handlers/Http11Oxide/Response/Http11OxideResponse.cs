@@ -1,9 +1,9 @@
 using Wired.IO.Protocol.Response;
 using Wired.IO.Utilities;
 
-namespace Wired.IO.Handlers.Http11Overclocked.Response;
+namespace Wired.IO.Handlers.Http11Oxide.Response;
 
-public class Http11OverclockedResponse : IOverclockedResponse
+public class Http11OxideResponse : IOxideResponse
 {
     private bool _active;
 

@@ -3,9 +3,9 @@ using ioxide;
 using Wired.IO.Protocol.Response;
 using Wired.IO.Utilities;
 
-namespace Wired.IO.Handlers.Http11Ioxide;
+namespace Wired.IO.Handlers.Http11Oxide;
 
-public partial class WiredHttp11Ioxide<TContext>
+public partial class WiredHttp11Oxide<TContext>
 {
     // Status line + headers go straight into ioxide's write slab (Connection is the IBufferWriter).
     private static void WriteStatusLine(Connection conn, ResponseStatus status)

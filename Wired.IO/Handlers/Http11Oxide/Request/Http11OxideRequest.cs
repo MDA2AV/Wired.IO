@@ -1,8 +1,8 @@
 using Wired.IO.Protocol.Request;
 
-namespace Wired.IO.Handlers.Http11Overclocked.Request;
+namespace Wired.IO.Handlers.Http11Oxide.Request;
 
-public class Http11OverclockedRequest : IBaseRequest
+public class Http11OxideRequest : IBaseRequest
 {
     public string Route { get; set; } = null!;
 
