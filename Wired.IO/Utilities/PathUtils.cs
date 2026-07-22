@@ -15,7 +15,7 @@ namespace Wired.IO.Utilities;
 ///  • This is a lexical combiner; it does not touch the filesystem, normalize dots ("." / ".."),
 ///    or validate drive letters / UNC paths. Use only where lexical join is desired.
 /// </summary>
-internal static class PathUtils
+public static class PathUtils
 {
     /// <summary>
     /// Combines two path segments without allocating temporaries, normalizing to a single separator.

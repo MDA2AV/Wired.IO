@@ -31,7 +31,7 @@ public static class MimeTypes
     /// <returns>
     /// A <see cref="ReadOnlySpan{Byte}"/> containing the MIME type as an ASCII/UTF-8 literal.
     /// </returns>
-    internal static ReadOnlySpan<byte> GetMimeType(string route)
+    public static ReadOnlySpan<byte> GetMimeType(string route)
     {
         // Use pattern matching to quickly resolve common MIME types.
         return Path.GetExtension(route) switch
@@ -62,7 +62,7 @@ public static class MimeTypes
     /// <returns>
     /// A <see cref="ReadOnlySpan{Byte}"/> representing the MIME type to use in the HTTP response.
     /// </returns>
-    internal static ReadOnlySpan<byte> GetSpaMimeType(string route)
+    public static ReadOnlySpan<byte> GetSpaMimeType(string route)
     {
         // Extract file extension (if any)
         var ext = Path.GetExtension(route);
