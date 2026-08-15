@@ -1,11 +1,6 @@
 ## Wired.IO
 
-<div align="center">
-  <a href="https://www.http-arena.com/leaderboard/">
-    <img alt="Benchmarked by HttpArena" src="https://cdn.jsdelivr.net/gh/MDA2AV/httparena-badge/wordmark.svg" width="235">
-  </a>
-</div>
-
+[![HTTP Arena](https://img.shields.io/endpoint?url=https://www.http-arena.com/badge/actix/h1.json)](https://www.http-arena.com/#q=actix)
 [![NuGet](https://img.shields.io/nuget/v/Wired.IO.svg)](https://www.nuget.org/packages/Wired.IO/)
 
 [Full project documentation](https://mda2av.github.io/Wired.IO.Docs/)
